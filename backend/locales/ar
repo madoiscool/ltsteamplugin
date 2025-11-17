@@ -20,9 +20,9 @@
     "settings.save": "حفظ الإعدادات",
     "settings.close": "إغلاق",
     "settings.general": "عام",
-    "settings.generalDescription": "وصف إعدادات LuaTools العامة.",
+    "settings.generalDescription": "وصف الإعدادات العامة.",
     "settings.language.label": "اللغة",
-    "settings.language.description": "إختر لغة عرض LuaTools.",
+    "settings.language.description": "إختر لغة العرض.",
     "settings.language.option.en": "الإنجليزية - English",
     "settings.language.option.pt-BR": "البرتغالية - Portuguese",
     "settings.donateKeys.label": "تبرع بالمفاتيح",
@@ -100,7 +100,7 @@
     "LuaTools · AIO Fixes Menu": "LuaTools · قائمة إصلاحات AIO",
     "Online Fix (Unsteam)": "إصلاح الأونلاين من خارج ستيم",
     "Back": "العودة",
-    "LuaTools backend unavailable": "واجهة LuaTools غير متوفرة",
+    "LuaTools backend unavailable": "الواجهة غير متوفرة",
     "Restart Steam now?": "إعادة تشغيل ستيم الآن؟",
     "LuaTools · Menu": "LuaTools · القائمة",
     "Join the Discord!": "انضم إلى مجتمع الديسكورد!",
@@ -127,7 +127,7 @@
     "Dismiss": "إغلاق",
     "Game folder": "ملف اللعبة",
     "Restart Steam": "ريستارت ستيم",
-    "Add via LuaTools": "إضافة عبر LuaTools",
+    "Add via LuaTools": "إضافة اللعبة للمكتبة",
     "Are you sure?": "هل أنت متأكد؟"
   }
 }
