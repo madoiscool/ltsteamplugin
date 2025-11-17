@@ -20,7 +20,7 @@
     "settings.save": "حفظ الإعدادات",
     "settings.close": "إغلاق",
     "settings.general": "عام",
-    "settings.generalDescription": "إعدادات عامة.",
+    "settings.generalDescription": "إعدادات عامة",
     "settings.language.label": "اللغة",
     "settings.language.description": "إختر لغة العرض.",
     "settings.language.option.en": "الإنجليزية - English",
