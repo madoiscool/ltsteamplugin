@@ -197,7 +197,8 @@
                                 const pathPayload = typeof pathRes === 'string' ? JSON.parse(pathRes) : pathRes;
                                 if (!pathPayload || !pathPayload.success) {
                                     try { overlay.remove(); } catch(_) {}
-                                    const errorMsg = (pathPayload && pathPayload.error) ? pathPayload.error : t('menu.error.noInstall', 'Could not find game installation');
+                                    const errorKey = (pathPayload && pathPayload.error) ? String(pathPayload.error) : 'menu.error.noInstall';
+                                    const errorMsg = (errorKey.startsWith('menu.error.') || errorKey.startsWith('common.')) ? t(errorKey) : errorKey;
                                     try { ShowAlertDialog && ShowAlertDialog('LuaTools', errorMsg); } catch(_) { alert(errorMsg); }
                                     return;
                                 }
@@ -680,7 +681,8 @@
                         // Show download progress popup similar to Add via LuaTools
                         showFixDownloadProgress(appid, fixType);
                     } else {
-                        const errorMsg = (payload && payload.error) ? String(payload.error) : lt('Failed to start fix download');
+                        const errorKey = (payload && payload.error) ? String(payload.error) : '';
+                        const errorMsg = (errorKey && (errorKey.startsWith('menu.error.') || errorKey.startsWith('common.'))) ? t(errorKey) : (errorKey || lt('Failed to start fix download'));
                         try { ShowAlertDialog && ShowAlertDialog('LuaTools', errorMsg); } catch(_) { alert(errorMsg); }
                     }
                 } catch(err) {
@@ -1142,7 +1144,8 @@
                                                             // Show progress popup
                                                             showUnfixProgress(appid);
                                                         } else {
-                                                        const errorMsg = (payload && payload.error) ? String(payload.error) : lt('Failed to start un-fix');
+                                                            const errorKey = (payload && payload.error) ? String(payload.error) : '';
+                                                            const errorMsg = (errorKey && (errorKey.startsWith('menu.error.') || errorKey.startsWith('common.'))) ? t(errorKey) : (errorKey || lt('Failed to start un-fix'));
                                                             try { ShowAlertDialog && ShowAlertDialog('LuaTools', errorMsg); } catch(_) { alert(errorMsg); }
                                                             // Don't reopen Fixes Menu - let user see the error
                                                         }
