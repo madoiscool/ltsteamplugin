@@ -27,7 +27,7 @@ HTTP_PROXY_TIMEOUT_SECONDS = 15
 
 UPDATE_CHECK_INTERVAL_SECONDS = 2 * 60 * 60  # 2 hours
 
-USER_AGENT = "luatools-v6-stplugin-hoe"
+USER_AGENT = "luatools-v61-stplugin-hoe"
 
 LOADED_APPS_FILE = "loadedappids.txt"
 APPID_LOG_FILE = "appidlogs.txt"
