@@ -906,36 +906,42 @@
     function showFixDownloadProgress(appid, fixType) {
         // Reuse the download popup UI from Add via LuaTools
         if (document.querySelector('.luatools-overlay')) return;
-        
+
+        ensureLuaToolsAnimations();
         const overlay = document.createElement('div');
         overlay.className = 'luatools-overlay';
-        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;';
 
         const modal = document.createElement('div');
-        modal.style.cssText = 'background:#1b2838;color:#fff;border:1px solid #2a475e;border-radius:4px;min-width:360px;max-width:600px;padding:18px 20px;box-shadow:0 8px 24px rgba(0,0,0,.6);';
+        modal.style.cssText = 'background:linear-gradient(135deg, #1b2838 0%, #2a475e 100%);color:#fff;border:2px solid #66c0f4;border-radius:8px;min-width:400px;max-width:560px;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px rgba(102,192,244,0.3);animation:slideUp 0.1s ease-out;';
 
         const title = document.createElement('div');
-        title.style.cssText = 'font-size:16px;color:#66c0f4;margin-bottom:10px;font-weight:600;';
+        title.style.cssText = 'font-size:22px;color:#fff;margin-bottom:16px;font-weight:700;text-shadow:0 2px 8px rgba(102,192,244,0.4);background:linear-gradient(135deg, #66c0f4 0%, #a4d7f5 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;';
         title.textContent = lt('Applying {fix}').replace('{fix}', fixType);
 
         const body = document.createElement('div');
-        body.style.cssText = 'font-size:14px;line-height:1.6;margin-bottom:12px;';
+        body.style.cssText = 'font-size:15px;line-height:1.6;margin-bottom:20px;color:#c7d5e0;';
         body.innerHTML = '<div id="lt-fix-progress-msg">' + lt('Downloading...') + '</div>';
 
         const btnRow = document.createElement('div');
         btnRow.className = 'lt-fix-btn-row';
-        btnRow.style.cssText = 'margin-top:16px;display:flex;gap:8px;justify-content:flex-end;';
+        btnRow.style.cssText = 'margin-top:16px;display:flex;gap:12px;justify-content:center;';
+
         const hideBtn = document.createElement('a');
-        hideBtn.className = 'btnv6_blue_hoverfade btn_medium';
-        hideBtn.innerHTML = '<span>' + lt('Hide') + '</span>';
         hideBtn.href = '#';
+        hideBtn.style.cssText = 'flex:1;display:flex;align-items:center;justify-content:center;padding:14px 28px;background:rgba(139,139,139,0.15);border:1px solid rgba(139,139,139,0.3);border-radius:12px;color:#c7d5e0;font-size:15px;font-weight:500;text-decoration:none;transition:all 0.3s ease;cursor:pointer;';
+        hideBtn.innerHTML = '<span>' + lt('Hide') + '</span>';
+        hideBtn.onmouseover = function() { this.style.background = 'rgba(139,139,139,0.25)'; this.style.transform = 'translateY(-2px)'; this.style.boxShadow = '0 8px 20px rgba(0,0,0,0.3)'; };
+        hideBtn.onmouseout = function() { this.style.background = 'rgba(139,139,139,0.15)'; this.style.transform = 'translateY(0)'; this.style.boxShadow = 'none'; };
         hideBtn.onclick = function(e){ e.preventDefault(); overlay.remove(); };
         btnRow.appendChild(hideBtn);
 
         const cancelBtn = document.createElement('a');
-        cancelBtn.className = 'btnv6_blue_hoverfade btn_medium';
-        cancelBtn.innerHTML = '<span>' + lt('Cancel') + '</span>';
         cancelBtn.href = '#';
+        cancelBtn.style.cssText = 'flex:1;display:flex;align-items:center;justify-content:center;padding:14px 28px;background:linear-gradient(135deg, rgba(102,192,244,0.3) 0%, rgba(102,192,244,0.15) 100%);border:1px solid #66c0f4;border-radius:12px;color:#fff;font-size:15px;font-weight:600;text-decoration:none;transition:all 0.3s ease;cursor:pointer;box-shadow:0 0 20px rgba(102,192,244,0.3);';
+        cancelBtn.innerHTML = '<span>' + lt('Cancel') + '</span>';
+        cancelBtn.onmouseover = function() { this.style.background = 'linear-gradient(135deg, rgba(102,192,244,0.5) 0%, rgba(102,192,244,0.3) 100%)'; this.style.transform = 'translateY(-2px) scale(1.02)'; this.style.boxShadow = '0 12px 30px rgba(102,192,244,0.5)'; };
+        cancelBtn.onmouseout = function() { this.style.background = 'linear-gradient(135deg, rgba(102,192,244,0.3) 0%, rgba(102,192,244,0.15) 100%)'; this.style.transform = 'translateY(0) scale(1)'; this.style.boxShadow = '0 0 20px rgba(102,192,244,0.3)'; };
         cancelBtn.onclick = function(e){
             e.preventDefault();
             if (cancelBtn.dataset.pending === '1') return;
@@ -987,10 +993,13 @@
         const btnRow = overlayEl.querySelector('.lt-fix-btn-row');
         if (!btnRow) return;
         btnRow.innerHTML = '';
+        btnRow.style.cssText = 'margin-top:16px;display:flex;justify-content:center;';
         const closeBtn = document.createElement('a');
-        closeBtn.className = 'btnv6_blue_hoverfade btn_medium';
-        closeBtn.innerHTML = '<span>' + lt('Close') + '</span>';
         closeBtn.href = '#';
+        closeBtn.style.cssText = 'min-width:140px;display:flex;align-items:center;justify-content:center;padding:14px 32px;background:linear-gradient(135deg, rgba(102,192,244,0.3) 0%, rgba(102,192,244,0.15) 100%);border:1px solid #66c0f4;border-radius:12px;color:#fff;font-size:15px;font-weight:600;text-decoration:none;transition:all 0.3s ease;cursor:pointer;box-shadow:0 0 20px rgba(102,192,244,0.3);';
+        closeBtn.innerHTML = '<span>' + lt('Close') + '</span>';
+        closeBtn.onmouseover = function() { this.style.background = 'linear-gradient(135deg, rgba(102,192,244,0.5) 0%, rgba(102,192,244,0.3) 100%)'; this.style.transform = 'translateY(-2px) scale(1.02)'; this.style.boxShadow = '0 12px 30px rgba(102,192,244,0.5)'; };
+        closeBtn.onmouseout = function() { this.style.background = 'linear-gradient(135deg, rgba(102,192,244,0.3) 0%, rgba(102,192,244,0.15) 100%)'; this.style.transform = 'translateY(0) scale(1)'; this.style.boxShadow = '0 0 20px rgba(102,192,244,0.3)'; };
         closeBtn.onclick = function(e){ e.preventDefault(); overlayEl.remove(); };
         btnRow.appendChild(closeBtn);
     }
@@ -1048,28 +1057,31 @@
     function showUnfixProgress(appid) {
         // Remove any existing popup
         try { const old = document.querySelector('.luatools-unfix-overlay'); if (old) old.remove(); } catch(_) {}
-        
+
+        ensureLuaToolsAnimations();
         const overlay = document.createElement('div');
         overlay.className = 'luatools-unfix-overlay';
-        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;';
 
         const modal = document.createElement('div');
-        modal.style.cssText = 'background:#1b2838;color:#fff;border:1px solid #2a475e;border-radius:4px;min-width:360px;max-width:600px;padding:18px 20px;box-shadow:0 8px 24px rgba(0,0,0,.6);';
+        modal.style.cssText = 'background:linear-gradient(135deg, #1b2838 0%, #2a475e 100%);color:#fff;border:2px solid #66c0f4;border-radius:8px;min-width:400px;max-width:560px;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px rgba(102,192,244,0.3);animation:slideUp 0.1s ease-out;';
 
         const title = document.createElement('div');
-        title.style.cssText = 'font-size:16px;color:#66c0f4;margin-bottom:10px;font-weight:600;';
+        title.style.cssText = 'font-size:22px;color:#fff;margin-bottom:16px;font-weight:700;text-shadow:0 2px 8px rgba(102,192,244,0.4);background:linear-gradient(135deg, #66c0f4 0%, #a4d7f5 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;';
         title.textContent = lt('Un-Fixing game');
 
         const body = document.createElement('div');
-        body.style.cssText = 'font-size:14px;line-height:1.6;margin-bottom:12px;';
+        body.style.cssText = 'font-size:15px;line-height:1.6;margin-bottom:20px;color:#c7d5e0;';
         body.innerHTML = '<div id="lt-unfix-progress-msg">' + lt('Removing fix files...') + '</div>';
 
         const btnRow = document.createElement('div');
-        btnRow.style.cssText = 'margin-top:16px;display:flex;gap:8px;justify-content:flex-end;';
+        btnRow.style.cssText = 'margin-top:16px;display:flex;justify-content:center;';
         const hideBtn = document.createElement('a');
-        hideBtn.className = 'btnv6_blue_hoverfade btn_medium';
-        hideBtn.innerHTML = '<span>' + lt('Hide') + '</span>';
         hideBtn.href = '#';
+        hideBtn.style.cssText = 'min-width:140px;display:flex;align-items:center;justify-content:center;padding:14px 32px;background:rgba(139,139,139,0.15);border:1px solid rgba(139,139,139,0.3);border-radius:12px;color:#c7d5e0;font-size:15px;font-weight:500;text-decoration:none;transition:all 0.3s ease;cursor:pointer;';
+        hideBtn.innerHTML = '<span>' + lt('Hide') + '</span>';
+        hideBtn.onmouseover = function() { this.style.background = 'rgba(139,139,139,0.25)'; this.style.transform = 'translateY(-2px)'; this.style.boxShadow = '0 8px 20px rgba(0,0,0,0.3)'; };
+        hideBtn.onmouseout = function() { this.style.background = 'rgba(139,139,139,0.15)'; this.style.transform = 'translateY(0)'; this.style.boxShadow = 'none'; };
         hideBtn.onclick = function(e){ e.preventDefault(); overlay.remove(); };
         btnRow.appendChild(hideBtn);
 
@@ -1106,13 +1118,15 @@
                                 if (msgEl) msgEl.textContent = lt('Removed {count} files. Running Steam verification...').replace('{count}', filesRemoved);
                                 // Change Hide button to Close button
                                 try {
-                                    const btnRow = overlayEl.querySelector('div[style*="justify-content:flex-end"]');
+                                    const btnRow = overlayEl.querySelector('div[style*="justify-content:center"]');
                                     if (btnRow) {
                                         btnRow.innerHTML = '';
                                         const closeBtn = document.createElement('a');
-                                        closeBtn.className = 'btnv6_blue_hoverfade btn_medium';
-                                        closeBtn.innerHTML = '<span>' + lt('Close') + '</span>';
                                         closeBtn.href = '#';
+                                        closeBtn.style.cssText = 'min-width:140px;display:flex;align-items:center;justify-content:center;padding:14px 32px;background:linear-gradient(135deg, rgba(102,192,244,0.3) 0%, rgba(102,192,244,0.15) 100%);border:1px solid #66c0f4;border-radius:12px;color:#fff;font-size:15px;font-weight:600;text-decoration:none;transition:all 0.3s ease;cursor:pointer;box-shadow:0 0 20px rgba(102,192,244,0.3);';
+                                        closeBtn.innerHTML = '<span>' + lt('Close') + '</span>';
+                                        closeBtn.onmouseover = function() { this.style.background = 'linear-gradient(135deg, rgba(102,192,244,0.5) 0%, rgba(102,192,244,0.3) 100%)'; this.style.transform = 'translateY(-2px) scale(1.02)'; this.style.boxShadow = '0 12px 30px rgba(102,192,244,0.5)'; };
+                                        closeBtn.onmouseout = function() { this.style.background = 'linear-gradient(135deg, rgba(102,192,244,0.3) 0%, rgba(102,192,244,0.15) 100%)'; this.style.transform = 'translateY(0) scale(1)'; this.style.boxShadow = '0 0 20px rgba(102,192,244,0.3)'; };
                                         closeBtn.onclick = function(e){ e.preventDefault(); overlayEl.remove(); };
                                         btnRow.appendChild(closeBtn);
                                     }
@@ -1132,15 +1146,17 @@
                                 if (msgEl) msgEl.textContent = lt('Failed: {error}').replace('{error}', state.error || lt('Unknown error'));
                                 // Change Hide button to Close button
                                 try {
-                                    const btnRow = overlayEl.querySelector('div[style*="justify-content:flex-end"]');
+                                    const btnRow = overlayEl.querySelector('div[style*="justify-content:center"]');
                                     if (btnRow) {
                                         btnRow.innerHTML = '';
-        const closeBtn = document.createElement('a');
-        closeBtn.className = 'btnv6_blue_hoverfade btn_medium';
-        closeBtn.innerHTML = '<span>' + lt('Close') + '</span>';
-        closeBtn.href = '#';
+                                        const closeBtn = document.createElement('a');
+                                        closeBtn.href = '#';
+                                        closeBtn.style.cssText = 'min-width:140px;display:flex;align-items:center;justify-content:center;padding:14px 32px;background:linear-gradient(135deg, rgba(102,192,244,0.3) 0%, rgba(102,192,244,0.15) 100%);border:1px solid #66c0f4;border-radius:12px;color:#fff;font-size:15px;font-weight:600;text-decoration:none;transition:all 0.3s ease;cursor:pointer;box-shadow:0 0 20px rgba(102,192,244,0.3);';
+                                        closeBtn.innerHTML = '<span>' + lt('Close') + '</span>';
+                                        closeBtn.onmouseover = function() { this.style.background = 'linear-gradient(135deg, rgba(102,192,244,0.5) 0%, rgba(102,192,244,0.3) 100%)'; this.style.transform = 'translateY(-2px) scale(1.02)'; this.style.boxShadow = '0 12px 30px rgba(102,192,244,0.5)'; };
+                                        closeBtn.onmouseout = function() { this.style.background = 'linear-gradient(135deg, rgba(102,192,244,0.3) 0%, rgba(102,192,244,0.15) 100%)'; this.style.transform = 'translateY(0) scale(1)'; this.style.boxShadow = '0 0 20px rgba(102,192,244,0.3)'; };
                                         closeBtn.onclick = function(e){ e.preventDefault(); overlayEl.remove(); };
-        btnRow.appendChild(closeBtn);
+                                        btnRow.appendChild(closeBtn);
                                     }
                                 } catch(_) {}
                                 return; // Stop polling
