@@ -72,7 +72,6 @@
                 }
             `;
             document.head.appendChild(style);
-            backendLog('LuaTools: Animations injected.');
         } catch(err) { backendLog('LuaTools: Animations injection failed: ' + err); }
     }
 
@@ -87,7 +86,6 @@
             link.crossOrigin = 'anonymous';
             link.referrerPolicy = 'no-referrer';
             document.head.appendChild(link);
-            backendLog('LuaTools: Font Awesome injected.');
         } catch(err) { backendLog('LuaTools: Font Awesome injection failed: ' + err); }
     }
 
@@ -1249,47 +1247,51 @@
         overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:100000;display:flex;align-items:center;justify-content:center;';
 
         const modal = document.createElement('div');
-        modal.style.cssText = 'position:relative;background:linear-gradient(135deg, #1b2838 0%, #2a475e 100%);color:#fff;border:2px solid #66c0f4;border-radius:8px;min-width:580px;max-width:700px;max-height:80vh;display:flex;flex-direction:column;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px rgba(102,192,244,0.3);animation:slideUp 0.1s ease-out;';
+        modal.style.cssText = 'position:relative;background:linear-gradient(165deg, #0f1923 0%, #1b2838 50%, #2a475e 100%);color:#fff;border:2px solid #4a9ece;border-radius:16px;min-width:650px;max-width:750px;max-height:85vh;display:flex;flex-direction:column;padding:0;box-shadow:0 25px 80px rgba(0,0,0,.95), 0 0 0 1px rgba(74,158,206,0.5), inset 0 1px 0 rgba(255,255,255,0.1);animation:slideUp 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);overflow:hidden;';
 
         const header = document.createElement('div');
-        header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid rgba(102,192,244,0.3);';
+        header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:24px 32px;background:linear-gradient(135deg, rgba(102,192,244,0.15) 0%, rgba(74,158,206,0.08) 100%);border-bottom:2px solid rgba(74,158,206,0.4);backdrop-filter:blur(10px);position:relative;overflow:hidden;';
+
+        const headerGlow = document.createElement('div');
+        headerGlow.style.cssText = 'position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle, rgba(102,192,244,0.15) 0%, transparent 70%);pointer-events:none;';
+        header.appendChild(headerGlow);
 
         const title = document.createElement('div');
-        title.style.cssText = 'font-size:24px;color:#fff;font-weight:700;text-shadow:0 2px 8px rgba(102,192,244,0.4);background:linear-gradient(135deg, #66c0f4 0%, #a4d7f5 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;';
+        title.style.cssText = 'font-size:28px;color:#fff;font-weight:800;text-shadow:0 2px 12px rgba(102,192,244,0.6), 0 0 30px rgba(102,192,244,0.3);background:linear-gradient(135deg, #66c0f4 0%, #a4d7f5 50%, #66c0f4 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:0.5px;position:relative;z-index:1;';
         title.textContent = t('settings.title', 'LuaTools · Settings');
 
         const iconButtons = document.createElement('div');
-        iconButtons.style.cssText = 'display:flex;gap:12px;';
+        iconButtons.style.cssText = 'display:flex;gap:10px;position:relative;z-index:1;';
 
         const discordIconBtn = document.createElement('a');
         discordIconBtn.href = '#';
-        discordIconBtn.style.cssText = 'display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:rgba(102,192,244,0.1);border:1px solid rgba(102,192,244,0.3);border-radius:10px;color:#66c0f4;font-size:18px;text-decoration:none;transition:all 0.3s ease;cursor:pointer;';
-        discordIconBtn.innerHTML = '<i class="fa-brands fa-discord"></i>';
+        discordIconBtn.style.cssText = 'display:flex;align-items:center;justify-content:center;width:44px;height:44px;background:rgba(102,192,244,0.12);border:2px solid rgba(102,192,244,0.35);border-radius:12px;color:#66c0f4;font-size:19px;text-decoration:none;transition:all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);cursor:pointer;position:relative;overflow:hidden;';
+        discordIconBtn.innerHTML = '<i class="fa-brands fa-discord" style="position:relative;z-index:1;"></i>';
         discordIconBtn.title = t('menu.discord', 'Discord');
-        discordIconBtn.onmouseover = function() { this.style.background = 'rgba(102,192,244,0.25)'; this.style.transform = 'translateY(-2px) scale(1.05)'; this.style.boxShadow = '0 8px 16px rgba(102,192,244,0.3)'; this.style.borderColor = '#66c0f4'; };
-        discordIconBtn.onmouseout = function() { this.style.background = 'rgba(102,192,244,0.1)'; this.style.transform = 'translateY(0) scale(1)'; this.style.boxShadow = 'none'; this.style.borderColor = 'rgba(102,192,244,0.3)'; };
+        discordIconBtn.onmouseover = function() { this.style.background = 'rgba(102,192,244,0.3)'; this.style.transform = 'translateY(-3px) scale(1.08) rotate(5deg)'; this.style.boxShadow = '0 10px 25px rgba(102,192,244,0.4), 0 0 20px rgba(102,192,244,0.3)'; this.style.borderColor = '#66c0f4'; };
+        discordIconBtn.onmouseout = function() { this.style.background = 'rgba(102,192,244,0.12)'; this.style.transform = 'translateY(0) scale(1) rotate(0)'; this.style.boxShadow = 'none'; this.style.borderColor = 'rgba(102,192,244,0.35)'; };
         iconButtons.appendChild(discordIconBtn);
 
         const settingsIcon = document.createElement('span');
-        settingsIcon.style.cssText = 'display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:rgba(102,192,244,0.2);border:1px solid rgba(102,192,244,0.4);border-radius:10px;color:#66c0f4;font-size:18px;cursor:default;opacity:0.6;';
+        settingsIcon.style.cssText = 'display:flex;align-items:center;justify-content:center;width:44px;height:44px;background:linear-gradient(135deg, rgba(102,192,244,0.25) 0%, rgba(74,158,206,0.2) 100%);border:2px solid rgba(102,192,244,0.5);border-radius:12px;color:#66c0f4;font-size:19px;cursor:default;box-shadow:0 0 15px rgba(102,192,244,0.3), inset 0 1px 0 rgba(255,255,255,0.2);';
         settingsIcon.innerHTML = '<i class="fa-solid fa-gear"></i>';
         settingsIcon.title = t('menu.settings', 'Settings');
         iconButtons.appendChild(settingsIcon);
 
         const closeIconBtn = document.createElement('a');
         closeIconBtn.href = '#';
-        closeIconBtn.style.cssText = 'display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:rgba(102,192,244,0.1);border:1px solid rgba(102,192,244,0.3);border-radius:10px;color:#66c0f4;font-size:18px;text-decoration:none;transition:all 0.3s ease;cursor:pointer;';
-        closeIconBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+        closeIconBtn.style.cssText = 'display:flex;align-items:center;justify-content:center;width:44px;height:44px;background:rgba(102,192,244,0.12);border:2px solid rgba(102,192,244,0.35);border-radius:12px;color:#66c0f4;font-size:19px;text-decoration:none;transition:all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);cursor:pointer;position:relative;overflow:hidden;';
+        closeIconBtn.innerHTML = '<i class="fa-solid fa-xmark" style="position:relative;z-index:1;"></i>';
         closeIconBtn.title = t('settings.close', 'Close');
-        closeIconBtn.onmouseover = function() { this.style.background = 'rgba(102,192,244,0.25)'; this.style.transform = 'translateY(-2px) scale(1.05)'; this.style.boxShadow = '0 8px 16px rgba(102,192,244,0.3)'; this.style.borderColor = '#66c0f4'; };
-        closeIconBtn.onmouseout = function() { this.style.background = 'rgba(102,192,244,0.1)'; this.style.transform = 'translateY(0) scale(1)'; this.style.boxShadow = 'none'; this.style.borderColor = 'rgba(102,192,244,0.3)'; };
+        closeIconBtn.onmouseover = function() { this.style.background = 'rgba(255,80,80,0.2)'; this.style.transform = 'translateY(-3px) scale(1.08) rotate(90deg)'; this.style.boxShadow = '0 10px 25px rgba(255,80,80,0.4), 0 0 20px rgba(255,80,80,0.3)'; this.style.borderColor = '#ff5050'; this.style.color = '#ff5050'; };
+        closeIconBtn.onmouseout = function() { this.style.background = 'rgba(102,192,244,0.12)'; this.style.transform = 'translateY(0) scale(1) rotate(0)'; this.style.boxShadow = 'none'; this.style.borderColor = 'rgba(102,192,244,0.35)'; this.style.color = '#66c0f4'; };
         iconButtons.appendChild(closeIconBtn);
 
         const contentWrap = document.createElement('div');
-        contentWrap.style.cssText = 'flex:1 1 auto;overflow-y:auto;padding:20px;border:1px solid rgba(102,192,244,0.3);border-radius:12px;background:rgba(11,20,30,0.6);';
+        contentWrap.style.cssText = 'flex:1 1 auto;overflow-y:auto;overflow-x:hidden;padding:28px;margin:20px 24px;border:2px solid rgba(74,158,206,0.25);border-radius:14px;background:linear-gradient(145deg, rgba(11,20,30,0.8) 0%, rgba(15,25,35,0.7) 100%);box-shadow:inset 0 2px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);';
 
         const btnRow = document.createElement('div');
-        btnRow.style.cssText = 'margin-top:16px;display:flex;gap:8px;justify-content:space-between;align-items:center;';
+        btnRow.style.cssText = 'padding:20px 24px 24px;display:flex;gap:12px;justify-content:space-between;align-items:center;background:linear-gradient(180deg, rgba(15,25,35,0.3) 0%, rgba(11,20,30,0.5) 100%);border-top:2px solid rgba(74,158,206,0.25);';
 
         const backBtn = createSettingsButton('back', '<i class="fa-solid fa-arrow-left"></i>');
         const rightButtons = document.createElement('div');
@@ -1318,12 +1320,57 @@
         function createSettingsButton(id, text, isPrimary) {
             const btn = document.createElement('a');
             btn.id = 'lt-settings-' + id;
-            btn.className = 'btnv6_blue_hoverfade btn_medium';
             btn.href = '#';
             btn.innerHTML = '<span>' + text + '</span>';
+
             if (isPrimary) {
                 btn.dataset.disabled = '1';
+                btn.style.cssText = 'padding:12px 28px;background:linear-gradient(135deg, #66c0f4 0%, #4a9ece 100%);border:2px solid #66c0f4;border-radius:12px;color:#0f1923;font-size:15px;font-weight:700;text-decoration:none;transition:all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);cursor:pointer;box-shadow:0 4px 15px rgba(102,192,244,0.4), inset 0 1px 0 rgba(255,255,255,0.3);text-shadow:0 1px 2px rgba(0,0,0,0.2);letter-spacing:0.3px;';
+            } else {
+                btn.style.cssText = 'padding:12px 24px;background:rgba(102,192,244,0.15);border:2px solid rgba(102,192,244,0.4);border-radius:12px;color:#66c0f4;font-size:15px;font-weight:600;text-decoration:none;transition:all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.3);letter-spacing:0.3px;';
             }
+
+            btn.onmouseover = function() {
+                if (this.dataset.disabled === '1') {
+                    this.style.opacity = '0.6';
+                    this.style.cursor = 'not-allowed';
+                    return;
+                }
+                if (isPrimary) {
+                    this.style.background = 'linear-gradient(135deg, #7dd4ff 0%, #5ab3e8 100%)';
+                    this.style.transform = 'translateY(-3px) scale(1.03)';
+                    this.style.boxShadow = '0 8px 25px rgba(102,192,244,0.6), inset 0 1px 0 rgba(255,255,255,0.4)';
+                } else {
+                    this.style.background = 'rgba(102,192,244,0.25)';
+                    this.style.transform = 'translateY(-2px)';
+                    this.style.boxShadow = '0 6px 20px rgba(102,192,244,0.3)';
+                    this.style.borderColor = '#66c0f4';
+                }
+            };
+
+            btn.onmouseout = function() {
+                if (this.dataset.disabled === '1') {
+                    this.style.opacity = '0.5';
+                    return;
+                }
+                if (isPrimary) {
+                    this.style.background = 'linear-gradient(135deg, #66c0f4 0%, #4a9ece 100%)';
+                    this.style.transform = 'translateY(0) scale(1)';
+                    this.style.boxShadow = '0 4px 15px rgba(102,192,244,0.4), inset 0 1px 0 rgba(255,255,255,0.3)';
+                } else {
+                    this.style.background = 'rgba(102,192,244,0.15)';
+                    this.style.transform = 'translateY(0)';
+                    this.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+                    this.style.borderColor = 'rgba(102,192,244,0.4)';
+                }
+            };
+
+            if (isPrimary) {
+                btn.dataset.disabled = '1';
+                btn.style.opacity = '0.5';
+                btn.style.cursor = 'not-allowed';
+            }
+
             return btn;
         }
 
@@ -1586,7 +1633,408 @@
                 contentWrap.appendChild(groupEl);
             }
 
+            // Render Installed Fixes section
+            renderInstalledFixesSection();
+
+            // Render Installed Lua Scripts section
+            renderInstalledLuaSection();
+
             updateSaveState();
+        }
+
+        function renderInstalledFixesSection() {
+            const sectionEl = document.createElement('div');
+            sectionEl.id = 'luatools-installed-fixes-section';
+            sectionEl.style.cssText = 'margin-top:36px;padding:24px;background:linear-gradient(135deg, rgba(102,192,244,0.05) 0%, rgba(74,158,206,0.08) 100%);border:2px solid rgba(74,158,206,0.3);border-radius:14px;box-shadow:0 4px 15px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);position:relative;overflow:hidden;';
+
+            const sectionGlow = document.createElement('div');
+            sectionGlow.style.cssText = 'position:absolute;top:-100%;left:-100%;width:300%;height:300%;background:radial-gradient(circle, rgba(102,192,244,0.08) 0%, transparent 70%);pointer-events:none;';
+            sectionEl.appendChild(sectionGlow);
+
+            const sectionTitle = document.createElement('div');
+            sectionTitle.style.cssText = 'font-size:22px;color:#66c0f4;margin-bottom:20px;font-weight:700;text-align:center;text-shadow:0 2px 10px rgba(102,192,244,0.5);background:linear-gradient(135deg, #66c0f4 0%, #a4d7f5 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;position:relative;z-index:1;letter-spacing:0.5px;';
+            sectionTitle.innerHTML = '<i class="fa-solid fa-wrench" style="margin-right:10px;"></i>' + t('settings.installedFixes.title', 'Installed Fixes');
+            sectionEl.appendChild(sectionTitle);
+
+            const listContainer = document.createElement('div');
+            listContainer.id = 'luatools-fixes-list';
+            listContainer.style.cssText = 'min-height:50px;';
+            sectionEl.appendChild(listContainer);
+
+            contentWrap.appendChild(sectionEl);
+
+            loadInstalledFixes(listContainer);
+        }
+
+        function loadInstalledFixes(container) {
+            container.innerHTML = '<div style="padding:14px;text-align:center;color:#c7d5e0;">' + t('settings.installedFixes.loading', 'Scanning for installed fixes...') + '</div>';
+
+            Millennium.callServerMethod('luatools', 'GetInstalledFixes', { contentScriptQuery: '' })
+                .then(function(res) {
+                    const response = typeof res === 'string' ? JSON.parse(res) : res;
+                    if (!response || !response.success) {
+                        container.innerHTML = '<div style="padding:14px;background:#102039;border:1px solid #ff5c5c;border-radius:4px;color:#ff5c5c;">' + t('settings.installedFixes.error', 'Failed to load installed fixes.') + '</div>';
+                        return;
+                    }
+
+                    const fixes = Array.isArray(response.fixes) ? response.fixes : [];
+                    if (fixes.length === 0) {
+                        container.innerHTML = '<div style="padding:14px;background:#102039;border:1px solid #2a475e;border-radius:4px;color:#c7d5e0;text-align:center;">' + t('settings.installedFixes.empty', 'No fixes installed yet.') + '</div>';
+                        return;
+                    }
+
+                    container.innerHTML = '';
+                    for (let i = 0; i < fixes.length; i++) {
+                        const fix = fixes[i];
+                        const fixEl = createFixListItem(fix, container);
+                        container.appendChild(fixEl);
+                    }
+                })
+                .catch(function(err) {
+                    container.innerHTML = '<div style="padding:14px;background:#102039;border:1px solid #ff5c5c;border-radius:4px;color:#ff5c5c;">' + t('settings.installedFixes.error', 'Failed to load installed fixes.') + '</div>';
+                });
+        }
+
+        function createFixListItem(fix, container) {
+            const itemEl = document.createElement('div');
+            itemEl.style.cssText = 'margin-bottom:12px;padding:14px;background:rgba(11,20,30,0.8);border:1px solid rgba(102,192,244,0.3);border-radius:6px;display:flex;justify-content:space-between;align-items:center;transition:all 0.2s ease;';
+            itemEl.onmouseover = function() { this.style.borderColor = '#66c0f4'; this.style.background = 'rgba(11,20,30,0.95)'; };
+            itemEl.onmouseout = function() { this.style.borderColor = 'rgba(102,192,244,0.3)'; this.style.background = 'rgba(11,20,30,0.8)'; };
+
+            const infoDiv = document.createElement('div');
+            infoDiv.style.cssText = 'flex:1;';
+
+            const gameName = document.createElement('div');
+            gameName.style.cssText = 'font-size:15px;font-weight:600;color:#fff;margin-bottom:6px;';
+            gameName.textContent = fix.gameName || 'Unknown Game (' + fix.appid + ')';
+            infoDiv.appendChild(gameName);
+
+            const detailsDiv = document.createElement('div');
+            detailsDiv.style.cssText = 'font-size:12px;color:#a9b2c3;line-height:1.6;';
+
+            if (fix.fixType) {
+                const typeSpan = document.createElement('div');
+                typeSpan.innerHTML = '<strong style="color:#66c0f4;">' + t('settings.installedFixes.type', 'Type:') + '</strong> ' + fix.fixType;
+                detailsDiv.appendChild(typeSpan);
+            }
+
+            if (fix.date) {
+                const dateSpan = document.createElement('div');
+                dateSpan.innerHTML = '<strong style="color:#66c0f4;">' + t('settings.installedFixes.date', 'Installed:') + '</strong> ' + fix.date;
+                detailsDiv.appendChild(dateSpan);
+            }
+
+            if (fix.filesCount > 0) {
+                const filesSpan = document.createElement('div');
+                filesSpan.innerHTML = '<strong style="color:#66c0f4;">' + t('settings.installedFixes.files', '{count} files').replace('{count}', fix.filesCount) + '</strong>';
+                detailsDiv.appendChild(filesSpan);
+            }
+
+            infoDiv.appendChild(detailsDiv);
+            itemEl.appendChild(infoDiv);
+
+            const deleteBtn = document.createElement('a');
+            deleteBtn.href = '#';
+            deleteBtn.style.cssText = 'display:flex;align-items:center;justify-content:center;width:44px;height:44px;background:rgba(255,80,80,0.12);border:2px solid rgba(255,80,80,0.35);border-radius:12px;color:#ff5050;font-size:18px;text-decoration:none;transition:all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);cursor:pointer;flex-shrink:0;';
+            deleteBtn.innerHTML = '<i class="fa-solid fa-trash"></i>';
+            deleteBtn.title = t('settings.installedFixes.delete', 'Delete');
+            deleteBtn.onmouseover = function() {
+                this.style.background = 'rgba(255,80,80,0.25)';
+                this.style.borderColor = 'rgba(255,80,80,0.6)';
+                this.style.color = '#ff6b6b';
+                this.style.transform = 'translateY(-2px) scale(1.05)';
+                this.style.boxShadow = '0 6px 20px rgba(255,80,80,0.4), 0 0 0 4px rgba(255,80,80,0.1)';
+            };
+            deleteBtn.onmouseout = function() {
+                this.style.background = 'rgba(255,80,80,0.12)';
+                this.style.borderColor = 'rgba(255,80,80,0.35)';
+                this.style.color = '#ff5050';
+                this.style.transform = 'translateY(0) scale(1)';
+                this.style.boxShadow = 'none';
+            };
+
+            deleteBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (deleteBtn.dataset.busy === '1') return;
+
+                showLuaToolsConfirm(
+                    fix.gameName || 'LuaTools',
+                    t('settings.installedFixes.deleteConfirm', 'Are you sure you want to remove this fix? This will delete fix files and run Steam verification.'),
+                    function() {
+                        // User confirmed
+                        deleteBtn.dataset.busy = '1';
+                        deleteBtn.style.opacity = '0.6';
+                        deleteBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+                        Millennium.callServerMethod('luatools', 'UnFixGame', {
+                            appid: fix.appid,
+                            installPath: fix.installPath || '',
+                            fixDate: fix.date || '',
+                            contentScriptQuery: ''
+                        })
+                        .then(function(res) {
+                            const response = typeof res === 'string' ? JSON.parse(res) : res;
+                            if (!response || !response.success) {
+                                alert(t('settings.installedFixes.deleteError', 'Failed to remove fix.'));
+                                deleteBtn.dataset.busy = '0';
+                                deleteBtn.style.opacity = '1';
+                                deleteBtn.innerHTML = '<span><i class="fa-solid fa-trash"></i> ' + t('settings.installedFixes.delete', 'Delete') + '</span>';
+                                return;
+                            }
+
+                            // Poll for unfix status
+                            pollUnfixStatus(fix.appid, itemEl, deleteBtn, container);
+                        })
+                        .catch(function(err) {
+                            alert(t('settings.installedFixes.deleteError', 'Failed to remove fix.') + ' ' + (err && err.message ? err.message : ''));
+                            deleteBtn.dataset.busy = '0';
+                            deleteBtn.style.opacity = '1';
+                            deleteBtn.innerHTML = '<span><i class="fa-solid fa-trash"></i> ' + t('settings.installedFixes.delete', 'Delete') + '</span>';
+                        });
+                    },
+                    function() {
+                        // User cancelled - do nothing
+                    }
+                );
+            });
+
+            itemEl.appendChild(deleteBtn);
+            return itemEl;
+        }
+
+        function pollUnfixStatus(appid, itemEl, deleteBtn, container) {
+            let pollCount = 0;
+            const maxPolls = 60;
+
+            function checkStatus() {
+                if (pollCount >= maxPolls) {
+                    alert(t('settings.installedFixes.deleteError', 'Failed to remove fix.') + ' (Timeout)');
+                    deleteBtn.dataset.busy = '0';
+                    deleteBtn.style.opacity = '1';
+                    deleteBtn.innerHTML = '<span><i class="fa-solid fa-trash"></i> ' + t('settings.installedFixes.delete', 'Delete') + '</span>';
+                    return;
+                }
+
+                pollCount++;
+
+                Millennium.callServerMethod('luatools', 'GetUnfixStatus', { appid: appid, contentScriptQuery: '' })
+                    .then(function(res) {
+                        const response = typeof res === 'string' ? JSON.parse(res) : res;
+                        if (!response || !response.success) {
+                            setTimeout(checkStatus, 500);
+                            return;
+                        }
+
+                        const state = response.state || {};
+                        const status = state.status;
+
+                        if (status === 'done' && state.success) {
+                            // Success - remove item from list with animation
+                            itemEl.style.transition = 'all 0.3s ease';
+                            itemEl.style.opacity = '0';
+                            itemEl.style.transform = 'translateX(-20px)';
+                            setTimeout(function() {
+                                itemEl.remove();
+                                // Check if list is now empty
+                                if (container.children.length === 0) {
+                                    container.innerHTML = '<div style="padding:14px;background:#102039;border:1px solid #2a475e;border-radius:4px;color:#c7d5e0;text-align:center;">' + t('settings.installedFixes.empty', 'No fixes installed yet.') + '</div>';
+                                }
+                            }, 300);
+                            return;
+                        } else if (status === 'failed' || (status === 'done' && !state.success)) {
+                            alert(t('settings.installedFixes.deleteError', 'Failed to remove fix.') + ' ' + (state.error || ''));
+                            deleteBtn.dataset.busy = '0';
+                            deleteBtn.style.opacity = '1';
+                            deleteBtn.innerHTML = '<span><i class="fa-solid fa-trash"></i> ' + t('settings.installedFixes.delete', 'Delete') + '</span>';
+                            return;
+                        } else {
+                            // Still in progress
+                            setTimeout(checkStatus, 500);
+                        }
+                    })
+                    .catch(function(err) {
+                        setTimeout(checkStatus, 500);
+                    });
+            }
+
+            checkStatus();
+        }
+
+        function renderInstalledLuaSection() {
+            const sectionEl = document.createElement('div');
+            sectionEl.id = 'luatools-installed-lua-section';
+            sectionEl.style.cssText = 'margin-top:24px;padding:24px;background:linear-gradient(135deg, rgba(138,102,244,0.05) 0%, rgba(102,138,244,0.08) 100%);border:2px solid rgba(138,102,244,0.3);border-radius:14px;box-shadow:0 4px 15px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);position:relative;overflow:hidden;';
+
+            const sectionGlow = document.createElement('div');
+            sectionGlow.style.cssText = 'position:absolute;top:-100%;left:-100%;width:300%;height:300%;background:radial-gradient(circle, rgba(138,102,244,0.08) 0%, transparent 70%);pointer-events:none;';
+            sectionEl.appendChild(sectionGlow);
+
+            const sectionTitle = document.createElement('div');
+            sectionTitle.style.cssText = 'font-size:22px;color:#a68aff;margin-bottom:20px;font-weight:700;text-align:center;text-shadow:0 2px 10px rgba(138,102,244,0.5);background:linear-gradient(135deg, #a68aff 0%, #c7b5ff 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;position:relative;z-index:1;letter-spacing:0.5px;';
+            sectionTitle.innerHTML = '<i class="fa-solid fa-code" style="margin-right:10px;"></i>' + t('settings.installedLua.title', 'Installed Lua Scripts');
+            sectionEl.appendChild(sectionTitle);
+
+            const listContainer = document.createElement('div');
+            listContainer.id = 'luatools-lua-list';
+            listContainer.style.cssText = 'min-height:50px;';
+            sectionEl.appendChild(listContainer);
+
+            contentWrap.appendChild(sectionEl);
+
+            loadInstalledLuaScripts(listContainer);
+        }
+
+        function loadInstalledLuaScripts(container) {
+            container.innerHTML = '<div style="padding:14px;text-align:center;color:#c7d5e0;">' + t('settings.installedLua.loading', 'Scanning for installed Lua scripts...') + '</div>';
+
+            Millennium.callServerMethod('luatools', 'GetInstalledLuaScripts', { contentScriptQuery: '' })
+                .then(function(res) {
+                    const response = typeof res === 'string' ? JSON.parse(res) : res;
+                    if (!response || !response.success) {
+                        container.innerHTML = '<div style="padding:14px;background:#102039;border:1px solid #ff5c5c;border-radius:4px;color:#ff5c5c;">' + t('settings.installedLua.error', 'Failed to load installed Lua scripts.') + '</div>';
+                        return;
+                    }
+
+                    const scripts = Array.isArray(response.scripts) ? response.scripts : [];
+                    if (scripts.length === 0) {
+                        container.innerHTML = '<div style="padding:14px;background:#102039;border:1px solid #2a475e;border-radius:4px;color:#c7d5e0;text-align:center;">' + t('settings.installedLua.empty', 'No Lua scripts installed yet.') + '</div>';
+                        return;
+                    }
+
+                    container.innerHTML = '';
+
+                    // Check if there are any unknown games
+                    const hasUnknownGames = scripts.some(function(s) {
+                        return s.gameName && s.gameName.startsWith('Unknown Game');
+                    });
+
+                    // Show info banner if there are unknown games
+                    if (hasUnknownGames) {
+                        const infoBanner = document.createElement('div');
+                        infoBanner.style.cssText = 'margin-bottom:16px;padding:12px 14px;background:rgba(255,193,7,0.1);border:1px solid rgba(255,193,7,0.3);border-radius:6px;color:#ffc107;font-size:13px;display:flex;align-items:center;gap:10px;';
+                        infoBanner.innerHTML = '<i class="fa-solid fa-circle-info" style="font-size:16px;"></i><span>' + t('settings.installedLua.unknownInfo', 'Games showing \'Unknown Game\' were installed manually (not via LuaTools).') + '</span>';
+                        container.appendChild(infoBanner);
+                    }
+
+                    for (let i = 0; i < scripts.length; i++) {
+                        const script = scripts[i];
+                        const scriptEl = createLuaListItem(script, container);
+                        container.appendChild(scriptEl);
+                    }
+                })
+                .catch(function(err) {
+                    container.innerHTML = '<div style="padding:14px;background:#102039;border:1px solid #ff5c5c;border-radius:4px;color:#ff5c5c;">' + t('settings.installedLua.error', 'Failed to load installed Lua scripts.') + '</div>';
+                });
+        }
+
+        function createLuaListItem(script, container) {
+            const itemEl = document.createElement('div');
+            itemEl.style.cssText = 'margin-bottom:12px;padding:14px;background:rgba(11,20,30,0.8);border:1px solid rgba(102,192,244,0.3);border-radius:6px;display:flex;justify-content:space-between;align-items:center;transition:all 0.2s ease;';
+            itemEl.onmouseover = function() { this.style.borderColor = '#66c0f4'; this.style.background = 'rgba(11,20,30,0.95)'; };
+            itemEl.onmouseout = function() { this.style.borderColor = 'rgba(102,192,244,0.3)'; this.style.background = 'rgba(11,20,30,0.8)'; };
+
+            const infoDiv = document.createElement('div');
+            infoDiv.style.cssText = 'flex:1;';
+
+            const gameName = document.createElement('div');
+            gameName.style.cssText = 'font-size:15px;font-weight:600;color:#fff;margin-bottom:6px;';
+            gameName.textContent = script.gameName || 'Unknown Game (' + script.appid + ')';
+
+            if (script.isDisabled) {
+                const disabledBadge = document.createElement('span');
+                disabledBadge.style.cssText = 'margin-left:8px;padding:2px 8px;background:rgba(255,92,92,0.2);border:1px solid #ff5c5c;border-radius:4px;font-size:11px;color:#ff5c5c;font-weight:500;';
+                disabledBadge.textContent = t('settings.installedLua.disabled', 'Disabled');
+                gameName.appendChild(disabledBadge);
+            }
+
+            infoDiv.appendChild(gameName);
+
+            const detailsDiv = document.createElement('div');
+            detailsDiv.style.cssText = 'font-size:12px;color:#a9b2c3;line-height:1.6;';
+
+            if (script.modifiedDate) {
+                const dateSpan = document.createElement('div');
+                dateSpan.innerHTML = '<strong style="color:#66c0f4;">' + t('settings.installedLua.modified', 'Modified:') + '</strong> ' + script.modifiedDate;
+                detailsDiv.appendChild(dateSpan);
+            }
+
+            infoDiv.appendChild(detailsDiv);
+            itemEl.appendChild(infoDiv);
+
+            const deleteBtn = document.createElement('a');
+            deleteBtn.href = '#';
+            deleteBtn.style.cssText = 'display:flex;align-items:center;justify-content:center;width:44px;height:44px;background:rgba(255,80,80,0.12);border:2px solid rgba(255,80,80,0.35);border-radius:12px;color:#ff5050;font-size:18px;text-decoration:none;transition:all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);cursor:pointer;flex-shrink:0;';
+            deleteBtn.innerHTML = '<i class="fa-solid fa-trash"></i>';
+            deleteBtn.title = t('settings.installedLua.delete', 'Remove');
+            deleteBtn.onmouseover = function() {
+                this.style.background = 'rgba(255,80,80,0.25)';
+                this.style.borderColor = 'rgba(255,80,80,0.6)';
+                this.style.color = '#ff6b6b';
+                this.style.transform = 'translateY(-2px) scale(1.05)';
+                this.style.boxShadow = '0 6px 20px rgba(255,80,80,0.4), 0 0 0 4px rgba(255,80,80,0.1)';
+            };
+            deleteBtn.onmouseout = function() {
+                this.style.background = 'rgba(255,80,80,0.12)';
+                this.style.borderColor = 'rgba(255,80,80,0.35)';
+                this.style.color = '#ff5050';
+                this.style.transform = 'translateY(0) scale(1)';
+                this.style.boxShadow = 'none';
+            };
+
+            deleteBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (deleteBtn.dataset.busy === '1') return;
+
+                showLuaToolsConfirm(
+                    script.gameName || 'LuaTools',
+                    t('settings.installedLua.deleteConfirm', 'Are you sure you want to remove this Lua script?'),
+                    function() {
+                        // User confirmed
+                        deleteBtn.dataset.busy = '1';
+                        deleteBtn.style.opacity = '0.6';
+                        deleteBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+                        Millennium.callServerMethod('luatools', 'DeleteLuaToolsForApp', {
+                            appid: script.appid,
+                            contentScriptQuery: ''
+                        })
+                        .then(function(res) {
+                            const response = typeof res === 'string' ? JSON.parse(res) : res;
+                            if (!response || !response.success) {
+                                alert(t('settings.installedLua.deleteError', 'Failed to remove Lua script.'));
+                                deleteBtn.dataset.busy = '0';
+                                deleteBtn.style.opacity = '1';
+                                deleteBtn.innerHTML = '<span><i class="fa-solid fa-trash"></i> ' + t('settings.installedLua.delete', 'Delete') + '</span>';
+                                return;
+                            }
+
+                            // Success - remove item from list with animation
+                            itemEl.style.transition = 'all 0.3s ease';
+                            itemEl.style.opacity = '0';
+                            itemEl.style.transform = 'translateX(-20px)';
+                            setTimeout(function() {
+                                itemEl.remove();
+                                // Check if list is now empty
+                                if (container.children.length === 0) {
+                                    container.innerHTML = '<div style="padding:14px;background:#102039;border:1px solid #2a475e;border-radius:4px;color:#c7d5e0;text-align:center;">' + t('settings.installedLua.empty', 'No Lua scripts installed yet.') + '</div>';
+                                }
+                            }, 300);
+                        })
+                        .catch(function(err) {
+                            alert(t('settings.installedLua.deleteError', 'Failed to remove Lua script.') + ' ' + (err && err.message ? err.message : ''));
+                            deleteBtn.dataset.busy = '0';
+                            deleteBtn.style.opacity = '1';
+                            deleteBtn.innerHTML = '<span><i class="fa-solid fa-trash"></i> ' + t('settings.installedLua.delete', 'Delete') + '</span>';
+                        });
+                    },
+                    function() {
+                        // User cancelled - do nothing
+                    }
+                );
+            });
+
+            itemEl.appendChild(deleteBtn);
+            return itemEl;
         }
 
         function handleLoad(force) {
@@ -2071,7 +2519,7 @@
                             };
                             ispan.appendChild(img);
                             iconBtn.appendChild(ispan);
-                            iconBtn.addEventListener('click', function(e){ e.preventDefault(); backendLog('LuaTools settings button clicked'); showSettingsPopup(); });
+                            iconBtn.addEventListener('click', function(e){ e.preventDefault(); showSettingsPopup(); });
                             restartBtn.after(iconBtn);
                             window.__LuaToolsIconInserted = true;
                             backendLog('Inserted Icon button');
@@ -2419,6 +2867,7 @@
         if (document.querySelector('.luatools-loadedapps-overlay')) return;
         ensureLuaToolsAnimations();
         const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease-out;';
         overlay.className = 'luatools-loadedapps-overlay';
         overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease-out;';
         overlay.className = 'luatools-loadedapps-overlay'; // I'm not touching this one, it's fine

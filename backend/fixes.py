@@ -209,7 +209,26 @@ def _download_and_extract_fix(appid: int, download_url: str, install_path: str, 
 
         log_file_path = os.path.join(install_path, f"luatools-fix-log-{appid}.log")
         try:
+            # Read existing log to preserve previous fixes
+            existing_content = ""
+            if os.path.exists(log_file_path):
+                try:
+                    with open(log_file_path, "r", encoding="utf-8") as log_file:
+                        existing_content = log_file.read()
+                except Exception:
+                    pass
+
+            # Append new fix entry
             with open(log_file_path, "w", encoding="utf-8") as log_file:
+                # Write existing content first
+                if existing_content:
+                    log_file.write(existing_content)
+                    if not existing_content.endswith("\n"):
+                        log_file.write("\n")
+                    log_file.write("\n---\n\n")  # Separator between fixes
+
+                # Write new fix entry
+                log_file.write(f'[FIX]\n')
                 log_file.write(f'Date: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}\n')
                 log_file.write(f'Game: {game_name or f"Unknown Game ({appid})"}\n')
                 log_file.write(f"Fix Type: {fix_type}\n")
@@ -217,7 +236,9 @@ def _download_and_extract_fix(appid: int, download_url: str, install_path: str, 
                 log_file.write("Files:\n")
                 for file_path in extracted_files:
                     log_file.write(f"{file_path}\n")
-            logger.log(f"LuaTools: Created fix log at {log_file_path} with {len(extracted_files)} files")
+                log_file.write("[/FIX]\n")
+
+            logger.log(f"LuaTools: Appended fix log at {log_file_path} with {len(extracted_files)} files")
         except Exception as exc:
             logger.warn(f"LuaTools: Failed to create fix log file: {exc}")
 
@@ -290,8 +311,9 @@ def cancel_apply_fix(appid: int) -> str:
     return json.dumps({"success": True})
 
 
-def _unfix_game_worker(appid: int, install_path: str):
+def _unfix_game_worker(appid: int, install_path: str, fix_date: str = None):
     try:
+        logger.log(f"LuaTools: Starting un-fix for appid {appid}, fix_date={fix_date}")
         log_file_path = os.path.join(install_path, f"luatools-fix-log-{appid}.log")
 
         if not os.path.exists(log_file_path):
@@ -300,18 +322,58 @@ def _unfix_game_worker(appid: int, install_path: str):
 
         _set_unfix_state(appid, {"status": "removing", "progress": "Reading log file..."})
 
-        files_to_delete = []
+        files_to_delete = set()  # Use set to avoid duplicates
+        remaining_fixes = []  # Fixes to keep in the log
+
         try:
             with open(log_file_path, "r", encoding="utf-8") as handle:
+                log_content = handle.read()
+
+            # Parse multiple fixes (new format with [FIX] markers)
+            if "[FIX]" in log_content:
+                # New format with multiple fixes
+                fix_blocks = log_content.split("[FIX]")
+                for block in fix_blocks:
+                    if not block.strip():
+                        continue
+
+                    lines = block.split("\n")
+                    in_files_section = False
+                    block_date = None
+                    block_lines = []  # Store original block content
+
+                    for line in lines:
+                        line_stripped = line.strip()
+                        if line_stripped == "[/FIX]" or line_stripped == "---":
+                            break
+                        if line_stripped.startswith("Date:"):
+                            block_date = line_stripped.replace("Date:", "").strip()
+
+                        block_lines.append(line)
+
+                        if line_stripped == "Files:":
+                            in_files_section = True
+                        elif in_files_section and line_stripped:
+                            # If we're deleting a specific fix, only add files from that fix
+                            if fix_date is None or (block_date and block_date == fix_date):
+                                files_to_delete.add(line_stripped)
+
+                    # If we're deleting a specific fix, keep the others
+                    if fix_date is not None and block_date and block_date != fix_date:
+                        remaining_fixes.append("[FIX]\n" + "\n".join(block_lines) + "\n[/FIX]")
+            else:
+                # Old format (single fix without markers) - legacy support
+                # Delete all files (no individual selection possible)
+                lines = log_content.split("\n")
                 in_files_section = False
-                for line in handle:
+                for line in lines:
                     line = line.strip()
                     if line == "Files:":
                         in_files_section = True
-                        continue
-                    if in_files_section and line:
-                        files_to_delete.append(line)
-            logger.log(f"LuaTools: Found {len(files_to_delete)} files to remove from log")
+                    elif in_files_section and line:
+                        files_to_delete.add(line)
+
+            logger.log(f"LuaTools: Found {len(files_to_delete)} unique files to remove from log")
         except Exception as exc:
             logger.warn(f"LuaTools: Failed to read log file: {exc}")
             _set_unfix_state(appid, {"status": "failed", "error": f"Failed to read log file: {str(exc)}"})
@@ -331,11 +393,22 @@ def _unfix_game_worker(appid: int, install_path: str):
 
         logger.log(f"LuaTools: Deleted {deleted_count}/{len(files_to_delete)} files")
 
-        try:
-            os.remove(log_file_path)
-            logger.log(f"LuaTools: Deleted log file {log_file_path}")
-        except Exception as exc:
-            logger.warn(f"LuaTools: Failed to delete log file: {exc}")
+        # Update or delete the log file
+        if remaining_fixes:
+            # We deleted a specific fix, update the log with remaining fixes
+            try:
+                with open(log_file_path, "w", encoding="utf-8") as handle:
+                    handle.write("\n\n---\n\n".join(remaining_fixes))
+                logger.log(f"LuaTools: Updated log file, {len(remaining_fixes)} fixes remaining")
+            except Exception as exc:
+                logger.warn(f"LuaTools: Failed to update log file: {exc}")
+        else:
+            # No fixes remaining, delete the log file
+            try:
+                os.remove(log_file_path)
+                logger.log(f"LuaTools: Deleted log file {log_file_path}")
+            except Exception as exc:
+                logger.warn(f"LuaTools: Failed to delete log file: {exc}")
 
         _set_unfix_state(appid, {"status": "done", "success": True, "filesRemoved": deleted_count})
 
@@ -344,7 +417,7 @@ def _unfix_game_worker(appid: int, install_path: str):
         _set_unfix_state(appid, {"status": "failed", "error": str(exc)})
 
 
-def unfix_game(appid: int, install_path: str = "") -> str:
+def unfix_game(appid: int, install_path: str = "", fix_date: str = "") -> str:
     try:
         appid = int(appid)
     except Exception:
@@ -363,10 +436,10 @@ def unfix_game(appid: int, install_path: str = "") -> str:
     if not os.path.exists(resolved_path):
         return json.dumps({"success": False, "error": "Install path does not exist"})
 
-    logger.log(f"LuaTools: UnFixGame appid={appid}, path={resolved_path}")
+    logger.log(f"LuaTools: UnFixGame appid={appid}, path={resolved_path}, fix_date={fix_date}")
 
     _set_unfix_state(appid, {"status": "queued", "progress": "", "error": None})
-    thread = threading.Thread(target=_unfix_game_worker, args=(appid, resolved_path), daemon=True)
+    thread = threading.Thread(target=_unfix_game_worker, args=(appid, resolved_path, fix_date or None), daemon=True)
     thread.start()
 
     return json.dumps({"success": True})
@@ -382,11 +455,192 @@ def get_unfix_status(appid: int) -> str:
     return json.dumps({"success": True, "state": state})
 
 
+def get_installed_fixes() -> str:
+    """Scan all Steam library folders for games with luatools fix logs."""
+    try:
+        from steam_utils import _find_steam_path, _parse_vdf_simple
+
+        steam_path = _find_steam_path()
+        if not steam_path:
+            return json.dumps({"success": False, "error": "Could not find Steam installation path"})
+
+        library_vdf_path = os.path.join(steam_path, "config", "libraryfolders.vdf")
+        if not os.path.exists(library_vdf_path):
+            return json.dumps({"success": False, "error": "Could not find libraryfolders.vdf"})
+
+        try:
+            with open(library_vdf_path, "r", encoding="utf-8") as handle:
+                vdf_content = handle.read()
+            library_data = _parse_vdf_simple(vdf_content)
+        except Exception as exc:
+            logger.warn(f"LuaTools: Failed to parse libraryfolders.vdf: {exc}")
+            return json.dumps({"success": False, "error": "Failed to parse libraryfolders.vdf"})
+
+        library_folders = library_data.get("libraryfolders", {})
+        all_library_paths = []
+
+        for folder_data in library_folders.values():
+            if isinstance(folder_data, dict):
+                folder_path = folder_data.get("path", "")
+                if folder_path:
+                    folder_path = folder_path.replace("\\\\", "\\")
+                    all_library_paths.append(folder_path)
+
+        installed_fixes = []
+
+        for lib_path in all_library_paths:
+            steamapps_path = os.path.join(lib_path, "steamapps")
+            if not os.path.exists(steamapps_path):
+                continue
+
+            # Get all appmanifest files
+            try:
+                for filename in os.listdir(steamapps_path):
+                    if not filename.startswith("appmanifest_") or not filename.endswith(".acf"):
+                        continue
+
+                    # Extract appid from filename
+                    try:
+                        appid_str = filename.replace("appmanifest_", "").replace(".acf", "")
+                        appid = int(appid_str)
+                    except Exception:
+                        continue
+
+                    # Parse manifest to get install directory
+                    manifest_path = os.path.join(steamapps_path, filename)
+                    try:
+                        with open(manifest_path, "r", encoding="utf-8") as handle:
+                            manifest_content = handle.read()
+                        manifest_data = _parse_vdf_simple(manifest_content)
+                        app_state = manifest_data.get("AppState", {})
+                        install_dir = app_state.get("installdir", "")
+                        game_name = app_state.get("name", f"Unknown Game ({appid})")
+
+                        if not install_dir:
+                            continue
+
+                        full_install_path = os.path.join(lib_path, "steamapps", "common", install_dir)
+                        if not os.path.exists(full_install_path):
+                            continue
+
+                        # Check for luatools fix log
+                        log_file_path = os.path.join(full_install_path, f"luatools-fix-log-{appid}.log")
+                        if os.path.exists(log_file_path):
+                            # Parse the log file to get fix info (supports multiple fixes)
+                            try:
+                                with open(log_file_path, "r", encoding="utf-8") as log_handle:
+                                    log_content = log_handle.read()
+
+                                # Parse multiple fixes (new format with [FIX] markers)
+                                fixes_in_log = []
+                                if "[FIX]" in log_content:
+                                    # New format with multiple fixes
+                                    fix_blocks = log_content.split("[FIX]")
+                                    for block in fix_blocks:
+                                        if not block.strip():
+                                            continue
+
+                                        # Extract data from this fix block
+                                        fix_data = {
+                                            "appid": appid,
+                                            "gameName": game_name,
+                                            "installPath": full_install_path,
+                                            "date": "",
+                                            "fixType": "",
+                                            "downloadUrl": "",
+                                            "filesCount": 0,
+                                            "files": []
+                                        }
+
+                                        lines = block.split("\n")
+                                        in_files_section = False
+
+                                        for line in lines:
+                                            line = line.strip()
+                                            if line == "[/FIX]" or line == "---":
+                                                break
+                                            if line.startswith("Date:"):
+                                                fix_data["date"] = line.replace("Date:", "").strip()
+                                            elif line.startswith("Game:"):
+                                                log_game_name = line.replace("Game:", "").strip()
+                                                if log_game_name and log_game_name != f"Unknown Game ({appid})":
+                                                    fix_data["gameName"] = log_game_name
+                                            elif line.startswith("Fix Type:"):
+                                                fix_data["fixType"] = line.replace("Fix Type:", "").strip()
+                                            elif line.startswith("Download URL:"):
+                                                fix_data["downloadUrl"] = line.replace("Download URL:", "").strip()
+                                            elif line == "Files:":
+                                                in_files_section = True
+                                            elif in_files_section and line:
+                                                fix_data["files"].append(line)
+
+                                        fix_data["filesCount"] = len(fix_data["files"])
+                                        if fix_data["date"]:  # Only add if it has a date (valid fix)
+                                            fixes_in_log.append(fix_data)
+                                else:
+                                    # Old format (single fix without markers) - legacy support
+                                    log_lines = log_content.split("\n")
+                                    fix_data = {
+                                        "appid": appid,
+                                        "gameName": game_name,
+                                        "installPath": full_install_path,
+                                        "date": "",
+                                        "fixType": "",
+                                        "downloadUrl": "",
+                                        "filesCount": 0,
+                                        "files": []
+                                    }
+
+                                    in_files_section = False
+                                    for line in log_lines:
+                                        line = line.strip()
+                                        if line.startswith("Date:"):
+                                            fix_data["date"] = line.replace("Date:", "").strip()
+                                        elif line.startswith("Game:"):
+                                            log_game_name = line.replace("Game:", "").strip()
+                                            if log_game_name and log_game_name != f"Unknown Game ({appid})":
+                                                fix_data["gameName"] = log_game_name
+                                        elif line.startswith("Fix Type:"):
+                                            fix_data["fixType"] = line.replace("Fix Type:", "").strip()
+                                        elif line.startswith("Download URL:"):
+                                            fix_data["downloadUrl"] = line.replace("Download URL:", "").strip()
+                                        elif line == "Files:":
+                                            in_files_section = True
+                                        elif in_files_section and line:
+                                            fix_data["files"].append(line)
+
+                                    fix_data["filesCount"] = len(fix_data["files"])
+                                    if fix_data["date"]:
+                                        fixes_in_log.append(fix_data)
+
+                                # Add all fixes found for this game
+                                for fix in fixes_in_log:
+                                    installed_fixes.append(fix)
+
+                            except Exception as exc:
+                                logger.warn(f"LuaTools: Failed to parse fix log for {appid}: {exc}")
+
+                    except Exception as exc:
+                        logger.warn(f"LuaTools: Failed to process manifest {filename}: {exc}")
+                        continue
+
+            except Exception as exc:
+                logger.warn(f"LuaTools: Failed to scan library {lib_path}: {exc}")
+                continue
+
+        return json.dumps({"success": True, "fixes": installed_fixes})
+
+    except Exception as exc:
+        logger.warn(f"LuaTools: Failed to get installed fixes: {exc}")
+        return json.dumps({"success": False, "error": str(exc)})
+
+
 __all__ = [
     "apply_game_fix",
     "cancel_apply_fix",
     "check_for_fixes",
     "get_apply_fix_status",
+    "get_installed_fixes",
     "get_unfix_status",
     "unfix_game",
 ]
