@@ -152,11 +152,12 @@ def load_api_manifest() -> List[Dict[str, Any]]:
     """Return the list of enabled APIs from api.json."""
     path = backend_path(API_JSON_FILE)
     text = read_text(path)
+
     normalized = normalize_manifest_text(text)
     if normalized and normalized != text:
         try:
             write_text(path, normalized)
-            logger.log("LuaTools: Normalized api.json to valid JSON")
+            logger.log("LuaTools: Normalized api.json")
         except Exception:
             pass
         text = normalized
@@ -168,4 +169,15 @@ def load_api_manifest() -> List[Dict[str, Any]]:
     except Exception as exc:
         logger.error(f"LuaTools: Failed to parse api.json: {exc}")
         return []
+
+
+def get_api_list(content_script_query: str = "") -> str:
+    """Return the list of enabled API names for the frontend."""
+    try:
+        apis = load_api_manifest()
+        api_names = [{"name": api.get("name", "Unknown"), "index": i} for i, api in enumerate(apis)]
+        return json.dumps({"success": True, "apis": api_names})
+    except Exception as exc:
+        logger.error(f"LuaTools: Failed to get API list: {exc}")
+        return json.dumps({"success": False, "error": str(exc), "apis": []})
 

@@ -474,7 +474,7 @@ def _download_zip_for_app(appid: int):
         _set_download_state(
             appid, {"status": "checking", "currentApi": name, "bytesRead": 0, "totalBytes": 0}
         )
-        logger.log(f"LuaTools: Trying API '{name}' -> {url}")
+        logger.log(f"LuaTools: Trying API '{name}'")
         try:
             headers = {"User-Agent": USER_AGENT}
             if _is_download_cancelled(appid):
