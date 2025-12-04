@@ -2850,7 +2850,7 @@
         function showBackupManagerUI() {
         if (document.querySelector('.luatools-backup-overlay')) return;
         
-        ensureLuaToolsAnimations();
+        ensureLuaToolsStyles();
         ensureFontAwesome();
         
         const overlay = document.createElement('div');
