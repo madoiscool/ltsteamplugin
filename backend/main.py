@@ -4,10 +4,36 @@ import shutil
 import sys
 import webbrowser
 
-from typing import Any, List
+from typing import Any
 
 import Millennium  # type: ignore
 import PluginUtils  # type: ignore
+
+from api_manifest import (
+    fetch_free_apis_now as api_fetch_free_apis_now,
+    get_init_apis_message as api_get_init_message,
+    init_apis as api_init_apis,
+    store_last_message,
+)
+from auto_update import (
+    apply_pending_update_if_any,
+    check_for_updates_now as auto_check_for_updates_now,
+    restart_steam as auto_restart_steam,
+    start_auto_update_background_check,
+)
+from config import WEBKIT_DIR_NAME, WEB_UI_ICON_FILE, WEB_UI_JS_FILE
+from downloads import (
+    cancel_add_via_luatools,
+    delete_luatools_for_app,
+    dismiss_loaded_apps,
+    get_add_status,
+    get_icon_data_url,
+    get_installed_lua_scripts,
+    has_luatools_for_app,
+    init_applist,
+    read_loaded_apps,
+    start_add_via_luatools,
+)
 
 from backup_manager import (
     create_backup,
@@ -16,101 +42,15 @@ from backup_manager import (
     open_backup_location,
     restore_backup,
 )
-from api_manifest import (
-    fetch_free_apis_now as api_fetch_free_apis_now,
-    get_init_apis_message as api_get_init_message,
-    init_apis as api_init_apis,
-    store_last_message,
-)
-from api_monitor import (
-    get_all_api_statuses,
-    get_monitor_json,
-    is_api_available,
-    record_api_request,
-)
-from activity_tracker import (
-    cancel_operation,
-    complete_operation,
-    get_dashboard_json,
-    get_operation_history,
-    start_operation,
-    update_operation,
-)
-from auto_update import (
-    apply_pending_update_if_any,
-    check_for_updates_now as auto_check_for_updates_now,
-    restart_steam as auto_restart_steam,
-    start_auto_update_background_check,
-)
-from bandwidth_limiter import (
-    disable_throttling,
-    enable_throttling,
-    get_bandwidth_settings,
-    set_bandwidth_limit,
-)
-from config import WEBKIT_DIR_NAME, WEB_UI_ICON_FILE, WEB_UI_JS_FILE
-from download_history import (
-    get_download_history_json,
-    get_download_statistics,
-    record_download_complete,
-    record_download_start,
-)
-from downloads import (
-    cancel_add_via_luatools,
-    delete_luatools_for_app,
-    dismiss_loaded_apps,
-    get_add_status,
-    get_icon_data_url,
-    has_luatools_for_app,
-    read_loaded_apps,
-    start_add_via_luatools,
-)
-from fix_conflicts import (
-    check_for_conflicts,
-    get_conflict_json,
-    record_fix_applied,
-    record_fix_removed,
-)
+
 from fixes import (
     apply_game_fix,
     cancel_apply_fix,
     check_for_fixes,
     get_apply_fix_status,
+    get_installed_fixes,
     get_unfix_status,
     unfix_game,
-)
-from game_metadata import (
-    add_or_update_game,
-    get_all_game_metadata,
-    get_favorite_games,
-    get_game_metadata,
-    get_games_by_tag,
-    get_metadata_json,
-    is_game_favorite,
-    search_games,
-    set_game_favorite,
-    set_game_notes,
-    set_game_rating,
-    set_game_tags,
-)
-from script_dependencies import (
-    check_for_circular_dependencies,
-    check_for_missing_dependencies,
-    detect_script_conflicts,
-    get_all_dependencies,
-    get_dependencies_json,
-    register_script,
-    resolve_installation_order,
-)
-from statistics import (
-    get_statistics,
-    get_statistics_json,
-    record_api_fetch,
-    record_download,
-    record_fix_applied as stats_record_fix_applied,
-    record_fix_removed as stats_record_fix_removed,
-    record_mod_installed,
-    record_mod_removed,
 )
 from utils import ensure_temp_download_dir
 from http_client import close_http_client, ensure_http_client
@@ -255,12 +195,20 @@ def CancelApplyFix(appid: int, contentScriptQuery: str = "") -> str:
     return cancel_apply_fix(appid)
 
 
-def UnFixGame(appid: int, installPath: str = "", contentScriptQuery: str = "") -> str:
-    return unfix_game(appid, installPath)
+def UnFixGame(appid: int, installPath: str = "", fixDate: str = "", contentScriptQuery: str = "") -> str:
+    return unfix_game(appid, installPath, fixDate)
 
 
 def GetUnfixStatus(appid: int, contentScriptQuery: str = "") -> str:
     return get_unfix_status(appid)
+
+
+def GetInstalledFixes(contentScriptQuery: str = "") -> str:
+    return get_installed_fixes()
+
+
+def GetInstalledLuaScripts(contentScriptQuery: str = "") -> str:
+    return get_installed_lua_scripts()
 
 
 def GetGameInstallPath(appid: int, contentScriptQuery: str = "") -> str:
@@ -425,199 +373,6 @@ def GetTranslations(contentScriptQuery: str = "", language: str = "", **kwargs: 
         logger.warn(f"LuaTools: GetTranslations failed: {exc}")
         return json.dumps({"success": False, "error": str(exc)})
 
-
-def GetStatistics(contentScriptQuery: str = "") -> str:
-    """Get plugin statistics."""
-    try:
-        return get_statistics_json()
-    except Exception as exc:
-        logger.warn(f"LuaTools: GetStatistics failed: {exc}")
-        return json.dumps({"success": False, "error": str(exc)})
-
-
-def GetDownloadHistory(limit: int = 50, contentScriptQuery: str = "") -> str:
-    """Get download history."""
-    try:
-        return get_download_history_json(limit)
-    except Exception as exc:
-        logger.warn(f"LuaTools: GetDownloadHistory failed: {exc}")
-        return json.dumps({"success": False, "error": str(exc)})
-
-
-def GetGameMetadata(appid: int = 0, contentScriptQuery: str = "") -> str:
-    """Get game metadata."""
-    try:
-        if appid > 0:
-            return get_metadata_json(appid)
-        else:
-            return get_metadata_json(None)
-    except Exception as exc:
-        logger.warn(f"LuaTools: GetGameMetadata failed: {exc}")
-        return json.dumps({"success": False, "error": str(exc)})
-
-
-def SetGameMetadata(appid: int, app_name: str = "", contentScriptQuery: str = "") -> str:
-    """Set or update game metadata."""
-    try:
-        add_or_update_game(appid, app_name)
-        return json.dumps({"success": True, "message": f"Game metadata updated for appid {appid}"})
-    except Exception as exc:
-        logger.warn(f"LuaTools: SetGameMetadata failed: {exc}")
-        return json.dumps({"success": False, "error": str(exc)})
-
-
-def SetGameTags(appid: int, tags: List[str] = None, contentScriptQuery: str = "") -> str:
-    """Set tags for a game."""
-    try:
-        if tags is None:
-            tags = []
-        set_game_tags(appid, tags)
-        return json.dumps({"success": True, "message": f"Tags set for appid {appid}"})
-    except Exception as exc:
-        logger.warn(f"LuaTools: SetGameTags failed: {exc}")
-        return json.dumps({"success": False, "error": str(exc)})
-
-
-def SetGameNotes(appid: int, notes: str = "", contentScriptQuery: str = "") -> str:
-    """Set notes for a game."""
-    try:
-        set_game_notes(appid, notes)
-        return json.dumps({"success": True, "message": f"Notes set for appid {appid}"})
-    except Exception as exc:
-        logger.warn(f"LuaTools: SetGameNotes failed: {exc}")
-        return json.dumps({"success": False, "error": str(exc)})
-
-
-def SetGameRating(appid: int, rating: int = 0, contentScriptQuery: str = "") -> str:
-    """Set rating for a game (0-5)."""
-    try:
-        set_game_rating(appid, rating)
-        return json.dumps({"success": True, "message": f"Rating set for appid {appid}"})
-    except Exception as exc:
-        logger.warn(f"LuaTools: SetGameRating failed: {exc}")
-        return json.dumps({"success": False, "error": str(exc)})
-
-
-def SetGameFavorite(appid: int, is_favorite: bool = False, contentScriptQuery: str = "") -> str:
-    """Mark a game as favorite."""
-    try:
-        set_game_favorite(appid, is_favorite)
-        return json.dumps({"success": True, "message": f"Favorite status updated for appid {appid}"})
-    except Exception as exc:
-        logger.warn(f"LuaTools: SetGameFavorite failed: {exc}")
-        return json.dumps({"success": False, "error": str(exc)})
-
-
-def GetFavoriteGames(contentScriptQuery: str = "") -> str:
-    """Get all favorite games."""
-    try:
-        favorites = get_favorite_games()
-        return json.dumps({"success": True, "games": favorites})
-    except Exception as exc:
-        logger.warn(f"LuaTools: GetFavoriteGames failed: {exc}")
-        return json.dumps({"success": False, "error": str(exc)})
-
-
-def IsGameFavorite(appid: int, contentScriptQuery: str = "") -> str:
-    """Check if a game is marked as favorite."""
-    try:
-        is_fav = is_game_favorite(appid)
-        return json.dumps({"success": True, "isFavorite": is_fav})
-    except Exception as exc:
-        logger.warn(f"LuaTools: IsGameFavorite failed: {exc}")
-        return json.dumps({"success": False, "error": str(exc)})
-
-
-def SearchGames(query: str = "", contentScriptQuery: str = "") -> str:
-    """Search games by name, tags, or notes."""
-    try:
-        results = search_games(query)
-        return json.dumps({"success": True, "results": results})
-    except Exception as exc:
-        logger.warn(f"LuaTools: SearchGames failed: {exc}")
-        return json.dumps({"success": False, "error": str(exc)})
-
-
-def GetAPIMonitor(contentScriptQuery: str = "") -> str:
-    """Get API monitoring statistics."""
-    try:
-        return get_monitor_json()
-    except Exception as exc:
-        logger.warn(f"LuaTools: GetAPIMonitor failed: {exc}")
-        return json.dumps({"success": False, "error": str(exc)})
-
-
-def CheckFixConflicts(appid: int, fix_type: str = "generic", contentScriptQuery: str = "") -> str:
-    """Check for fix conflicts before applying."""
-    try:
-        result = check_for_conflicts(appid, fix_type)
-        return json.dumps({"success": True, **result})
-    except Exception as exc:
-        logger.warn(f"LuaTools: CheckFixConflicts failed: {exc}")
-        return json.dumps({"success": False, "error": str(exc)})
-
-
-def GetScriptDependencies(script_id: str, contentScriptQuery: str = "") -> str:
-    """Get script dependency information."""
-    try:
-        return get_dependencies_json(script_id)
-    except Exception as exc:
-        logger.warn(f"LuaTools: GetScriptDependencies failed: {exc}")
-        return json.dumps({"success": False, "error": str(exc)})
-
-
-def RegisterScript(script_id: str, name: str = "", version: str = "", dependencies: List[str] = None, contentScriptQuery: str = "") -> str:
-    """Register a script with its dependencies."""
-    try:
-        if dependencies is None:
-            dependencies = []
-        register_script(script_id, name, version, dependencies)
-        return json.dumps({"success": True, "message": f"Script {script_id} registered"})
-    except Exception as exc:
-        logger.warn(f"LuaTools: RegisterScript failed: {exc}")
-        return json.dumps({"success": False, "error": str(exc)})
-
-
-def GetActivityDashboard(contentScriptQuery: str = "") -> str:
-    """Get real-time activity dashboard data."""
-    try:
-        return get_dashboard_json()
-    except Exception as exc:
-        logger.warn(f"LuaTools: GetActivityDashboard failed: {exc}")
-        return json.dumps({"success": False, "error": str(exc)})
-
-
-def GetBandwidthSettings(contentScriptQuery: str = "") -> str:
-    """Get current bandwidth limiting settings."""
-    try:
-        settings = get_bandwidth_settings()
-        return json.dumps({"success": True, "settings": settings})
-    except Exception as exc:
-        logger.warn(f"LuaTools: GetBandwidthSettings failed: {exc}")
-        return json.dumps({"success": False, "error": str(exc)})
-
-
-def SetBandwidthLimit(max_bytes_per_second: int, contentScriptQuery: str = "") -> str:
-    """Set bandwidth limit for downloads."""
-    try:
-        set_bandwidth_limit(max_bytes_per_second)
-        enable_throttling(max_bytes_per_second)
-        return json.dumps({"success": True, "message": f"Bandwidth limit set to {max_bytes_per_second} bytes/sec"})
-    except Exception as exc:
-        logger.warn(f"LuaTools: SetBandwidthLimit failed: {exc}")
-        return json.dumps({"success": False, "error": str(exc)})
-
-
-def DisableBandwidthLimit(contentScriptQuery: str = "") -> str:
-    """Disable bandwidth limiting."""
-    try:
-        disable_throttling()
-        return json.dumps({"success": True, "message": "Bandwidth limiting disabled"})
-    except Exception as exc:
-        logger.warn(f"LuaTools: DisableBandwidthLimit failed: {exc}")
-        return json.dumps({"success": False, "error": str(exc)})
-
-
 def CreateBackup(backup_name: str = "", destination: str = "", contentScriptQuery: str = "") -> str:
     """Create a backup of Steam config folders."""
     try:
@@ -711,6 +466,53 @@ class Plugin:
         close_http_client("InitApis")
 
 
-plugin = Plugin()
+class Plugin:
+    def _front_end_loaded(self):
+        _copy_webkit_files()
 
+    def _load(self):
+        logger.log(f"bootstrapping LuaTools plugin, millennium {Millennium.version()}")
+
+        try:
+            detect_steam_install_path()
+        except Exception as exc:
+            logger.warn(f"LuaTools: steam path detection failed: {exc}")
+
+        ensure_http_client("InitApis")
+        ensure_temp_download_dir()
+
+        try:
+            message = apply_pending_update_if_any()
+            if message:
+                store_last_message(message)
+        except Exception as exc:
+            logger.warn(f"AutoUpdate: apply pending failed: {exc}")
+
+        try:
+            init_applist()
+        except Exception as exc:
+            logger.warn(f"LuaTools: Applist initialization failed: {exc}")
+
+        _copy_webkit_files()
+        _inject_webkit_files()
+
+        try:
+            result = InitApis("boot")
+            logger.log(f"InitApis (boot) return: {result}")
+        except Exception as exc:
+            logger.error(f"InitApis (boot) failed: {exc}")
+
+        try:
+            start_auto_update_background_check()
+        except Exception as exc:
+            logger.warn(f"AutoUpdate: start background check failed: {exc}")
+
+        Millennium.ready()
+
+    def _unload(self):
+        logger.log("unloading")
+        close_http_client("InitApis")
+
+
+plugin = Plugin()
 

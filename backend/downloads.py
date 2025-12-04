@@ -24,12 +24,27 @@ from config import (
 from http_client import ensure_http_client
 from logger import logger
 from paths import backend_path, public_path
-from statistics import record_download as stats_record_download
 from steam_utils import detect_steam_install_path, has_lua_for_app
 from utils import count_apis, ensure_temp_download_dir, normalize_manifest_text, read_text, write_text
 
 DOWNLOAD_STATE: Dict[int, Dict[str, any]] = {}
 DOWNLOAD_LOCK = threading.Lock()
+
+# Cache for app names to avoid repeated API calls
+APP_NAME_CACHE: Dict[int, str] = {}
+APP_NAME_CACHE_LOCK = threading.Lock()
+
+# Rate limiting for Steam API calls
+LAST_API_CALL_TIME = 0
+API_CALL_MIN_INTERVAL = 0.3  # 300ms between calls to avoid 429 errors
+
+# In-memory applist for fallback app name lookup
+APPLIST_DATA: Dict[int, str] = {}
+APPLIST_LOADED = False
+APPLIST_LOCK = threading.Lock()
+APPLIST_FILE_NAME = "all-appids.json"
+APPLIST_URL = "https://applist.morrenus.xyz/"
+APPLIST_DOWNLOAD_TIMEOUT = 300  # 5 minutes for large file
 
 
 def _set_download_state(appid: int, update: dict) -> None:
@@ -53,6 +68,38 @@ def _appid_log_path() -> str:
 
 
 def _fetch_app_name(appid: int) -> str:
+    """Fetch app name with rate limiting and caching.
+    
+    Fallback order:
+    1. In-memory cache
+    2. Applist file (in-memory) - checked before web requests
+    3. Steam API (web request as final resort)
+    """
+    global LAST_API_CALL_TIME
+
+    # Check cache first
+    with APP_NAME_CACHE_LOCK:
+        if appid in APP_NAME_CACHE:
+            cached = APP_NAME_CACHE[appid]
+            if cached:  # Only return if not empty
+                return cached
+
+    # Check applist file before making web requests
+    applist_name = _get_app_name_from_applist(appid)
+    if applist_name:
+        # Cache the result from applist
+        with APP_NAME_CACHE_LOCK:
+            APP_NAME_CACHE[appid] = applist_name
+        return applist_name
+
+    # Steam API as final resort (web request)
+    # Rate limiting: wait if needed
+    with APP_NAME_CACHE_LOCK:
+        time_since_last_call = time.time() - LAST_API_CALL_TIME
+        if time_since_last_call < API_CALL_MIN_INTERVAL:
+            time.sleep(API_CALL_MIN_INTERVAL - time_since_last_call)
+        LAST_API_CALL_TIME = time.time()
+
     client = ensure_http_client("LuaTools: _fetch_app_name")
     try:
         url = f"https://store.steampowered.com/api/appdetails?appids={appid}"
@@ -64,9 +111,17 @@ def _fetch_app_name(appid: int) -> str:
             inner = entry.get("data") or {}
             name = inner.get("name")
             if isinstance(name, str) and name.strip():
-                return name.strip()
+                name = name.strip()
+                # Cache the result
+                with APP_NAME_CACHE_LOCK:
+                    APP_NAME_CACHE[appid] = name
+                return name
     except Exception as exc:
         logger.warn(f"LuaTools: _fetch_app_name failed for {appid}: {exc}")
+
+    # Cache empty result to avoid repeated failed attempts
+    with APP_NAME_CACHE_LOCK:
+        APP_NAME_CACHE[appid] = ""
     return ""
 
 
@@ -112,18 +167,186 @@ def _log_appid_event(action: str, appid: int, name: str) -> None:
         logger.warn(f"LuaTools: _log_appid_event failed: {exc}")
 
 
-def _get_loaded_app_name(appid: int) -> str:
+def _preload_app_names_cache() -> None:
+    """Pre-load all app names from loaded_apps, appidlogs, and applist files into memory cache."""
+    # First, load from appidlogs.txt (historical records)
+    try:
+        log_path = _appid_log_path()
+        if os.path.exists(log_path):
+            with open(log_path, "r", encoding="utf-8") as handle:
+                for line in handle.read().splitlines():
+                    # Format: [ACTION - API_NAME] appid - name - timestamp
+                    # Example: [ADDED - Sadie] 945360 - Among Us - 2024-01-15 14:05:04
+                    # Or: [REMOVED] appid - name - timestamp
+                    if "]" in line and " - " in line:
+                        try:
+                            # Extract content after the first ']'
+                            parts = line.split("]", 1)
+                            if len(parts) < 2:
+                                continue
+
+                            content = parts[1].strip()
+                            # Split by " - " to get: appid, name, timestamp (max 3 parts)
+                            content_parts = content.split(" - ", 2)
+
+                            if len(content_parts) >= 2:
+                                appid_str = content_parts[0].strip()
+                                name = content_parts[1].strip()
+
+                                # Try to parse appid
+                                appid = int(appid_str)
+
+                                # Skip "Unknown Game" or "UNKNOWN" entries
+                                if name and not name.startswith("Unknown") and not name.startswith("UNKNOWN"):
+                                    with APP_NAME_CACHE_LOCK:
+                                        APP_NAME_CACHE[appid] = name
+                        except (ValueError, IndexError):
+                            continue
+    except Exception as exc:
+        logger.warn(f"LuaTools: _preload_app_names_cache from logs failed: {exc}")
+
+    # Then, load from loaded_apps.txt (current state - overrides log if present)
     try:
         path = _loaded_apps_path()
-        if not os.path.exists(path):
-            return ""
-        with open(path, "r", encoding="utf-8") as handle:
-            for line in handle.read().splitlines():
-                if line.startswith(f"{appid}:"):
-                    return line.split(":", 1)[1].strip()
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as handle:
+                for line in handle.read().splitlines():
+                    if ":" in line:
+                        parts = line.split(":", 1)
+                        try:
+                            appid = int(parts[0].strip())
+                            name = parts[1].strip()
+                            if name:
+                                with APP_NAME_CACHE_LOCK:
+                                    APP_NAME_CACHE[appid] = name
+                        except (ValueError, IndexError):
+                            continue
+    except Exception as exc:
+        logger.warn(f"LuaTools: _preload_app_names_cache from loaded_apps failed: {exc}")
+    
+    # Finally, load from applist file (as fallback source - doesn't override existing cache)
+    # This ensures applist is available for lookups without web requests
+    try:
+        _load_applist_into_memory()
+    except Exception as exc:
+        logger.warn(f"LuaTools: _preload_app_names_cache from applist failed: {exc}")
+
+
+def _get_loaded_app_name(appid: int) -> str:
+    """Get app name from loadedappids.txt, with applist as fallback."""
+    try:
+        path = _loaded_apps_path()
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as handle:
+                for line in handle.read().splitlines():
+                    if line.startswith(f"{appid}:"):
+                        name = line.split(":", 1)[1].strip()
+                        if name:
+                            return name
     except Exception:
-        return ""
-    return ""
+        pass
+    
+    # Fallback to applist if not found in loadedappids.txt
+    return _get_app_name_from_applist(appid)
+
+
+def _applist_file_path() -> str:
+    """Get the path to the applist JSON file."""
+    temp_dir = ensure_temp_download_dir()
+    return os.path.join(temp_dir, APPLIST_FILE_NAME)
+
+
+def _load_applist_into_memory() -> None:
+    """Load the applist JSON file into memory for fast lookups."""
+    global APPLIST_DATA, APPLIST_LOADED
+    
+    with APPLIST_LOCK:
+        if APPLIST_LOADED:
+            return
+        
+        file_path = _applist_file_path()
+        if not os.path.exists(file_path):
+            logger.log("LuaTools: Applist file not found, skipping load")
+            APPLIST_LOADED = True  # Mark as loaded to avoid repeated checks
+            return
+        
+        try:
+            logger.log("LuaTools: Loading applist into memory...")
+            with open(file_path, "r", encoding="utf-8") as handle:
+                data = json.load(handle)
+            
+            if isinstance(data, list):
+                count = 0
+                for entry in data:
+                    if isinstance(entry, dict):
+                        appid = entry.get("appid")
+                        name = entry.get("name")
+                        if appid and name and isinstance(name, str) and name.strip():
+                            APPLIST_DATA[int(appid)] = name.strip()
+                            count += 1
+                logger.log(f"LuaTools: Loaded {count} app names from applist into memory")
+            else:
+                logger.warn("LuaTools: Applist file has invalid format (expected array)")
+            
+            APPLIST_LOADED = True
+        except Exception as exc:
+            logger.warn(f"LuaTools: Failed to load applist into memory: {exc}")
+            APPLIST_LOADED = True  # Mark as loaded to avoid repeated failed attempts
+
+
+def _get_app_name_from_applist(appid: int) -> str:
+    """Get app name from in-memory applist."""
+    global APPLIST_DATA, APPLIST_LOADED
+    
+    # Ensure applist is loaded
+    if not APPLIST_LOADED:
+        _load_applist_into_memory()
+    
+    with APPLIST_LOCK:
+        return APPLIST_DATA.get(int(appid), "")
+
+
+def _ensure_applist_file() -> None:
+    """Download the applist file if it doesn't exist."""
+    file_path = _applist_file_path()
+    
+    if os.path.exists(file_path):
+        logger.log("LuaTools: Applist file already exists, skipping download")
+        return
+    
+    logger.log("LuaTools: Applist file not found, downloading...")
+    client = ensure_http_client("LuaTools: DownloadApplist")
+    
+    try:
+        resp = client.get(APPLIST_URL, follow_redirects=True, timeout=APPLIST_DOWNLOAD_TIMEOUT)
+        resp.raise_for_status()
+        
+        # Validate JSON format before saving
+        try:
+            data = resp.json()
+            if not isinstance(data, list):
+                logger.warn("LuaTools: Downloaded applist has invalid format (expected array)")
+                return
+        except json.JSONDecodeError as exc:
+            logger.warn(f"LuaTools: Downloaded applist is not valid JSON: {exc}")
+            return
+        
+        # Save to file
+        with open(file_path, "w", encoding="utf-8") as handle:
+            json.dump(data, handle)
+        
+        logger.log(f"LuaTools: Successfully downloaded and saved applist file ({len(data)} entries)")
+    except Exception as exc:
+        logger.warn(f"LuaTools: Failed to download applist file: {exc}")
+
+
+def init_applist() -> None:
+    """Initialize the applist system: download if needed, then load into memory."""
+    try:
+        _ensure_applist_file()
+        _load_applist_into_memory()
+    except Exception as exc:
+        logger.warn(f"LuaTools: Applist initialization failed: {exc}")
 
 
 def fetch_app_name(appid: int) -> str:
@@ -328,14 +551,6 @@ def _download_zip_for_app(appid: int):
                         _log_appid_event(f"ADDED - {name}", appid, fetched_name)
                     except Exception:
                         pass
-                    
-                    # Track download statistics
-                    try:
-                        file_size = os.path.getsize(dest_path) if os.path.exists(dest_path) else 0
-                        stats_record_download(appid, file_size)
-                    except Exception as stats_err:
-                        logger.warn(f"LuaTools: Failed to record download stats: {stats_err}")
-                    
                     _set_download_state(appid, {"status": "done", "success": True, "api": name})
                     return
                 except Exception as install_exc:
@@ -476,7 +691,6 @@ def has_luatools_for_app(appid: int) -> str:
     except Exception:
         return json.dumps({"success": False, "error": "Invalid appid"})
     exists = has_lua_for_app(appid)
-    logger.log(f"LuaTools: HasLuaToolsForApp appid={appid} -> {exists}")
     return json.dumps({"success": True, "exists": exists})
 
 
@@ -495,15 +709,106 @@ def cancel_add_via_luatools(appid: int) -> str:
     return json.dumps({"success": True})
 
 
+def get_installed_lua_scripts() -> str:
+    """Get list of all installed Lua scripts from stplug-in directory."""
+    try:
+        # Pre-load app names cache from file to avoid API calls
+        _preload_app_names_cache()
+
+        base_path = detect_steam_install_path() or Millennium.steam_path()
+        if not base_path:
+            return json.dumps({"success": False, "error": "Could not find Steam installation path"})
+
+        target_dir = os.path.join(base_path, "config", "stplug-in")
+        if not os.path.exists(target_dir):
+            return json.dumps({"success": True, "scripts": []})
+
+        installed_scripts = []
+
+        try:
+            for filename in os.listdir(target_dir):
+                # Match both enabled (.lua) and disabled (.lua.disabled) scripts
+                if filename.endswith(".lua") or filename.endswith(".lua.disabled"):
+                    try:
+                        # Extract appid from filename
+                        appid_str = filename.replace(".lua.disabled", "").replace(".lua", "")
+                        appid = int(appid_str)
+
+                        # Check if it's disabled
+                        is_disabled = filename.endswith(".lua.disabled")
+
+                        # Try to get game name from cache (no API calls during listing)
+                        game_name = ""
+                        with APP_NAME_CACHE_LOCK:
+                            game_name = APP_NAME_CACHE.get(appid, "")
+
+                        # Fallback to loaded_apps file if not in cache
+                        if not game_name:
+                            game_name = _get_loaded_app_name(appid)
+
+                        # Fallback to applist if still not found (no web request)
+                        # Note: _get_loaded_app_name already checks applist, but check again here for clarity
+                        if not game_name:
+                            game_name = _get_app_name_from_applist(appid)
+
+                        # Only use "Unknown Game" as last resort - don't fetch from API
+                        if not game_name:
+                            game_name = f"Unknown Game ({appid})"
+
+                        # Get file stats
+                        file_path = os.path.join(target_dir, filename)
+                        file_stat = os.stat(file_path)
+                        file_size = file_stat.st_size
+
+                        # Format date
+                        import datetime
+                        modified_time = datetime.datetime.fromtimestamp(file_stat.st_mtime)
+                        formatted_date = modified_time.strftime("%Y-%m-%d %H:%M:%S")
+
+                        script_info = {
+                            "appid": appid,
+                            "gameName": game_name,
+                            "filename": filename,
+                            "isDisabled": is_disabled,
+                            "fileSize": file_size,
+                            "modifiedDate": formatted_date,
+                            "path": file_path
+                        }
+
+                        installed_scripts.append(script_info)
+
+                    except ValueError:
+                        # Not a numeric filename, skip
+                        continue
+                    except Exception as exc:
+                        logger.warn(f"LuaTools: Failed to process Lua file {filename}: {exc}")
+                        continue
+
+        except Exception as exc:
+            logger.warn(f"LuaTools: Failed to scan stplug-in directory: {exc}")
+            return json.dumps({"success": False, "error": f"Failed to scan directory: {str(exc)}"})
+
+        # Sort by appid
+        installed_scripts.sort(key=lambda x: x["appid"])
+
+        return json.dumps({"success": True, "scripts": installed_scripts})
+
+    except Exception as exc:
+        logger.warn(f"LuaTools: Failed to get installed Lua scripts: {exc}")
+        return json.dumps({"success": False, "error": str(exc)})
+
+
 __all__ = [
+    "cancel_add_via_luatools",
     "delete_luatools_for_app",
     "dismiss_loaded_apps",
+    "fetch_app_name",
     "get_add_status",
     "get_icon_data_url",
+    "get_installed_lua_scripts",
     "has_luatools_for_app",
+    "init_applist",
     "read_loaded_apps",
     "start_add_via_luatools",
-    "fetch_app_name",
-    "cancel_add_via_luatools",
 ]
 

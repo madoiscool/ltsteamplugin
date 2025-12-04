@@ -1,0 +1,163 @@
+{
+  "_meta": {
+    "code": "ar",
+    "name": "Arabic",
+    "nativeName": "العربية",
+    "credits": "تم تعريب الأداة بواسطة مجتمع [PolarCommunity](https://discord.gg/plr)"
+  },
+  "strings": {
+    "Add via LuaTools": "إضافة اللعبة للمكتبة",
+    "Advanced": "مزايا أخرى",
+    "All-In-One Fixes": "إصلاحات شاملة (الكل في واحد)",
+    "Apply": "تطبيق",
+    "Applying {fix}": "جاري تطبيق {fix}",
+    "Are you sure you want to un-fix? This will remove fix files and verify game files.": "هل أنت متأكد من إزالة الإصلاح؟ سيؤدي هذا الخيار إلى إزالة ملفات الإصلاح كاملة وإستعادة ملفات اللعبة الأصلية!",
+    "Are you sure?": "هل أنت متأكد؟",
+    "Back": "العودة",
+    "Cancel": "إلغاء",
+    "Cancellation failed": "فشل الإلغاء",
+    "Cancelled": "تم الإلغاء",
+    "Cancelled by user": "تم الإلغاء بواسطتك",
+    "Cancelled: {reason}": "تم الإلغاء بسبب: {reason}",
+    "Cancelling...": "جاري الإلغاء...",
+    "Check for updates": "التحقق من التحديثات",
+    "Checking availability…": "جاري التحقق من التوفر…",
+    "Checking generic fix...": "جاري التحقق من الإصلاح العام ...",
+    "Checking online-fix...": "جاري التحقق من إصلاح الأونلاين...",
+    "Close": "إغلاق",
+    "Confirm": "تأكيد",
+    "Discord": "الديسكورد",
+    "Dismiss": "رفض",
+    "Downloading...": "جاري التنزيل...",
+    "Downloading: {percent}%": "جاري التنزيل: {percent}%",
+    "Downloading…": "جاري التنزيل…",
+    "Error applying fix": "خطأ في تطبيق الإصلاح",
+    "Error checking for fixes": "تعذر التحقق من الإصلاحات",
+    "Error starting Online Fix": "خطأ في تشغيل إصلاح الأونلاين",
+    "Error starting un-fix": "تعذر في بدء إزالة الإصلاح",
+    "Error! Code: {code}": "خطأ! في الرمز: {code}",
+    "Extracting to game folder...": "جاري الأستخراج إلى ملف اللعبة...",
+    "Failed": "فشل",
+    "Failed to cancel fix download": "فشل إلغاء تنزيل الإصلاح",
+    "Failed to check for fixes.": "فشل التحقق من الإصلاحات!",
+    "Failed to load free APIs.": "فشل تحيث الواجهة.",
+    "Failed to start fix download": "فشل بدء تنزيل الإصلاح",
+    "Failed to start un-fix": "فشل في بدء إزالة الإصلاح",
+    "Failed: {error}": "فشل بسبب: {error}",
+    "Fetch Free API's": "تحديث الداتا",
+    "Fetching game name...": "جاري معرفة اسم اللعبة...",
+    "Finishing…": "جاري الإنهاء…",
+    "Fixes Menu": "قائمة الإصلاحات",
+    "Game added!": "تم إضافة اللعبة، فضلًا أعد تشغيل ستيم!",
+    "Game folder": "ملف اللعبة",
+    "Game install path not found": "لم يتم العثور على مسار تثبيت اللعبة",
+    "Generic Fix": "إصلاح عام",
+    "Generic fix found!": "تم العثور على إصلاح عام!",
+    "Hide": "إخفاء",
+    "Installing…": "جاري التثبيت…",
+    "Join the Discord!": "انضم إلى مجتمع الديسكورد!",
+    "Left click to install, Right click for SteamDB": "الزر الأيسر بالماوس للتحميل، الزر الأيمن بالماوس يعرض التفاصيل على SteamDB",
+    "Loaded free APIs: {count}": "تم تحديث الواجهة:  {count}",
+    "Loading fixes...": "جاري تحميل الإصلاحات...",
+    "Look for Fixes": "البحث عن الإصلاحات",
+    "LuaTools backend unavailable": "الواجهة غير متوفرة",
+    "LuaTools · AIO Fixes Menu": "LuaTools · قائمة إصلاحات AIO",
+    "LuaTools · Added Games": "LuaTools · الألعاب المضافة",
+    "LuaTools · Fixes Menu": "LuaTools · قائمة الإصلاحات",
+    "LuaTools · Menu": "LuaTools · القائمة",
+    "LuaTools · {api}": "LuaTools · {api}",
+    "Manage Game": "إدارة اللعبة",
+    "No games found.": "لم يتم العثور على ألعاب!",
+    "No generic fix": "لا يوجد إصلاح عام!",
+    "No online-fix": "لا يوجد إصلاح للأونلاين!",
+    "No updates available.": "لا توجد تحديثات متاحة!",
+    "Not found": "غير موجود",
+    "Online Fix": "إصلاح الأونلاين",
+    "Online Fix (Unsteam)": "إصلاح الأونلاين من خارج ستيم",
+    "Online-fix found!": "تم العثور على إصلاح الأونلاين!",
+    "Only possible thanks to {name} 💜": "شكر خاص لـ {name} 💜",
+    "Processing package…": "جاري معالجة الحزمة…",
+    "Remove via LuaTools": "إزالة من المكتبة",
+    "Removed {count} files. Running Steam verification...": "تمت إزالة {count} الملفات. جاري إعادة التحقق من ملفات اللعبة...",
+    "Removing fix files...": "جاري إزالة ملفات الإصلاح...",
+    "Restart Steam": "ريستارت ستيم",
+    "Restart Steam now?": "إعادة تشغيل ستيم الآن؟",
+    "Settings": "الإعدادات",
+    "Un-Fix (verify game)": "إزالة الإصلاح (التحقق من اللعبة)",
+    "Un-Fixing game": "جاري إزالة إصلاح اللعبة",
+    "Unknown Game": "لعبة غير معروفة",
+    "Unknown error": "خطأ غير معروف",
+    "Working…": "جاري العمل…",
+    "common.alert.ok": "موافق",
+    "common.error.unsupportedOption": "نوع الخيار غير مدعوم: {type}",
+    "common.status.error": "خطأ",
+    "common.status.loading": "جاري التحميل...",
+    "common.status.success": "نجح",
+    "common.translationMissing": "الترجمة مفقودة",
+    "menu.advancedLabel": "التحديثات",
+    "menu.checkForUpdates": "التحقق من التحديثات",
+    "menu.discord": "ديسكورد",
+    "menu.error.getPath": "خطأ في الحصول على مسار اللعبة",
+    "menu.error.noAppId": "لا يوجد معرف للعبة حتى الآن",
+    "menu.error.noInstall": "اللعبة غير مثبتة",
+    "menu.error.notInstalled": "اللعبة غير مثبتة! أضف وقم بتثبيتها أولاً :D",
+    "menu.fetchFreeApis": "تحديث الواجهة",
+    "menu.fixesMenu": "إصلاح الأونلاين",
+    "menu.joinDiscordLabel": "انضم إلى مجتمع الديسكورد!",
+    "menu.manageGameLabel": "إدارة اللعبة",
+    "menu.remove.confirm": "هل أنت متأكد من حذف اللعبة من المكتبة؟",
+    "menu.remove.failure": "فشل إزالة اللعبة من المكتبة",
+    "menu.remove.success": "تم حذف اللعبة من المكتبة بنجاح!",
+    "menu.removeLuaTools": "إزالة من المكتبة",
+    "menu.settings": "الإعدادات",
+    "menu.title": "LuaTools · القائمة",
+    "settings.close": "إغلاق",
+    "settings.donateKeys.description": "التبرع بمافتيح فك حماية الألعاب!",
+    "settings.donateKeys.label": "تبرع بالمفاتيح",
+    "settings.donateKeys.no": "لا",
+    "settings.donateKeys.yes": "نعم",
+    "settings.empty": "لا توجد إعدادات متاحة!",
+    "settings.error": "فشل تحميل الإعدادات!",
+    "settings.general": "عام",
+    "settings.generalDescription": "وصف الإعدادات العامة",
+    "settings.installedFixes.title": "الإصلاحات المثبتة",
+    "settings.installedFixes.empty": "لا توجد إصلاحات مثبتة بعد.",
+    "settings.installedFixes.loading": "جارٍ البحث عن الإصلاحات المثبتة...",
+    "settings.installedFixes.error": "فشل تحميل الإصلاحات المثبتة.",
+    "settings.installedFixes.delete": "حذف",
+    "settings.installedFixes.deleteConfirm": "هل أنت متأكد من أنك تريد إزالة هذا الإصلاح؟ سيتم حذف ملفات الإصلاح وتشغيل التحقق من Steam.",
+    "settings.installedFixes.deleting": "جارٍ إزالة الإصلاح...",
+    "settings.installedFixes.deleteSuccess": "تم إزالة الإصلاح بنجاح!",
+    "settings.installedFixes.deleteError": "فشل إزالة الإصلاح.",
+    "settings.installedFixes.date": "تاريخ التثبيت:",
+    "settings.installedFixes.type": "النوع:",
+    "settings.installedFixes.files": "{count} ملف",
+    "settings.installedLua.title": "الألعاب عبر LuaTools",
+    "settings.installedLua.empty": "لا توجد سكريبتات Lua مثبتة بعد.",
+    "settings.installedLua.loading": "جارٍ البحث عن سكريبتات Lua المثبتة...",
+    "settings.installedLua.error": "فشل تحميل سكريبتات Lua المثبتة.",
+    "settings.installedLua.delete": "إزالة",
+    "settings.installedLua.deleteConfirm": "إزالة عبر LuaTools لهذه اللعبة؟",
+    "settings.installedLua.deleting": "جارٍ الإزالة عبر LuaTools...",
+    "settings.installedLua.deleteSuccess": "تمت الإزالة عبر LuaTools بنجاح!",
+    "settings.installedLua.deleteError": "فشلت الإزالة عبر LuaTools.",
+    "settings.installedLua.modified": "تاريخ التعديل:",
+    "settings.installedLua.disabled": "معطل",
+    "settings.installedLua.unknownInfo": "الألعاب التي تظهر 'لعبة غير معروفة' تم تثبيتها من مصادر خارجية (وليس عبر LuaTools).",
+    "settings.language.description": "إختر لغة العرض",
+    "settings.language.label": "اللغة",
+    "settings.language.option.en": "الإنجليزية - English",
+    "settings.language.option.pt-BR": "البرتغالية - Portuguese",
+    "settings.loading": "جاري التحميل...",
+    "settings.noChanges": "لا توجد تغييرات للحفظ!",
+    "settings.refresh": "تحديث",
+    "settings.refreshing": "جاري التحديث...",
+    "settings.save": "حفظ الإعدادات",
+    "settings.saveError": "فشل حفظ الإعدادات.",
+    "settings.saveSuccess": "تم حفظ الإعدادات بنجاح!",
+    "settings.saving": "جاري الحفظ...",
+    "settings.title": "LuaTools · الإعدادات",
+    "settings.unsaved": "لم يتم الحفظ !",
+    "{fix} applied successfully!": "تم تطبيق {fix} بنجاح!"
+  }
+}
