@@ -11,6 +11,7 @@ import PluginUtils  # type: ignore
 
 from api_manifest import (
     fetch_free_apis_now as api_fetch_free_apis_now,
+    get_api_list as api_get_api_list,
     get_init_apis_message as api_get_init_message,
     init_apis as api_init_apis,
     store_last_message,
@@ -148,6 +149,10 @@ def StartAddViaLuaTools(appid: int, contentScriptQuery: str = "") -> str:
 
 def GetAddViaLuaToolsStatus(appid: int, contentScriptQuery: str = "") -> str:
     return get_add_status(appid)
+
+
+def GetApiList(contentScriptQuery: str = "") -> str:
+    return api_get_api_list(contentScriptQuery)
 
 
 def CancelAddViaLuaTools(appid: int, contentScriptQuery: str = "") -> str:

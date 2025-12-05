@@ -442,7 +442,7 @@
         if (document.querySelector('.luatools-overlay')) return;
         // Close settings popup if open so modals don't overlap
         try { const s = document.querySelector('.luatools-settings-overlay'); if (s) s.remove(); } catch(_) {}
-        
+
         ensureLuaToolsStyles();
         const overlay = document.createElement('div');
         overlay.className = 'luatools-overlay';
@@ -450,33 +450,94 @@
         overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;';
 
         const modal = document.createElement('div');
-        modal.style.cssText = 'background:linear-gradient(135deg, #1b2838 0%, #2a475e 100%);color:#fff;border:2px solid #66c0f4;border-radius:8px;min-width:400px;max-width:560px;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px rgba(102,192,244,0.3);animation:slideUp 0.1s ease-out;';
+        modal.style.cssText = 'background:linear-gradient(135deg, #1b2838 0%, #2a475e 100%);color:#fff;border:2px solid #66c0f4;border-radius:8px;min-width:450px;max-width:600px;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px rgba(102,192,244,0.3);animation:slideUp 0.1s ease-out;';
 
         const title = document.createElement('div');
-        title.style.cssText = 'font-size:22px;color:#fff;margin-bottom:16px;font-weight:700;text-shadow:0 2px 8px rgba(102,192,244,0.4);background:linear-gradient(135deg, #66c0f4 0%, #a4d7f5 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;';
+        title.style.cssText = 'font-size:22px;color:#fff;margin-bottom:20px;font-weight:700;text-shadow:0 2px 8px rgba(102,192,244,0.4);background:linear-gradient(135deg, #66c0f4 0%, #a4d7f5 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;';
         title.className = 'luatools-title';
         title.textContent = 'LuaTools';
 
+        // API list container
+        const apiListContainer = document.createElement('div');
+        apiListContainer.className = 'luatools-api-list';
+        apiListContainer.style.cssText = 'margin-bottom:16px;';
+
+        // Placeholder while loading APIs
+        const loadingItem = document.createElement('div');
+        loadingItem.style.cssText = 'text-align:center;padding:10px;color:#8f98a0;font-size:13px;';
+        loadingItem.textContent = lt('Loading APIs...');
+        apiListContainer.appendChild(loadingItem);
+
+        // Load APIs dynamically from backend
+        if (typeof Millennium !== 'undefined' && typeof Millennium.callServerMethod === 'function') {
+            Millennium.callServerMethod('luatools', 'GetApiList', { contentScriptQuery: '' }).then(function(res){
+                try {
+                    const payload = typeof res === 'string' ? JSON.parse(res) : res;
+                    if (payload && payload.success && payload.apis && Array.isArray(payload.apis)) {
+                        // Clear loading message
+                        apiListContainer.innerHTML = '';
+
+                        // Create API items
+                        payload.apis.forEach((api, index) => {
+                            const apiItem = document.createElement('div');
+                            apiItem.className = `luatools-api-item luatools-api-${index}`;
+                            apiItem.setAttribute('data-api-name', api.name);
+                            apiItem.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;margin-bottom:8px;background:rgba(42,71,94,0.3);border:1px solid rgba(102,192,244,0.2);border-radius:6px;transition:all 0.2s;';
+
+                            const apiName = document.createElement('div');
+                            apiName.className = 'luatools-api-name';
+                            apiName.style.cssText = 'font-size:14px;color:#c7d5e0;font-weight:500;';
+                            apiName.textContent = api.name;
+
+                            const apiStatus = document.createElement('div');
+                            apiStatus.className = 'luatools-api-status';
+                            apiStatus.style.cssText = 'font-size:14px;color:#8f98a0;display:flex;align-items:center;gap:6px;';
+                            apiStatus.innerHTML = '<span style="color:#8f98a0;">⏳</span><span>' + lt('Waiting…') + '</span>';
+
+                            apiItem.appendChild(apiName);
+                            apiItem.appendChild(apiStatus);
+                            apiListContainer.appendChild(apiItem);
+                        });
+                    }
+                } catch(e) {
+                    backendLog('Failed to parse API list: ' + e);
+                }
+            }).catch(function(err){
+                backendLog('Failed to load API list: ' + err);
+            });
+        }
+
         const body = document.createElement('div');
-        body.style.cssText = 'font-size:14px;line-height:1.4;margin-bottom:12px;';
+        body.style.cssText = 'font-size:14px;line-height:1.4;margin-bottom:12px;color:#8f98a0;';
         body.className = 'luatools-status';
-        body.textContent = lt('Working…');
+        body.textContent = lt('Checking availability…');
 
         const progressWrap = document.createElement('div');
-        progressWrap.style.cssText = 'background:rgba(42,71,94,0.5);height:12px;border-radius:4px;overflow:hidden;position:relative;display:none;border:1px solid rgba(102,192,244,0.3);';
+        progressWrap.style.cssText = 'background:rgba(42,71,94,0.5);height:20px;border-radius:4px;overflow:hidden;position:relative;display:none;border:1px solid rgba(102,192,244,0.3);margin-top:12px;';
         progressWrap.className = 'luatools-progress-wrap';
         const progressBar = document.createElement('div');
-        progressBar.style.cssText = 'height:100%;width:0%;background:linear-gradient(90deg, #66c0f4 0%, #a4d7f5 100%);transition:width 0.1s linear;box-shadow:0 0 10px rgba(102,192,244,0.5);';
+        progressBar.style.cssText = 'height:100%;width:0%;background:linear-gradient(90deg, #66c0f4 0%, #a4d7f5 100%);transition:width 0.3s ease;box-shadow:0 0 10px rgba(102,192,244,0.5);';
         progressBar.className = 'luatools-progress-bar';
         progressWrap.appendChild(progressBar);
 
-        const percent = document.createElement('div');
-        percent.style.cssText = 'text-align:right;color:#8f98a0;margin-top:8px;font-size:12px;display:none;';
+        const progressInfo = document.createElement('div');
+        progressInfo.style.cssText = 'display:none;margin-top:8px;font-size:12px;color:#8f98a0;';
+        progressInfo.className = 'luatools-progress-info';
+
+        const percent = document.createElement('span');
         percent.className = 'luatools-percent';
         percent.textContent = '0%';
 
+        const downloadSize = document.createElement('span');
+        downloadSize.className = 'luatools-download-size';
+        downloadSize.style.cssText = 'margin-left:12px;';
+        downloadSize.textContent = '';
+
+        progressInfo.appendChild(percent);
+        progressInfo.appendChild(downloadSize);
+
         const btnRow = document.createElement('div');
-        btnRow.style.cssText = 'margin-top:16px;display:flex;gap:8px;justify-content:flex-end;';
+        btnRow.style.cssText = 'margin-top:20px;display:flex;gap:8px;justify-content:flex-end;';
         const cancelBtn = document.createElement('a');
         cancelBtn.className = 'btnv6_blue_hoverfade btn_medium luatools-cancel-btn';
         cancelBtn.innerHTML = `<span>${lt('Cancel')}</span>`;
@@ -492,9 +553,10 @@
         btnRow.appendChild(hideBtn);
 
         modal.appendChild(title);
+        modal.appendChild(apiListContainer);
         modal.appendChild(body);
         modal.appendChild(progressWrap);
-        modal.appendChild(percent);
+        modal.appendChild(progressInfo);
         modal.appendChild(btnRow);
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
@@ -521,9 +583,9 @@
             if (hideBtn) hideBtn.innerHTML = `<span>${lt('Close')}</span>`;
             // Hide progress UI
             const wrap = overlay.querySelector('.luatools-progress-wrap');
-            const percent = overlay.querySelector('.luatools-percent');
+            const progressInfo = overlay.querySelector('.luatools-progress-info');
             if (wrap) wrap.style.display = 'none';
-            if (percent) percent.style.display = 'none';
+            if (progressInfo) progressInfo.style.display = 'none';
             // Reset run state
             runState.inProgress = false;
             runState.appid = null;
@@ -2758,6 +2820,8 @@
     // Poll backend for progress and update progress bar and text
     function startPolling(appid){
         let done = false;
+        let lastCheckedApi = null;
+        let successfulApi = null; // Track which API successfully found the file
         const timer = setInterval(() => {
             if (done) { clearInterval(timer); return; }
             try {
@@ -2765,17 +2829,91 @@
                     try {
                         const payload = typeof res === 'string' ? JSON.parse(res) : res;
                         const st = payload && payload.state ? payload.state : {};
-                        
+
                         // Try to find overlay (may or may not be visible)
                         const overlay = document.querySelector('.luatools-overlay');
                         const title = overlay ? overlay.querySelector('.luatools-title') : null;
                         const status = overlay ? overlay.querySelector('.luatools-status') : null;
                         const wrap = overlay ? overlay.querySelector('.luatools-progress-wrap') : null;
+                        const progressInfo = overlay ? overlay.querySelector('.luatools-progress-info') : null;
                         const percent = overlay ? overlay.querySelector('.luatools-percent') : null;
+                        const downloadSize = overlay ? overlay.querySelector('.luatools-download-size') : null;
                         const bar = overlay ? overlay.querySelector('.luatools-progress-bar') : null;
-                        
+
+                        // Update individual API status in the list
+                        if (overlay) {
+                            const apiItems = overlay.querySelectorAll('.luatools-api-item');
+
+                            // Track successful API when download/processing starts
+                            if ((st.status === 'downloading' || st.status === 'processing' || st.status === 'installing' || st.status === 'done') && st.currentApi && !successfulApi) {
+                                successfulApi = st.currentApi;
+
+                                // Mark all APIs: not found before successful, skipped after
+                                let foundSuccessful = false;
+                                apiItems.forEach((item) => {
+                                    const apiName = item.getAttribute('data-api-name');
+                                    const apiStatus = item.querySelector('.luatools-api-status');
+                                    if (!apiStatus) return;
+
+                                    if (apiName === successfulApi) {
+                                        foundSuccessful = true;
+                                        item.style.background = 'rgba(102,192,244,0.2)';
+                                        item.style.borderColor = 'rgba(102,192,244,0.7)';
+                                        apiStatus.innerHTML = '<span style="color:#66c0f4;font-size:16px;">✓</span><span style="color:#66c0f4;">' + lt('Found') + '</span>';
+                                    } else if (!foundSuccessful) {
+                                        // This API comes before the successful one, mark as not found
+                                        item.style.background = 'rgba(42,71,94,0.2)';
+                                        item.style.borderColor = 'rgba(102,192,244,0.1)';
+                                        apiStatus.innerHTML = '<span style="color:#8f98a0;font-size:16px;">✗</span><span style="color:#8f98a0;">' + lt('Not found') + '</span>';
+                                    } else {
+                                        // This API comes after the successful one, mark as skipped
+                                        item.style.background = 'rgba(42,71,94,0.15)';
+                                        item.style.borderColor = 'rgba(102,192,244,0.1)';
+                                        apiStatus.innerHTML = '<span style="color:#8f98a0;font-size:14px;">—</span><span style="color:#8f98a0;">' + lt('Skipped') + '</span>';
+                                    }
+                                });
+                            }
+
+                            // Mark previous API as not found if we moved to a new one (only during checking phase)
+                            if (st.status === 'checking' && st.currentApi && st.currentApi !== lastCheckedApi && lastCheckedApi) {
+                                apiItems.forEach((item) => {
+                                    const apiName = item.getAttribute('data-api-name');
+                                    const apiStatus = item.querySelector('.luatools-api-status');
+                                    if (!apiStatus) return;
+
+                                    if (apiName === lastCheckedApi) {
+                                        item.style.background = 'rgba(42,71,94,0.2)';
+                                        item.style.borderColor = 'rgba(102,192,244,0.1)';
+                                        apiStatus.innerHTML = '<span style="color:#8f98a0;font-size:16px;">✗</span><span style="color:#8f98a0;">' + lt('Not found') + '</span>';
+                                    }
+                                });
+                            }
+
+                            // Update current API status during checking
+                            if (st.status === 'checking' && st.currentApi) {
+                                apiItems.forEach((item) => {
+                                    const apiName = item.getAttribute('data-api-name');
+                                    const apiStatus = item.querySelector('.luatools-api-status');
+                                    if (!apiStatus) return;
+
+                                    if (apiName === st.currentApi) {
+                                        item.style.background = 'rgba(102,192,244,0.15)';
+                                        item.style.borderColor = 'rgba(102,192,244,0.5)';
+                                        apiStatus.innerHTML = '<span style="color:#66c0f4;animation:pulse 1.5s ease-in-out infinite;">⏳</span><span style="color:#66c0f4;">' + lt('Checking…') + '</span>';
+                                    }
+                                });
+
+                                lastCheckedApi = st.currentApi;
+                            }
+                        }
+
                         // Update UI if overlay is present
-                        if (st.currentApi && title) title.textContent = lt('LuaTools · {api}').replace('{api}', st.currentApi);
+                        if (st.status === 'checking' && st.currentApi && title) {
+                            title.textContent = lt('LuaTools · {api}').replace('{api}', st.currentApi);
+                        } else if ((st.status === 'downloading' || st.status === 'processing' || st.status === 'installing') && title) {
+                            title.textContent = 'LuaTools';
+                        }
+
                         if (status) {
                             if (st.status === 'checking') status.textContent = lt('Checking availability…');
                             if (st.status === 'downloading') status.textContent = lt('Downloading…');
@@ -2784,21 +2922,44 @@
                             if (st.status === 'done') status.textContent = lt('Finishing…');
                             if (st.status === 'failed') status.textContent = lt('Failed');
                         }
-                        if (st.status === 'downloading'){
-                            // reveal progress UI on first download tick (if overlay visible)
+                        if (st.status === 'downloading' || st.status === 'processing' || st.status === 'installing'){
+                            // reveal progress UI (if overlay visible)
                             if (wrap && wrap.style.display === 'none') wrap.style.display = 'block';
-                            if (percent && percent.style.display === 'none') percent.style.display = 'block';
+                            if (progressInfo && progressInfo.style.display === 'none') {
+                                progressInfo.style.display = 'flex';
+                                progressInfo.style.justifyContent = 'space-between';
+                            }
+
                             const total = st.totalBytes || 0; const read = st.bytesRead || 0;
                             let pct = total > 0 ? Math.floor((read/total)*100) : (read ? 1 : 0);
                             if (pct > 100) pct = 100; if (pct < 0) pct = 0;
+
+                            // Update bar and percentage
                             if (bar) bar.style.width = pct + '%';
                             if (percent) percent.textContent = pct + '%';
+
+                            // Format file sizes (only if we have size data)
+                            if (downloadSize) {
+                                if (total > 0) {
+                                    const formatBytes = (bytes) => {
+                                        if (bytes === 0) return '0 B';
+                                        const k = 1024;
+                                        const sizes = ['B', 'KB', 'MB', 'GB'];
+                                        const i = Math.floor(Math.log(bytes) / Math.log(k));
+                                        return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+                                    };
+                                    downloadSize.textContent = formatBytes(read) + ' / ' + formatBytes(total);
+                                } else {
+                                    downloadSize.textContent = '';
+                                }
+                            }
                             // Show Cancel button during download
                             const cancelBtn = overlay ? overlay.querySelector('.luatools-cancel-btn') : null;
-                            if (cancelBtn) cancelBtn.style.display = '';
+                            if (cancelBtn && st.status === 'downloading') cancelBtn.style.display = '';
                         }
                         if (st.status === 'done'){
                             // Update popup if visible
+                            if (title) title.textContent = 'LuaTools';
                             if (bar) bar.style.width = '100%';
                             if (percent) percent.textContent = '100%';
                             if (status) status.textContent = lt('Game added!');
@@ -2808,8 +2969,11 @@
                             const hideBtn = overlay ? overlay.querySelector('.luatools-hide-btn') : null;
                             if (hideBtn) hideBtn.innerHTML = '<span>' + lt('Close') + '</span>';
                             // hide progress visuals after a short beat
-                            if (wrap || percent) {
-                            setTimeout(function(){ if (wrap) wrap.style.display = 'none'; if (percent) percent.style.display = 'none'; }, 300);
+                            if (wrap || progressInfo) {
+                            setTimeout(function(){
+                                if (wrap) wrap.style.display = 'none';
+                                if (progressInfo) progressInfo.style.display = 'none';
+                            }, 300);
                             }
                             done = true; clearInterval(timer);
                             runState.inProgress = false; runState.appid = null;
@@ -2820,6 +2984,22 @@
                             }
                         }
                         if (st.status === 'failed'){
+                            // Mark all APIs as not found when failed
+                            if (overlay && !successfulApi) {
+                                const apiItems = overlay.querySelectorAll('.luatools-api-item');
+                                apiItems.forEach((item) => {
+                                    const apiStatus = item.querySelector('.luatools-api-status');
+                                    if (!apiStatus) return;
+                                    // Check if this API is still in "Waiting..." or "Checking..." state
+                                    const statusText = apiStatus.textContent || '';
+                                    if (statusText.includes('Waiting') || statusText.includes('Esperando') || statusText.includes('Checking') || statusText.includes('Verificando')) {
+                                        item.style.background = 'rgba(42,71,94,0.2)';
+                                        item.style.borderColor = 'rgba(102,192,244,0.1)';
+                                        apiStatus.innerHTML = '<span style="color:#8f98a0;font-size:16px;">✗</span><span style="color:#8f98a0;">' + lt('Not found') + '</span>';
+                                    }
+                                });
+                            }
+
                             // show error in the popup if visible
                             if (status) status.textContent = lt('Failed: {error}').replace('{error}', st.error || lt('Unknown error'));
                             // Hide Cancel button and update Hide to Close
@@ -2828,7 +3008,7 @@
                             const hideBtn = overlay ? overlay.querySelector('.luatools-hide-btn') : null;
                             if (hideBtn) hideBtn.innerHTML = '<span>' + lt('Close') + '</span>';
                             if (wrap) wrap.style.display = 'none';
-                            if (percent) percent.style.display = 'none';
+                            if (progressInfo) progressInfo.style.display = 'none';
                             done = true; clearInterval(timer);
                             runState.inProgress = false; runState.appid = null;
                         }
