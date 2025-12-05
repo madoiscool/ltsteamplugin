@@ -163,6 +163,7 @@
     "settings.saving": "Saving...",
     "settings.title": "LuaTools · Settings",
     "settings.unsaved": "Unsaved changes",
-    "{fix} applied successfully!": "{fix} applied successfully!"
+    "{fix} applied successfully!": "{fix} applied successfully!",
+    "bigpicture.mouseTip": "To use mouse mode in Steam: Guide Button + Right Joystick, click with RB"
   }
 }

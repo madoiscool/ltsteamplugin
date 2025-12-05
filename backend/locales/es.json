@@ -163,6 +163,7 @@
     "settings.installedLua.modified": "Modificado:",
     "settings.installedLua.disabled": "Deshabilitado",
     "settings.installedLua.unknownInfo": "Los juegos que muestran 'Juego desconocido' fueron instalados desde fuentes externas (no vía LuaTools).",
-    "{fix} applied successfully!": "¡{fix} aplicado correctamente!"
+    "{fix} applied successfully!": "¡{fix} aplicado correctamente!",
+    "bigpicture.mouseTip": "Para usar el modo mouse en Steam: Botón guía + Joystick derecho, clic con RB"
   }
 }
