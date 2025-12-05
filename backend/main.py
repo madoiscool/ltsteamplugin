@@ -55,6 +55,13 @@ from settings.manager import (
     get_translation_map,
 )
 from steam_utils import detect_steam_install_path, get_game_install_path_response, open_game_folder
+from achievements import (
+    get_achievements_for_app,
+    unlock_achievement,
+    lock_achievement,
+    get_all_achievements_for_app,
+    import_achievements,
+)
 
 logger = shared_logger
 
@@ -199,6 +206,152 @@ def GetUnfixStatus(appid: int, contentScriptQuery: str = "") -> str:
     return get_unfix_status(appid)
 
 
+def GetAchievementsForApp(appid: int, contentScriptQuery: str = "") -> str:
+    """Get player's unlocked achievements for an app."""
+    return get_achievements_for_app(appid)
+
+
+def UnlockAchievement(appid: int, achievementId: str = "", contentScriptQuery: str = "", **kwargs: Any) -> str:
+    """
+    Unlock an achievement for an app.
+    Parameters can be passed via kwargs or as separate arguments.
+    """
+    try:
+        # Try to get from kwargs first
+        if not achievementId and "achievementId" in kwargs:
+            achievementId = kwargs["achievementId"]
+        if not achievementId and "achievement_id" in kwargs:
+            achievementId = kwargs["achievement_id"]
+        
+        # Also check if passed as appid, achievementId from frontend
+        if not achievementId:
+            # Try to parse from contentScriptQuery or kwargs
+            payload = kwargs.get("payload") or kwargs.get("data")
+            if isinstance(payload, dict):
+                achievementId = payload.get("achievementId") or payload.get("achievement_id")
+            elif isinstance(payload, str):
+                try:
+                    payload_dict = json.loads(payload)
+                    achievementId = payload_dict.get("achievementId") or payload_dict.get("achievement_id")
+                except Exception:
+                    pass
+        
+        if not achievementId:
+            return json.dumps({"success": False, "error": "achievementId parameter required"})
+        
+        result = unlock_achievement(int(appid), str(achievementId))
+        return json.dumps(result)
+    except Exception as exc:
+        logger.warn(f"LuaTools: UnlockAchievement failed: {exc}")
+        return json.dumps({"success": False, "error": str(exc)})
+
+
+def LockAchievement(appid: int, achievementId: str = "", contentScriptQuery: str = "", **kwargs: Any) -> str:
+    """
+    Lock (remove unlock) an achievement for an app.
+    Parameters can be passed via kwargs or as separate arguments.
+    """
+    try:
+        # Try to get from kwargs first
+        if not achievementId and "achievementId" in kwargs:
+            achievementId = kwargs["achievementId"]
+        if not achievementId and "achievement_id" in kwargs:
+            achievementId = kwargs["achievement_id"]
+        
+        # Also check if passed as payload
+        if not achievementId:
+            payload = kwargs.get("payload") or kwargs.get("data")
+            if isinstance(payload, dict):
+                achievementId = payload.get("achievementId") or payload.get("achievement_id")
+            elif isinstance(payload, str):
+                try:
+                    payload_dict = json.loads(payload)
+                    achievementId = payload_dict.get("achievementId") or payload_dict.get("achievement_id")
+                except Exception:
+                    pass
+        
+        if not achievementId:
+            return json.dumps({"success": False, "error": "achievementId parameter required"})
+        
+        result = lock_achievement(int(appid), str(achievementId))
+        return json.dumps(result)
+    except Exception as exc:
+        logger.warn(f"LuaTools: LockAchievement failed: {exc}")
+        return json.dumps({"success": False, "error": str(exc)})
+
+
+def GetAllAchievementsForApp(appid: int, contentScriptQuery: str = "") -> str:
+    """Get all achievements (unlocked and locked) for an app."""
+    try:
+        result = get_all_achievements_for_app(int(appid))
+        return json.dumps(result)
+    except Exception as exc:
+        logger.warn(f"LuaTools: GetAllAchievementsForApp failed: {exc}")
+        return json.dumps({"success": False, "error": str(exc)})
+    return get_achievements_for_app(appid)
+
+
+def ImportAchievements(
+    contentScriptQuery: str = "", achievements_list: Any = None, **kwargs: Any
+) -> str:
+    """
+    Import achievements from a backup list.
+    Follows the same pattern as ApplySettingsChanges.
+    """
+    try:
+        # Debug logging
+        logger.log(f"LuaTools: ImportAchievements called with achievements_list type: {type(achievements_list)}, value: {achievements_list!r}")
+        logger.log(f"LuaTools: ImportAchievements kwargs keys: {list(kwargs.keys())}, values: {kwargs}")
+
+        # Get appid from kwargs (Millennium passes appid as named parameter)
+        appid = kwargs.get("appid", 0)
+        logger.log(f"LuaTools: Extracted appid: {appid}")
+
+        # Check if achievements_list is in kwargs instead
+        if achievements_list is None and "achievements_list" in kwargs:
+            achievements_list = kwargs["achievements_list"]
+            logger.log(f"LuaTools: Found achievements_list in kwargs")
+        elif achievements_list is None and "achievements" in kwargs:
+            achievements_list = kwargs["achievements"]
+            logger.log(f"LuaTools: Found achievements in kwargs")
+
+        # If achievements_list is a string, try to parse as JSON
+        if isinstance(achievements_list, str):
+            try:
+                parsed = json.loads(achievements_list)
+                logger.log(f"LuaTools: Parsed achievements_list JSON, type: {type(parsed)}")
+                achievements_list = parsed
+            except Exception as parse_exc:
+                logger.log(f"LuaTools: Failed to parse achievements_list as JSON: {parse_exc}")
+
+        # If achievements_list is still None, check if the entire kwargs is the data
+        if achievements_list is None and isinstance(kwargs, dict) and len(kwargs) > 1:
+            # Look for achievements in the kwargs
+            for key, value in kwargs.items():
+                if key not in ["appid", "contentScriptQuery"] and isinstance(value, list):
+                    achievements_list = value
+                    logger.log(f"LuaTools: Found achievements list in kwargs key: {key}")
+                    break
+
+        if achievements_list is None:
+            logger.log(f"LuaTools: No achievements_list found. achievements_list: {achievements_list}, kwargs: {kwargs}")
+            return json.dumps({"success": False, "error": "achievements_list parameter required"})
+
+        if not isinstance(achievements_list, list):
+            logger.log(f"LuaTools: achievements_list is not a list: {type(achievements_list)}")
+            return json.dumps({"success": False, "error": "achievements_list must be an array"})
+
+        appid = int(appid)
+        logger.log(f"LuaTools: Processing import for appid {appid} with {len(achievements_list)} achievements")
+
+        result = import_achievements(appid, achievements_list)
+        return json.dumps(result)
+
+    except Exception as exc:
+        logger.warn(f"LuaTools: ImportAchievements failed: {exc}")
+        import traceback
+        logger.warn(f"LuaTools: ImportAchievements traceback: {traceback.format_exc()}")
+        return json.dumps({"success": False, "error": str(exc)})
 def GetInstalledFixes(contentScriptQuery: str = "") -> str:
     return get_installed_fixes()
 

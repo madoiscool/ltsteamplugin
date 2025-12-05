@@ -73,6 +73,7 @@ Write-Host "`nCreating ZIP file..." -ForegroundColor Cyan
 $IncludePaths = @(
     "backend",
     "public",
+    "vendor",
     "plugin.json",
     "requirements.txt",
     "readme"

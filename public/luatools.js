@@ -15,7 +15,15 @@
         }
     }
     
-    backendLog('LuaTools script loaded');
+    try {
+        backendLog('LuaTools script loaded');
+    } catch(e) {
+        // Fallback if backendLog fails during initialization
+        if (typeof console !== 'undefined' && console.log) {
+            console.log('[LuaTools] Script loaded');
+        }
+    }
+    
     // anti-spam state
     const logState = { missingOnce: false, existsOnce: false };
     // click/run debounce state
@@ -126,6 +134,1148 @@
         } catch(err) { backendLog('LuaTools: Font Awesome injection failed: ' + err); }
     }
 
+    // Function to discover available Steam Client APIs
+    function discoverSteamClientAPIs() {
+        const discovered = [];
+        try {
+            // Check window for Steam-related objects
+            const steamObjects = ['SteamClient', 'g_SteamClient', 'Steam', 'g_Steam', 'SteamUI', 'g_SteamUI'];
+            for (let i = 0; i < steamObjects.length; i++) {
+                const objName = steamObjects[i];
+                if (typeof window[objName] !== 'undefined') {
+                    discovered.push(objName + ' exists');
+                    const obj = window[objName];
+                    if (typeof obj === 'object') {
+                        // List all properties
+                        try {
+                            const keys = Object.keys(obj);
+                            for (let j = 0; j < Math.min(keys.length, 20); j++) {
+                                const key = keys[j];
+                                if (key.toLowerCase().includes('achievement') || key.toLowerCase().includes('stats') || key.toLowerCase().includes('app')) {
+                                    discovered.push(objName + '.' + key);
+                                }
+                            }
+                        } catch(e) {}
+                    }
+                }
+            }
+            
+            // Try to find ISteamUserStats interface
+            const statsInterfaces = [
+                'ISteamUserStats',
+                'SteamClient.UserStats',
+                'SteamClient.Stats',
+                'SteamClient.Apps',
+                'window.ISteamUserStats'
+            ];
+            
+            for (let i = 0; i < statsInterfaces.length; i++) {
+                try {
+                    const path = statsInterfaces[i].split('.');
+                    let obj = window;
+                    for (let j = 0; j < path.length; j++) {
+                        obj = obj[path[j]];
+                        if (!obj) break;
+                    }
+                    if (obj && typeof obj === 'object') {
+                        discovered.push('Found: ' + statsInterfaces[i]);
+                        // List methods
+                        const methods = Object.keys(obj);
+                        for (let j = 0; j < methods.length; j++) {
+                            if (methods[j].toLowerCase().includes('achievement') || methods[j].toLowerCase().includes('get')) {
+                                discovered.push(statsInterfaces[i] + '.' + methods[j]);
+                            }
+                        }
+                    }
+                } catch(e) {}
+            }
+        } catch(err) {
+            backendLog('LuaTools: Error discovering APIs: ' + err);
+        }
+        
+        if (discovered.length > 0) {
+            backendLog('LuaTools: Discovered Steam APIs: ' + discovered.join(', '));
+        }
+        return discovered;
+    }
+    
+    // Function to fetch achievements via SteamClient API or page DOM
+    function fetchAchievementsViaSteamClient(appid, loadingOverlay) {
+        try {
+            backendLog('LuaTools: Attempting to fetch achievements for appid ' + appid);
+            
+            // Discover available APIs first
+            discoverSteamClientAPIs();
+            
+            // Method 1: Try SteamClient API (if available in Millennium context)
+            try {
+                if (typeof SteamClient !== 'undefined') {
+                    backendLog('LuaTools: SteamClient is available');
+                    
+                    // Expanded list of possible methods to try
+                    const methods = [
+                        'SteamClient.Apps.GetAchievementProgress',
+                        'SteamClient.Apps.GetAchievements',
+                        'SteamClient.Stats.GetAchievements',
+                        'SteamClient.UserStats.GetAchievements',
+                        'SteamClient.UserStats.GetPlayerAchievements',
+                        'SteamClient.Apps.GetAppStats',
+                        'SteamClient.Apps.GetGameAchievements',
+                        'SteamClient.LocalAchievements.Get',
+                        'SteamClient.LocalStats.GetAchievements',
+                        'ISteamUserStats.GetPlayerAchievements',
+                        'ISteamUserStats.GetAchievementProgress',
+                        'g_SteamClient.UserStats.GetAchievements',
+                        'window.SteamClient.UserStats.GetAchievements'
+                    ];
+                    
+                    for (let i = 0; i < methods.length; i++) {
+                        try {
+                            const methodPath = methods[i].split('.');
+                            let obj = window;
+                            for (let j = 0; j < methodPath.length; j++) {
+                                obj = obj[methodPath[j]];
+                                if (!obj) break;
+                            }
+                            
+                            if (typeof obj === 'function') {
+                                backendLog('LuaTools: Found method: ' + methods[i]);
+                                const result = obj(appid);
+                                if (result && typeof result.then === 'function') {
+                                    // It's a promise
+                                    backendLog('LuaTools: Method returns promise, waiting for result...');
+                                    result.then(function(achievements) {
+                                        try {
+                                            if (loadingOverlay && typeof loadingOverlay.remove === 'function') loadingOverlay.remove();
+                                            backendLog('LuaTools: Got achievements data: ' + JSON.stringify(achievements).substring(0, 200));
+                                            if (achievements && Array.isArray(achievements)) {
+                                                const unlocked = achievements.filter(function(ach) {
+                                                    return ach && (ach.bUnlocked === true || ach.unlocked === true || ach.achieved === true || ach.unlocktime > 0);
+                                                });
+                                                backendLog('LuaTools: Filtered to ' + unlocked.length + ' unlocked achievements');
+                                                if (typeof showAchievementsPopup === 'function') {
+                                                    showAchievementsPopup(appid, {
+                                                        success: true,
+                                                        achievements: unlocked.map(function(ach) {
+                                                            return {
+                                                                id: ach.apiname || ach.id || ach.achievement_id || '',
+                                                                name: ach.name || ach.displayName || ach.localized_name || '',
+                                                                unlocktime: ach.unlocktime || ach.rtimeUnlocked || '1'
+                                                            };
+                                                        }),
+                                                        total_count: unlocked.length,
+                                                        source: 'SteamClient API: ' + methods[i]
+                                                    });
+                                                    return; // Success!
+                                                }
+                                            } else if (achievements && typeof achievements === 'object') {
+                                                // Try to extract achievements from object
+                                                backendLog('LuaTools: Achievements is object, trying to extract...');
+                                                const achievementsList = achievements.achievements || achievements.playerstats || achievements.stats || [];
+                                                if (Array.isArray(achievementsList) && achievementsList.length > 0) {
+                                                    const unlocked = achievementsList.filter(function(ach) {
+                                                        return ach && (ach.bUnlocked === true || ach.unlocked === true || ach.achieved === true || ach.rtimeUnlocked > 0);
+                                                    });
+                                                    if (typeof showAchievementsPopup === 'function') {
+                                                        showAchievementsPopup(appid, {
+                                                            success: true,
+                                                            achievements: unlocked.map(function(ach) {
+                                                                return {
+                                                                    id: ach.apiname || ach.id || ach.achievement_id || '',
+                                                                    name: ach.name || ach.displayName || ach.localized_name || '',
+                                                                    unlocktime: ach.unlocktime || ach.rtimeUnlocked || '1'
+                                                                };
+                                                            }),
+                                                            total_count: unlocked.length,
+                                                            source: 'SteamClient API: ' + methods[i]
+                                                        });
+                                                        return; // Success!
+                                                    }
+                                                }
+                                            }
+                                            // If we got here, didn't work with this method
+                                            if (i === methods.length - 1 && typeof tryAlternativeAchievementMethod === 'function') {
+                                                tryAlternativeAchievementMethod(appid, loadingOverlay, null);
+                                            }
+                                        } catch(e) {
+                                            backendLog('LuaTools: Error in promise handler: ' + e);
+                                            if (i === methods.length - 1 && typeof tryAlternativeAchievementMethod === 'function') {
+                                                tryAlternativeAchievementMethod(appid, loadingOverlay, null);
+                                            }
+                                        }
+                                    }).catch(function(err) {
+                                        backendLog('LuaTools: Method ' + methods[i] + ' failed: ' + err);
+                                        if (i === methods.length - 1 && typeof tryAlternativeAchievementMethod === 'function') {
+                                            tryAlternativeAchievementMethod(appid, loadingOverlay, null);
+                                        }
+                                    });
+                                    return; // Don't try other methods, wait for promise
+                                } else if (result && typeof result === 'object') {
+                                    // Synchronous result
+                                    backendLog('LuaTools: Method returned synchronous result');
+                                    // Process synchronously (same logic as promise handler above)
+                                }
+                            }
+                        } catch(e) {
+                            // Method not available, continue
+                        }
+                    }
+                } else {
+                    backendLog('LuaTools: SteamClient is not available in window');
+                }
+            } catch(err) {
+                backendLog('LuaTools: Error checking SteamClient: ' + err);
+            }
+            
+            // Method 2: Try to read from current page DOM immediately
+            if (typeof tryAlternativeAchievementMethod === 'function') {
+                tryAlternativeAchievementMethod(appid, loadingOverlay, null);
+            } else {
+                backendLog('LuaTools: tryAlternativeAchievementMethod not available');
+                if (loadingOverlay && typeof loadingOverlay.remove === 'function') loadingOverlay.remove();
+            }
+        } catch(err) {
+            backendLog('LuaTools: Error in fetchAchievementsViaSteamClient: ' + err);
+            if (loadingOverlay && typeof loadingOverlay.remove === 'function') loadingOverlay.remove();
+        }
+    }
+    
+    // Alternative method: Try to get achievements from page or navigate to achievements page
+    function tryAlternativeAchievementMethod(appid, loadingOverlay, steamid) {
+        // Debug: Log current page info
+        const currentUrl = window.location.href;
+        backendLog('LuaTools: Current page URL: ' + currentUrl);
+        backendLog('LuaTools: Looking for achievements on page for appid: ' + appid);
+        
+        // Method 1: Try to get achievements from current page DOM
+        try {
+            // Check multiple possible selectors for achievements on Steam pages
+            // Steam uses different selectors in different contexts:
+            // - Library achievements page: .achieveRow, .achieveRow.unlocked
+            // - Community achievements: .achievement, .achievement.unlocked
+            // - Stats page: .achieveRow, [data-achievement-id]
+            const selectors = [
+                '.achieveRow',
+                '.achievement',
+                '[data-achievement-id]',
+                '.achieveRow.unlocked',
+                '.achievement.unlocked',
+                '.achieveRow.achieved',
+                '.achievement.achieved',
+                'div[class*="achieve"]',
+                'div[class*="achievement"]'
+            ];
+            
+            let achievementElements = [];
+            let foundSelector = null;
+            
+            backendLog('LuaTools: Trying to find achievement elements on page...');
+            for (let i = 0; i < selectors.length; i++) {
+                try {
+                    const elements = document.querySelectorAll(selectors[i]);
+                    if (elements && elements.length > 0) {
+                        achievementElements = Array.from(elements);
+                        foundSelector = selectors[i];
+                        backendLog('LuaTools: Found ' + elements.length + ' elements using selector: ' + selectors[i]);
+                        break;
+                    } else {
+                        backendLog('LuaTools: Selector "' + selectors[i] + '" found 0 elements');
+                    }
+                } catch(e) {
+                    backendLog('LuaTools: Error with selector "' + selectors[i] + '": ' + e);
+                }
+            }
+            
+            // If no elements found, log page structure for debugging
+            if (achievementElements.length === 0) {
+                backendLog('LuaTools: No achievement elements found. Page structure debug:');
+                backendLog('LuaTools: - Page title: ' + (document.title || 'N/A'));
+                backendLog('LuaTools: - Body classes: ' + (document.body ? document.body.className : 'N/A'));
+                
+                // Try to find any achievement-related text or elements
+                const allDivs = document.querySelectorAll('div');
+                let achievementRelatedCount = 0;
+                for (let i = 0; i < Math.min(allDivs.length, 100); i++) {
+                    const text = allDivs[i].textContent || '';
+                    const className = allDivs[i].className || '';
+                    if (text.toLowerCase().includes('achievement') || className.toLowerCase().includes('achieve')) {
+                        achievementRelatedCount++;
+                    }
+                }
+                backendLog('LuaTools: - Found ' + achievementRelatedCount + ' divs with "achievement" in text/class (checked first 100)');
+            }
+            
+            if (achievementElements.length > 0) {
+                const unlockedAchievements = [];
+                
+                achievementElements.forEach(function(el) {
+                    try {
+                        // Check if achievement is unlocked
+                        const isUnlocked = el.classList.contains('unlocked') || 
+                                         el.classList.contains('achieved') ||
+                                         el.querySelector('.achieveUnlockTime') !== null ||
+                                         el.querySelector('.achieveUnlockDate') !== null ||
+                                         (el.getAttribute('data-achievement-unlocked') === 'true');
+                        
+                        if (isUnlocked) {
+                            // Try to get achievement name
+                            const nameSelectors = [
+                                '.achieveTxtHolder h3',
+                                '.achievementName',
+                                'h3',
+                                '.achieveTxt',
+                                '[data-achievement-name]'
+                            ];
+                            
+                            let name = 'Unknown Achievement';
+                            for (let j = 0; j < nameSelectors.length; j++) {
+                                const nameEl = el.querySelector(nameSelectors[j]);
+                                if (nameEl && nameEl.textContent) {
+                                    name = nameEl.textContent.trim();
+                                    break;
+                                }
+                            }
+                            
+                            // Try to get achievement ID
+                            let id = '';
+                            const idEl = el.querySelector('[data-achievement-id]');
+                            if (idEl) {
+                                id = idEl.getAttribute('data-achievement-id');
+                            } else if (el.getAttribute('data-achievement-id')) {
+                                id = el.getAttribute('data-achievement-id');
+                            } else {
+                                id = name; // Use name as ID if no ID found
+                            }
+                            
+                            // Try to get unlock time
+                            let unlocktime = '1';
+                            const timeEl = el.querySelector('.achieveUnlockTime, .achieveUnlockDate');
+                            if (timeEl && timeEl.textContent) {
+                                // Try to parse date
+                                try {
+                                    const dateText = timeEl.textContent.trim();
+                                    unlocktime = dateText;
+                                } catch(e) {}
+                            }
+                            
+                            unlockedAchievements.push({
+                                id: id,
+                                name: name,
+                                unlocktime: unlocktime
+                            });
+                        }
+                    } catch(e) {
+                        backendLog('LuaTools: Error parsing achievement element: ' + e);
+                    }
+                });
+                
+                if (unlockedAchievements.length > 0) {
+                    loadingOverlay.remove();
+                    backendLog('LuaTools: Found ' + unlockedAchievements.length + ' unlocked achievements from page DOM');
+                    showAchievementsPopup(appid, {
+                        success: true,
+                        achievements: unlockedAchievements,
+                        total_count: unlockedAchievements.length
+                    });
+                    return;
+                } else {
+                    backendLog('LuaTools: Found achievement elements but none are marked as unlocked');
+                }
+            }
+        } catch(err) {
+            backendLog('LuaTools: Error reading achievements from page: ' + err);
+        }
+        
+        // Method 2: Try to fetch from Steam Web API (public, no key needed for global stats)
+        // But we need SteamID for player-specific achievements
+        // For now, show message with option to navigate to achievements page
+        loadingOverlay.remove();
+        
+        // Try to get SteamID from page (if not already provided as parameter)
+        if (!steamid) {
+            try {
+                if (window.g_steamID) {
+                    steamid = window.g_steamID;
+                } else if (window.g_CurrentUser && window.g_CurrentUser.steamid) {
+                    steamid = window.g_CurrentUser.steamid;
+                } else if (typeof SteamClient !== 'undefined' && SteamClient.User && SteamClient.User.GetSteamId) {
+                    steamid = SteamClient.User.GetSteamId();
+                }
+            } catch(e) {
+                backendLog('LuaTools: Could not get SteamID: ' + e);
+            }
+        }
+        
+        // Show popup with option to navigate to achievements page
+        const popup = document.createElement('div');
+        popup.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;';
+        
+        const content = document.createElement('div');
+        content.style.cssText = 'background:#1b2838;border-radius:8px;padding:24px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 4px 20px rgba(0,0,0,0.5);';
+        
+        const title = document.createElement('div');
+        title.style.cssText = 'font-size:20px;font-weight:600;color:#fff;margin-bottom:16px;';
+        title.textContent = 'Achievements';
+        content.appendChild(title);
+        
+        const msg = document.createElement('div');
+        msg.style.cssText = 'font-size:14px;color:#8f98a0;margin-bottom:20px;line-height:1.5;';
+        
+        // Create detailed explanation
+        const explanation = document.createElement('div');
+        explanation.style.cssText = 'margin-bottom:16px;';
+        
+        const reasonTitle = document.createElement('div');
+        reasonTitle.style.cssText = 'font-weight:600;color:#66c0f4;margin-bottom:8px;';
+        reasonTitle.textContent = 'Por que não conseguiu encontrar?';
+        explanation.appendChild(reasonTitle);
+        
+        const reasonList = document.createElement('ul');
+        reasonList.style.cssText = 'margin:0;padding-left:20px;color:#8f98a0;';
+        
+        const reasons = [
+            'Você precisa estar na página de achievements do jogo na biblioteca do Steam',
+            'O código procura por elementos HTML específicos (.achieveRow, .achievement) que só existem na página de achievements',
+            'Se você está na página da loja ou na biblioteca geral, esses elementos não existem',
+            'Steam não armazena achievements em arquivos locais - eles são carregados dinamicamente quando você abre a página de achievements'
+        ];
+        
+        reasons.forEach(function(reason) {
+            const li = document.createElement('li');
+            li.style.cssText = 'margin-bottom:4px;';
+            li.textContent = reason;
+            reasonList.appendChild(li);
+        });
+        
+        explanation.appendChild(reasonList);
+        msg.appendChild(explanation);
+        
+        const solution = document.createElement('div');
+        solution.style.cssText = 'margin-top:12px;padding:12px;background:rgba(102,192,244,0.1);border-radius:4px;border:1px solid rgba(102,192,244,0.2);';
+        solution.textContent = 'Solução: Clique no botão abaixo para abrir a página de achievements do jogo, depois use o botão "List Achievements" novamente.';
+        msg.appendChild(solution);
+        
+        content.appendChild(msg);
+        
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.cssText = 'display:flex;gap:12px;justify-content:flex-end;';
+        
+        const openBtn = document.createElement('button');
+        openBtn.style.cssText = 'background:#66c0f4;color:#1b2838;border:none;padding:10px 20px;border-radius:4px;font-size:14px;font-weight:600;cursor:pointer;';
+        openBtn.textContent = 'Open Achievements Page';
+        openBtn.onclick = function() {
+            // Try to open achievements page
+            const achievementsUrl = 'steam://url/GameAchievementsPage/' + appid;
+            try {
+                window.location.href = achievementsUrl;
+            } catch(e) {
+                // Fallback: try to navigate to web page
+                window.open('https://steamcommunity.com/profiles/' + (steamid || '') + '/stats/' + appid + '/achievements', '_blank');
+            }
+            popup.remove();
+        };
+        buttonContainer.appendChild(openBtn);
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.style.cssText = 'background:rgba(255,255,255,0.1);color:#fff;border:none;padding:10px 20px;border-radius:4px;font-size:14px;font-weight:600;cursor:pointer;';
+        closeBtn.textContent = 'Close';
+        closeBtn.onclick = function() {
+            popup.remove();
+        };
+        buttonContainer.appendChild(closeBtn);
+        
+        content.appendChild(buttonContainer);
+        popup.appendChild(content);
+        
+        popup.onclick = function(e) {
+            if (e.target === popup) {
+                popup.remove();
+            }
+        };
+        
+        document.body.appendChild(popup);
+    }
+
+    // Function to show achievements popup
+    function showAchievementsPopup(appid, achievementsData) {
+        // Avoid duplicates
+        if (document.querySelector('.luatools-achievements-overlay')) return;
+        
+        ensureLuaToolsAnimations();
+        const overlay = document.createElement('div');
+        overlay.className = 'luatools-achievements-overlay';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease-out;';
+        
+        const modal = document.createElement('div');
+        modal.style.cssText = 'background:linear-gradient(135deg, #1b2838 0%, #2a475e 100%);color:#fff;border:2px solid #66c0f4;border-radius:8px;min-width:500px;max-width:700px;max-height:80vh;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px rgba(102,192,244,0.3);animation:slideUp 0.1s ease-out;overflow-y:auto;';
+        
+        const title = document.createElement('div');
+        title.style.cssText = 'font-size:22px;color:#fff;margin-bottom:16px;font-weight:700;text-shadow:0 2px 8px rgba(102,192,244,0.4);background:linear-gradient(135deg, #66c0f4 0%, #a4d7f5 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;';
+        title.textContent = 'Achievements';
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.style.cssText = 'position:absolute;top:16px;right:16px;background:none;border:none;color:#66c0f4;font-size:24px;cursor:pointer;padding:4px 8px;';
+        closeBtn.innerHTML = '&times;';
+        closeBtn.onclick = function() { overlay.remove(); };
+        
+        const content = document.createElement('div');
+        content.style.cssText = 'max-height:60vh;overflow-y:auto;';
+        
+        if (achievementsData && achievementsData.success && achievementsData.achievements && achievementsData.achievements.length > 0) {
+            // Filter only unlocked achievements
+            const unlockedAchievements = achievementsData.achievements.filter(ach => ach.unlocked === true);
+
+            if (unlockedAchievements.length > 0) {
+                const count = document.createElement('div');
+                count.style.cssText = 'font-size:14px;color:#8f98a0;margin-bottom:16px;';
+                count.textContent = `You have unlocked ${unlockedAchievements.length} achievement(s)`;
+                content.appendChild(count);
+
+                const list = document.createElement('div');
+                list.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
+
+                unlockedAchievements.forEach(function(ach) {
+                    const item = document.createElement('div');
+                    item.style.cssText = 'background:rgba(42,71,94,0.5);padding:12px;border-radius:6px;border:1px solid rgba(102,192,244,0.2);';
+
+                    const name = document.createElement('div');
+                    name.style.cssText = 'font-size:14px;font-weight:600;color:#fff;margin-bottom:4px;';
+                    name.textContent = ach.name || ach.id || 'Unknown Achievement';
+
+                    const unlockInfo = document.createElement('div');
+                    unlockInfo.style.cssText = 'font-size:12px;color:#66c0f4;';
+                    if (ach.unlocktime && ach.unlocktime !== '0' && ach.unlocktime !== 0) {
+                        const unlockDate = new Date(parseInt(ach.unlocktime) * 1000);
+                        unlockInfo.textContent = `Unlocked: ${unlockDate.toLocaleDateString()} ${unlockDate.toLocaleTimeString()}`;
+                    } else {
+                        unlockInfo.textContent = 'Unlocked';
+                    }
+
+                    item.appendChild(name);
+                    item.appendChild(unlockInfo);
+                    list.appendChild(item);
+                });
+
+                content.appendChild(list);
+            } else {
+                const noAchievementsMsg = document.createElement('div');
+                noAchievementsMsg.style.cssText = 'padding:20px;text-align:center;color:#8f98a0;';
+                noAchievementsMsg.textContent = 'No achievements unlocked yet for this game.';
+                content.appendChild(noAchievementsMsg);
+            }
+        } else {
+            const errorMsg = document.createElement('div');
+            errorMsg.style.cssText = 'padding:20px;text-align:center;color:#8f98a0;';
+            if (achievementsData && achievementsData.error) {
+                errorMsg.textContent = `Error: ${achievementsData.error}`;
+            } else if (achievementsData && achievementsData.achievements && achievementsData.achievements.length === 0) {
+                errorMsg.textContent = 'No achievements unlocked yet for this game.';
+            } else {
+                errorMsg.textContent = 'Failed to load achievements. Make sure you have played this game.';
+            }
+            content.appendChild(errorMsg);
+        }
+        
+        modal.appendChild(title);
+        modal.appendChild(closeBtn);
+        modal.appendChild(content);
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        
+        // Close on overlay click (outside modal)
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) {
+                overlay.remove();
+            }
+        });
+    }
+
+    // Dev Console - estilo Chrome DevTools
+    function showDevConsole() {
+        if (document.querySelector('.luatools-dev-console-overlay')) return;
+        
+        ensureLuaToolsAnimations();
+        ensureFontAwesome();
+        
+        const overlay = document.createElement('div');
+        overlay.className = 'luatools-dev-console-overlay';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99999;display:flex;flex-direction:column;font-family:"Consolas","Monaco","Courier New",monospace;';
+        
+        const header = document.createElement('div');
+        header.style.cssText = 'background:#1b2838;padding:12px 16px;border-bottom:2px solid #66c0f4;display:flex;justify-content:space-between;align-items:center;';
+        
+        const title = document.createElement('div');
+        title.style.cssText = 'color:#66c0f4;font-size:16px;font-weight:600;display:flex;align-items:center;gap:8px;';
+        title.innerHTML = '<i class="fa-solid fa-terminal"></i> LuaTools Dev Console';
+        header.appendChild(title);
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.style.cssText = 'background:none;border:none;color:#66c0f4;font-size:20px;cursor:pointer;padding:4px 8px;';
+        closeBtn.innerHTML = '&times;';
+        closeBtn.onclick = function() { overlay.remove(); };
+        header.appendChild(closeBtn);
+        
+        const output = document.createElement('div');
+        output.className = 'luatools-console-output';
+        output.style.cssText = 'flex:1;overflow-y:auto;background:#0d1117;color:#c9d1d9;padding:16px;font-size:13px;line-height:1.5;';
+        
+        const inputContainer = document.createElement('div');
+        inputContainer.style.cssText = 'background:#161b22;border-top:2px solid #66c0f4;padding:12px;display:flex;gap:8px;align-items:center;position:relative;';
+        
+        const prompt = document.createElement('span');
+        prompt.style.cssText = 'color:#66c0f4;font-weight:600;user-select:none;';
+        prompt.textContent = '> ';
+        
+        const inputWrapper = document.createElement('div');
+        inputWrapper.style.cssText = 'flex:1;position:relative;';
+        
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'luatools-console-input';
+        input.style.cssText = 'width:100%;background:#0d1117;border:1px solid #30363d;color:#c9d1d9;padding:8px 12px;border-radius:4px;font-family:inherit;font-size:13px;outline:none;box-sizing:border-box;';
+        input.placeholder = 'Digite comandos JavaScript aqui... (ex: window.SteamClient)';
+        
+        // Autocomplete dropdown
+        const autocompleteDropdown = document.createElement('div');
+        autocompleteDropdown.className = 'luatools-autocomplete-dropdown';
+        autocompleteDropdown.style.cssText = 'position:absolute;bottom:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:#161b22;border:1px solid #66c0f4;border-radius:4px;margin-bottom:4px;display:none;z-index:100000;box-shadow:0 4px 12px rgba(0,0,0,0.5);';
+        inputWrapper.appendChild(input);
+        inputWrapper.appendChild(autocompleteDropdown);
+        
+        const history = [];
+        let historyIndex = -1;
+        let autocompleteSuggestions = [];
+        let autocompleteIndex = -1;
+        let currentText = '';
+        
+        // Lista de objetos e propriedades conhecidos para autocomplete
+        const knownGlobals = [
+            'window', 'document', 'console', 'SteamClient', 'Millennium',
+            'g_steamID', 'g_CurrentUser', 'location', 'history'
+        ];
+        
+        const steamClientMethods = [
+            'Apps', 'User', 'Stats', 'UserStats', 'LocalStorage', 'Settings'
+        ];
+        
+        // Função para obter propriedades de um objeto
+        function getObjectProperties(obj, maxDepth, currentDepth) {
+            if (currentDepth >= maxDepth || !obj || typeof obj !== 'object') return [];
+            const props = [];
+            try {
+                const keys = Object.keys(obj);
+                for (let i = 0; i < Math.min(keys.length, 50); i++) {
+                    props.push(keys[i]);
+                }
+            } catch(e) {}
+            return props;
+        }
+        
+        // Função para buscar sugestões
+        function getSuggestions(text) {
+            if (!text || text.trim() === '') return [];
+            
+            const suggestions = [];
+            const parts = text.split('.');
+            const lastPart = parts[parts.length - 1];
+            const prefix = parts.slice(0, -1).join('.');
+            
+            // Se está digitando uma propriedade (tem ponto)
+            if (parts.length > 1 && prefix) {
+                try {
+                    // Tenta avaliar o prefixo para obter o objeto
+                    const obj = eval(prefix);
+                    if (obj && typeof obj === 'object') {
+                        const props = getObjectProperties(obj, 2, 0);
+                        props.forEach(function(prop) {
+                            const propLower = prop.toLowerCase();
+                            const lastLower = lastPart.toLowerCase();
+                            if (propLower.includes(lastLower) || lastPart === '') {
+                                const type = typeof obj[prop];
+                                let typeLabel = type;
+                                if (Array.isArray(obj[prop])) typeLabel = 'array';
+                                else if (type === 'function') typeLabel = 'function';
+                                
+                                suggestions.push({
+                                    text: prefix + '.' + prop,
+                                    label: prop,
+                                    type: typeLabel,
+                                    priority: propLower.startsWith(lastLower) ? 1 : 2
+                                });
+                            }
+                        });
+                    }
+                } catch(e) {
+                    // Prefixo inválido, ignorar
+                }
+            } else {
+                // Buscar em globais conhecidos
+                knownGlobals.forEach(function(global) {
+                    const globalLower = global.toLowerCase();
+                    const lastLower = lastPart.toLowerCase();
+                    if (globalLower.includes(lastLower) || lastPart === '') {
+                        try {
+                            if (typeof window[global] !== 'undefined') {
+                                suggestions.push({
+                                    text: global,
+                                    label: global,
+                                    type: typeof window[global],
+                                    priority: globalLower.startsWith(lastLower) ? 1 : 2
+                                });
+                            }
+                        } catch(e) {}
+                    }
+                });
+                
+                // Adicionar métodos conhecidos do SteamClient
+                if (lastPart.toLowerCase().includes('steam') || lastPart === '') {
+                    steamClientMethods.forEach(function(method) {
+                        const methodLower = method.toLowerCase();
+                        const lastLower = lastPart.toLowerCase();
+                        if (methodLower.includes(lastLower) || lastPart === '') {
+                            suggestions.push({
+                                text: 'SteamClient.' + method,
+                                label: 'SteamClient.' + method,
+                                type: 'object',
+                                priority: methodLower.startsWith(lastLower) ? 1 : 2
+                            });
+                        }
+                    });
+                }
+                
+                // Buscar propriedades de SteamClient se existir
+                if (typeof SteamClient !== 'undefined') {
+                    try {
+                        const props = getObjectProperties(SteamClient, 1, 0);
+                        props.forEach(function(prop) {
+                            const propLower = prop.toLowerCase();
+                            const lastLower = lastPart.toLowerCase();
+                            if (propLower.includes(lastLower) || lastPart === '') {
+                                const type = typeof SteamClient[prop];
+                                suggestions.push({
+                                    text: 'SteamClient.' + prop,
+                                    label: 'SteamClient.' + prop,
+                                    type: type === 'function' ? 'function' : type,
+                                    priority: propLower.startsWith(lastLower) ? 1 : 2
+                                });
+                            }
+                        });
+                    } catch(e) {}
+                }
+                
+                // Sugerir Millennium se relevante
+                if (typeof Millennium !== 'undefined' && (lastPart === '' || 'millennium'.includes(lastPart.toLowerCase()))) {
+                    try {
+                        const props = getObjectProperties(Millennium, 1, 0);
+                        props.forEach(function(prop) {
+                            const propLower = prop.toLowerCase();
+                            const lastLower = lastPart.toLowerCase();
+                            if (propLower.includes(lastLower) || lastPart === '') {
+                                suggestions.push({
+                                    text: 'Millennium.' + prop,
+                                    label: 'Millennium.' + prop,
+                                    type: typeof Millennium[prop],
+                                    priority: propLower.startsWith(lastLower) ? 1 : 2
+                                });
+                            }
+                        });
+                    } catch(e) {}
+                }
+            }
+            
+            // Ordenar por prioridade e remover duplicatas
+            suggestions.sort(function(a, b) {
+                if (a.priority !== b.priority) return a.priority - b.priority;
+                return a.label.localeCompare(b.label);
+            });
+            
+            const unique = [];
+            const seen = {};
+            suggestions.forEach(function(sug) {
+                if (!seen[sug.text] && unique.length < 20) {
+                    seen[sug.text] = true;
+                    unique.push(sug);
+                }
+            });
+            
+            return unique;
+        }
+        
+        // Função para mostrar autocomplete
+        function showAutocomplete(suggestions) {
+            if (suggestions.length === 0) {
+                autocompleteDropdown.style.display = 'none';
+                return;
+            }
+            
+            autocompleteDropdown.innerHTML = '';
+            autocompleteSuggestions = suggestions;
+            autocompleteIndex = -1;
+            
+            suggestions.forEach(function(sug, index) {
+                const item = document.createElement('div');
+                item.className = 'autocomplete-item';
+                item.style.cssText = 'padding:8px 12px;cursor:pointer;border-bottom:1px solid #30363d;color:#c9d1d9;display:flex;justify-content:space-between;align-items:center;';
+                item.onmouseover = function() {
+                    item.style.background = '#1f6feb';
+                    item.style.color = '#fff';
+                };
+                item.onmouseout = function() {
+                    item.style.background = 'transparent';
+                    item.style.color = '#c9d1d9';
+                };
+                item.onclick = function() {
+                    input.value = sug.text;
+                    hideAutocomplete();
+                    input.focus();
+                };
+                
+                const label = document.createElement('span');
+                label.textContent = sug.label;
+                label.style.cssText = 'font-weight:500;';
+                
+                const type = document.createElement('span');
+                type.textContent = sug.type;
+                type.style.cssText = 'font-size:11px;color:#8b949e;margin-left:8px;';
+                
+                item.appendChild(label);
+                item.appendChild(type);
+                autocompleteDropdown.appendChild(item);
+            });
+            
+            autocompleteDropdown.style.display = 'block';
+        }
+        
+        // Função para esconder autocomplete
+        function hideAutocomplete() {
+            autocompleteDropdown.style.display = 'none';
+            autocompleteIndex = -1;
+        }
+        
+        // Atualizar autocomplete enquanto digita
+        input.oninput = function(e) {
+            const text = input.value;
+            currentText = text;
+            
+            // Não mostrar autocomplete se estiver vazio ou se acabou de executar comando
+            if (!text || text.trim() === '') {
+                hideAutocomplete();
+                return;
+            }
+            
+            // Obter sugestões
+            const suggestions = getSuggestions(text);
+            showAutocomplete(suggestions);
+        };
+        
+        function addOutput(text, type) {
+            const line = document.createElement('div');
+            line.style.cssText = 'margin-bottom:4px;word-wrap:break-word;';
+            
+            if (type === 'error') {
+                line.style.color = '#f85149';
+                line.textContent = '✗ ' + text;
+            } else if (type === 'warn') {
+                line.style.color = '#d29922';
+                line.textContent = '⚠ ' + text;
+            } else if (type === 'info') {
+                line.style.color = '#58a6ff';
+                line.textContent = 'ℹ ' + text;
+            } else if (type === 'command') {
+                line.style.color = '#7c3aed';
+                line.textContent = '> ' + text;
+            } else if (type === 'result') {
+                line.style.color = '#c9d1d9';
+                line.textContent = text;
+            } else {
+                line.textContent = text;
+            }
+            
+            output.appendChild(line);
+            output.scrollTop = output.scrollHeight;
+        }
+        
+        function executeCommand(cmd) {
+            if (!cmd || !cmd.trim()) return;
+            
+            addOutput(cmd, 'command');
+            history.push(cmd);
+            historyIndex = history.length;
+            
+            // Comandos especiais
+            const trimmedCmd = cmd.trim();
+            if (trimmedCmd === 'clear' || trimmedCmd === 'cls') {
+                output.innerHTML = '';
+                addOutput('Console cleared', 'info');
+                return;
+            }
+            if (trimmedCmd === 'help') {
+                addOutput('Comandos disponíveis:', 'info');
+                addOutput('  clear / cls - Limpa o console', 'info');
+                addOutput('  help - Mostra esta ajuda', 'info');
+                addOutput('  inspect(obj) - Inspeciona um objeto detalhadamente', 'info');
+                addOutput('  steam() - Mostra informações do Steam Client', 'info');
+                addOutput('  vars() - Lista variáveis globais úteis', 'info');
+                addOutput('', 'result');
+                addOutput('Exemplos:', 'info');
+                addOutput('  SteamClient - Ver o objeto SteamClient', 'info');
+                addOutput('  inspect(SteamClient) - Inspecionar SteamClient detalhadamente', 'info');
+                addOutput('  window.g_steamID - Ver SteamID', 'info');
+                addOutput('  typeof SteamClient.Apps - Verificar tipo', 'info');
+                return;
+            }
+            if (trimmedCmd === 'steam()' || trimmedCmd === 'steam') {
+                addOutput('Steam Client Info:', 'info');
+                if (typeof SteamClient !== 'undefined') {
+                    try {
+                        const keys = Object.keys(SteamClient).slice(0, 20);
+                        addOutput('SteamClient properties: ' + keys.join(', '), 'result');
+                    } catch(e) {
+                        addOutput('SteamClient exists but error accessing: ' + e, 'warn');
+                    }
+                } else {
+                    addOutput('SteamClient not found', 'warn');
+                }
+                return;
+            }
+            if (trimmedCmd === 'vars()' || trimmedCmd === 'vars') {
+                addOutput('Variáveis globais úteis:', 'info');
+                const usefulVars = ['window', 'document', 'SteamClient', 'g_steamID', 'g_CurrentUser', 'Millennium'];
+                usefulVars.forEach(function(v) {
+                    if (typeof window[v] !== 'undefined') {
+                        addOutput('  ' + v + ': exists', 'result');
+                    } else {
+                        addOutput('  ' + v + ': not found', 'warn');
+                    }
+                });
+                return;
+            }
+            
+            // Executar JavaScript
+            try {
+                // Check if it's an inspect command
+                if (trimmedCmd.startsWith('inspect(') && trimmedCmd.endsWith(')')) {
+                    const objToInspect = trimmedCmd.substring(8, trimmedCmd.length - 1);
+                    try {
+                        const obj = eval(objToInspect);
+                        const inspected = inspect(obj, 0, objToInspect);
+                        addOutput(inspected, 'result');
+                    } catch(inspectErr) {
+                        addOutput('Error inspecting: ' + inspectErr.message, 'error');
+                    }
+                    return;
+                }
+                
+                // Tenta eval primeiro (para expressões)
+                let result;
+                try {
+                    // Make inspect available in eval context
+                    result = eval('(function(inspect) { return ' + cmd + ' })(' + inspect.toString() + ')');
+                } catch(evalErr) {
+                    // Se eval falhar, tenta Function constructor
+                    try {
+                        result = (new Function('inspect', 'return (' + cmd + ')')(inspect));
+                    } catch(funcErr) {
+                        throw evalErr; // Use original error
+                    }
+                }
+                
+                // Formatar resultado
+                if (result === undefined) {
+                    addOutput('undefined', 'result');
+                } else if (result === null) {
+                    addOutput('null', 'result');
+                } else if (typeof result === 'object') {
+                    try {
+                        const json = JSON.stringify(result, null, 2);
+                        if (json.length > 1000) {
+                            addOutput(json.substring(0, 1000) + '... (truncated, use inspect() for details)', 'result');
+                        } else {
+                            addOutput(json, 'result');
+                        }
+                    } catch(jsonErr) {
+                        addOutput(result.toString() + ' [Object]', 'result');
+                        addOutput('Use inspect(' + cmd + ') para ver detalhes', 'info');
+                    }
+                } else {
+                    addOutput(String(result), 'result');
+                }
+            } catch(err) {
+                addOutput('Error: ' + err.message, 'error');
+                if (err.stack) {
+                    addOutput(err.stack, 'error');
+                }
+            }
+        }
+        
+        // Função helper para inspecionar objetos
+        function inspect(obj, depth, path) {
+            depth = depth || 0;
+            path = path || '';
+            if (depth > 3) return '... (max depth)';
+            
+            let output = '';
+            if (obj === null) return 'null';
+            if (obj === undefined) return 'undefined';
+            if (typeof obj === 'function') return '[Function]';
+            
+            if (typeof obj === 'object') {
+                if (Array.isArray(obj)) {
+                    output = 'Array[' + obj.length + '] {\n';
+                    for (let i = 0; i < Math.min(obj.length, 10); i++) {
+                        output += '  '.repeat(depth + 1) + i + ': ' + inspect(obj[i], depth + 1, path + '[' + i + ']') + ',\n';
+                    }
+                    if (obj.length > 10) {
+                        output += '  '.repeat(depth + 1) + '... (' + (obj.length - 10) + ' more)\n';
+                    }
+                    output += '  '.repeat(depth) + '}';
+                } else {
+                    output = 'Object {\n';
+                    const keys = Object.keys(obj).slice(0, 20);
+                    for (let i = 0; i < keys.length; i++) {
+                        const key = keys[i];
+                        try {
+                            const value = obj[key];
+                            if (typeof value === 'function') {
+                                output += '  '.repeat(depth + 1) + key + ': [Function],\n';
+                            } else {
+                                output += '  '.repeat(depth + 1) + key + ': ' + inspect(value, depth + 1, path + '.' + key) + ',\n';
+                            }
+                        } catch(e) {
+                            output += '  '.repeat(depth + 1) + key + ': [Error accessing],\n';
+                        }
+                    }
+                    if (Object.keys(obj).length > 20) {
+                        output += '  '.repeat(depth + 1) + '... (' + (Object.keys(obj).length - 20) + ' more properties)\n';
+                    }
+                    output += '  '.repeat(depth) + '}';
+                }
+            } else {
+                output = String(obj);
+            }
+            
+            return output;
+        }
+        
+        // Tornar inspect() disponível globalmente no console
+        window.luatools_inspect = inspect;
+        
+        // Mensagem de boas-vindas
+        addOutput('LuaTools Dev Console v1.0', 'info');
+        addOutput('Digite comandos JavaScript ou "help" para ajuda', 'info');
+        addOutput('', 'result');
+        
+        input.onkeydown = function(e) {
+            // Se autocomplete está visível, tratar navegação no autocomplete
+            if (autocompleteDropdown.style.display === 'block' && autocompleteSuggestions.length > 0) {
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    autocompleteIndex = (autocompleteIndex + 1) % autocompleteSuggestions.length;
+                    const items = autocompleteDropdown.querySelectorAll('.autocomplete-item');
+                    items.forEach(function(item, idx) {
+                        if (idx === autocompleteIndex) {
+                            item.style.background = '#1f6feb';
+                            item.style.color = '#fff';
+                            item.scrollIntoView({ block: 'nearest' });
+                        } else {
+                            item.style.background = 'transparent';
+                            item.style.color = '#c9d1d9';
+                        }
+                    });
+                    return;
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (autocompleteIndex <= 0) {
+                        autocompleteIndex = autocompleteSuggestions.length - 1;
+                    } else {
+                        autocompleteIndex--;
+                    }
+                    const items = autocompleteDropdown.querySelectorAll('.autocomplete-item');
+                    items.forEach(function(item, idx) {
+                        if (idx === autocompleteIndex) {
+                            item.style.background = '#1f6feb';
+                            item.style.color = '#fff';
+                            item.scrollIntoView({ block: 'nearest' });
+                        } else {
+                            item.style.background = 'transparent';
+                            item.style.color = '#c9d1d9';
+                        }
+                    });
+                    return;
+                } else if (e.key === 'Enter' && autocompleteIndex >= 0) {
+                    e.preventDefault();
+                    const selected = autocompleteSuggestions[autocompleteIndex];
+                    input.value = selected.text;
+                    hideAutocomplete();
+                    input.focus();
+                    return;
+                } else if (e.key === 'Tab' && autocompleteIndex >= 0) {
+                    e.preventDefault();
+                    const selected = autocompleteSuggestions[autocompleteIndex];
+                    input.value = selected.text;
+                    hideAutocomplete();
+                    input.focus();
+                    return;
+                } else if (e.key === 'Escape') {
+                    hideAutocomplete();
+                    return;
+                }
+            }
+            
+            if (e.key === 'Enter') {
+                hideAutocomplete();
+                executeCommand(input.value);
+                input.value = '';
+                currentText = '';
+            } else if (e.key === 'ArrowUp' && autocompleteDropdown.style.display !== 'block') {
+                e.preventDefault();
+                if (historyIndex > 0) {
+                    historyIndex--;
+                    input.value = history[historyIndex];
+                }
+            } else if (e.key === 'ArrowDown' && autocompleteDropdown.style.display !== 'block') {
+                e.preventDefault();
+                if (historyIndex < history.length - 1) {
+                    historyIndex++;
+                    input.value = history[historyIndex] || '';
+                } else {
+                    historyIndex = history.length;
+                    input.value = '';
+                }
+            } else if (e.key === 'Escape') {
+                if (autocompleteDropdown.style.display === 'block') {
+                    hideAutocomplete();
+                } else {
+                    overlay.remove();
+                }
+            }
+        };
+        
+        // Esconder autocomplete ao clicar fora
+        overlay.addEventListener('click', function(e) {
+            if (!inputWrapper.contains(e.target)) {
+                hideAutocomplete();
+            }
+        });
+        
+        inputContainer.appendChild(prompt);
+        inputContainer.appendChild(inputWrapper);
+        
+        overlay.appendChild(header);
+        overlay.appendChild(output);
+        overlay.appendChild(inputContainer);
+        
+        document.body.appendChild(overlay);
+        input.focus();
+        
+        // Adicionar comandos especiais ao window para facilitar
+        window.luatools_exec = executeCommand;
+        window.luatools_inspect = inspect;
+        
+        addOutput('Dica: Use inspect(obj) para inspecionar objetos detalhadamente', 'info');
+        addOutput('Exemplo: inspect(SteamClient)', 'info');
+    }
+
     function showSettingsPopup() {
         if (document.querySelector('.luatools-settings-overlay') || settingsMenuPending) return;
         settingsMenuPending = true;
@@ -212,6 +1362,12 @@
             const checkBtn = createMenuButton('lt-settings-check', 'menu.checkForUpdates', 'Check For Updates', 'fa-cloud-arrow-down');
             const fetchApisBtn = createMenuButton('lt-settings-fetch-apis', 'menu.fetchFreeApis', 'Fetch Free APIs', 'fa-server');
 
+            createSectionLabel('menu.debugLabel', 'MISC');
+            const exportAchievementsBtn = createMenuButton('lt-settings-export-achievements', 'menu.exportAchievements', 'Export Achievements', 'fa-download');
+            const importAchievementsBtn = createMenuButton('lt-settings-import-achievements', 'menu.importAchievements', 'Import Achievements', 'fa-upload');
+            const devConsoleBtn = createMenuButton('lt-settings-dev-console', 'menu.devConsole', 'Dev Console', 'fa-terminal');
+            backendLog('LuaTools: Dev Console button created: ' + (devConsoleBtn ? 'success' : 'failed'));
+
             body.appendChild(container);
 
             header.appendChild(title);
@@ -280,6 +1436,225 @@
                     e.preventDefault();
                     try { overlay.remove(); } catch(_) {}
                     showSettingsManagerPopup(false, showSettingsPopup);
+                });
+            }
+
+            if (exportAchievementsBtn) {
+                exportAchievementsBtn.addEventListener('click', function(e){
+                    e.preventDefault();
+                    try { overlay.remove(); } catch(_) {}
+                    // Get appid from current page
+                    const match = window.location.href.match(/https:\/\/store\.steampowered\.com\/app\/(\d+)/) || window.location.href.match(/https:\/\/steamcommunity\.com\/app\/(\d+)/);
+                    const appid = match ? parseInt(match[1], 10) : NaN;
+                    if (!isNaN(appid) && typeof Millennium !== 'undefined' && typeof Millennium.callServerMethod === 'function') {
+                        // Show loading
+                        const loadingOverlay = document.createElement('div');
+                        loadingOverlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99998;display:flex;align-items:center;justify-content:center;';
+                        const loadingText = document.createElement('div');
+                        loadingText.style.cssText = 'color:#fff;font-size:18px;';
+                        loadingText.textContent = 'Exporting achievements...';
+                        loadingOverlay.appendChild(loadingText);
+                        document.body.appendChild(loadingOverlay);
+
+                        // Get all achievements (including locked ones for backup)
+                        Millennium.callServerMethod('luatools', 'GetAllAchievementsForApp', { appid, contentScriptQuery: '' }).then(function(res){
+                            loadingOverlay.remove();
+                            try {
+                                const payload = typeof res === 'string' ? JSON.parse(res) : res;
+                                if (payload && payload.success && payload.achievements && payload.achievements.length > 0) {
+                                    // Create backup JSON
+                                    const backupData = {
+                                        appid: appid,
+                                        export_date: new Date().toISOString(),
+                                        achievements: payload.achievements
+                                    };
+
+                                    // Download as JSON file
+                                    const dataStr = JSON.stringify(backupData, null, 2);
+                                    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                                    const url = URL.createObjectURL(dataBlob);
+
+                                    const link = document.createElement('a');
+                                    link.href = url;
+                                    link.download = `achievements_${appid}.json`;
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    document.body.removeChild(link);
+                                    URL.revokeObjectURL(url);
+
+                                    ShowLuaToolsAlert('LuaTools', `Exported ${payload.achievements.length} achievements to achievements_${appid}.json`);
+                                } else {
+                                    ShowLuaToolsAlert('LuaTools', 'No achievements found to export.');
+                                }
+                            } catch (parseErr) {
+                                backendLog('LuaTools: Failed to parse export response: ' + parseErr);
+                                ShowLuaToolsAlert('LuaTools', 'Failed to export achievements.');
+                            }
+                        }).catch(function(err){
+                            loadingOverlay.remove();
+                            backendLog('LuaTools: Failed to export achievements: ' + err);
+                            ShowLuaToolsAlert('LuaTools', 'Failed to export achievements.');
+                        });
+                    } else {
+                        backendLog('LuaTools: Could not determine appid from URL');
+                        ShowLuaToolsAlert('LuaTools', 'Could not determine game ID from URL. Please navigate to the game\'s store page or community page.');
+                    }
+                });
+            }
+
+            if (importAchievementsBtn) {
+                importAchievementsBtn.addEventListener('click', function(e){
+                    e.preventDefault();
+                    try { overlay.remove(); } catch(_) {}
+
+                    // Create file input for JSON selection
+                    const fileInput = document.createElement('input');
+                    fileInput.type = 'file';
+                    fileInput.accept = '.json';
+                    fileInput.style.display = 'none';
+
+                    fileInput.addEventListener('change', function(){
+                        const file = fileInput.files[0];
+                        if (!file) return;
+
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            try {
+                                const backupData = JSON.parse(e.target.result);
+                                backendLog('LuaTools: Loaded backup data: ' + JSON.stringify(backupData).substring(0, 200) + '...');
+
+                                if (!backupData.achievements || !Array.isArray(backupData.achievements)) {
+                                    backendLog('LuaTools: Invalid backup format - no achievements array');
+                                    ShowLuaToolsAlert('LuaTools', 'Invalid backup file format.');
+                                    return;
+                                }
+
+                                backendLog('LuaTools: Found ' + backupData.achievements.length + ' achievements in backup');
+
+                                const unlockedAchievements = backupData.achievements.filter(a => a.unlocked === true);
+                                const unlockedIds = unlockedAchievements.map(a => a.id);
+
+                                backendLog('LuaTools: Found ' + unlockedIds.length + ' unlocked achievements in backup');
+
+                                if (unlockedIds.length === 0) {
+                                    ShowLuaToolsAlert('LuaTools', 'No unlocked achievements found in backup.');
+                                    return;
+                                }
+
+                                // Show confirmation
+                                const confirmMsg = `Found ${unlockedIds.length} unlocked achievements in backup. Import them?`;
+                                if (!confirm(confirmMsg)) return;
+
+                                // Get appid from current page
+                                const match = window.location.href.match(/https:\/\/store\.steampowered\.com\/app\/(\d+)/) || window.location.href.match(/https:\/\/steamcommunity\.com\/app\/(\d+)/);
+                                const appid = match ? parseInt(match[1], 10) : NaN;
+                                backendLog('LuaTools: Determined appid: ' + appid);
+
+                                if (isNaN(appid)) {
+                                    ShowLuaToolsAlert('LuaTools', 'Could not determine game ID from URL.');
+                                    return;
+                                }
+
+                                // Show loading with progress
+                                const loadingOverlay = document.createElement('div');
+                                loadingOverlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99998;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;';
+                                document.body.appendChild(loadingOverlay);
+
+                                const loadingText = document.createElement('div');
+                                loadingText.style.cssText = 'color:#fff;font-size:18px;text-align:center;';
+                                loadingText.textContent = 'Importing achievements...';
+                                loadingOverlay.appendChild(loadingText);
+
+                                // Progress bar container
+                                const progressContainer = document.createElement('div');
+                                progressContainer.style.cssText = 'width:300px;height:20px;background:rgba(255,255,255,0.2);border-radius:10px;overflow:hidden;';
+                                loadingOverlay.appendChild(progressContainer);
+
+                                // Progress bar
+                                const progressBar = document.createElement('div');
+                                progressBar.style.cssText = 'width:0%;height:100%;background:linear-gradient(90deg, #66c0f4 0%, #4a90e2 100%);border-radius:10px;transition:width 0.3s ease;';
+                                progressContainer.appendChild(progressBar);
+
+                                // Progress text
+                                const progressText = document.createElement('div');
+                                progressText.style.cssText = 'color:#fff;font-size:14px;margin-top:10px;text-align:center;';
+                                progressText.textContent = '0 / ' + unlockedIds.length;
+                                loadingOverlay.appendChild(progressText);
+
+                                // Animate progress bar
+                                let progressPercent = 0;
+                                const progressInterval = setInterval(() => {
+                                    if (progressPercent < 90) { // Don't go to 100% until actually done
+                                        progressPercent += Math.random() * 5; // Random increment for visual effect
+                                        if (progressPercent > 90) progressPercent = 90;
+                                        progressBar.style.width = progressPercent + '%';
+                                        progressText.textContent = Math.floor((progressPercent / 100) * unlockedIds.length) + ' / ' + unlockedIds.length;
+                                    }
+                                }, 200);
+
+                                const importData = {
+                                    appid: appid,
+                                    achievements_list: unlockedIds,
+                                    contentScriptQuery: ''
+                                };
+
+                                backendLog('LuaTools: Calling ImportAchievements with ' + unlockedIds.length + ' unlocked achievement IDs');
+
+                                // Import achievements
+                                Millennium.callServerMethod('luatools', 'ImportAchievements', importData).then(function(res){
+                                    // Stop progress animation and complete it
+                                    clearInterval(progressInterval);
+                                    progressBar.style.width = '100%';
+                                    progressText.textContent = unlockedIds.length + ' / ' + unlockedIds.length;
+
+                                    // Wait a moment to show completion, then remove overlay and show result
+                                    setTimeout(() => {
+                                        loadingOverlay.remove();
+                                        backendLog('LuaTools: ImportAchievements response: ' + res);
+                                        try {
+                                            const payload = typeof res === 'string' ? JSON.parse(res) : res;
+                                            if (payload && payload.success) {
+                                                const msg = `Successfully imported ${payload.imported || 0} achievements`;
+                                                if (payload.failed > 0) {
+                                                    msg += `, ${payload.failed} failed`;
+                                                }
+                                                ShowLuaToolsAlert('LuaTools', msg);
+                                            } else {
+                                                ShowLuaToolsAlert('LuaTools', payload.error || 'Import failed');
+                                            }
+                                        } catch (parseErr) {
+                                            backendLog('LuaTools: Failed to parse import response: ' + parseErr);
+                                            ShowLuaToolsAlert('LuaTools', 'Import completed but response could not be parsed.');
+                                        }
+                                    }, 500);
+                                }).catch(function(err){
+                                    clearInterval(progressInterval);
+                                    loadingOverlay.remove();
+                                    backendLog('LuaTools: Failed to import achievements: ' + err);
+                                    ShowLuaToolsAlert('LuaTools', 'Failed to import achievements.');
+                                });
+
+                            } catch (parseErr) {
+                                backendLog('LuaTools: JSON parse error: ' + parseErr.message);
+                                ShowLuaToolsAlert('LuaTools', 'Invalid JSON file: ' + parseErr.message);
+                            }
+                        };
+
+                        reader.readAsText(file);
+                    });
+
+                    // Trigger file selection
+                    document.body.appendChild(fileInput);
+                    fileInput.click();
+                    document.body.removeChild(fileInput);
+                });
+            }
+
+            if (devConsoleBtn) {
+                devConsoleBtn.addEventListener('click', function(e){
+                    e.preventDefault();
+                    try { overlay.remove(); } catch(_) {}
+                    showDevConsole();
                 });
             }
 

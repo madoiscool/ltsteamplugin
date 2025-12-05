@@ -81,6 +81,7 @@ cd "$ROOT_DIR"
 # Copy required directories and files
 cp -r backend "$TEMP_DIR/"
 cp -r public "$TEMP_DIR/"
+cp -r vendor "$TEMP_DIR/"
 cp plugin.json "$TEMP_DIR/"
 cp requirements.txt "$TEMP_DIR/" 2>/dev/null || true
 cp readme "$TEMP_DIR/" 2>/dev/null || true
