@@ -1,7 +1,561 @@
 // LuaTools button injection (standalone plugin)
+
+// ============================================
+// GAMEPAD NAVIGATION SYSTEM - Inline Version
+// ============================================
 (function() {
     'use strict';
-    
+
+    // Inject gamepad navigation CSS
+    const gamepadCSS = document.createElement('style');
+    gamepadCSS.id = 'gamepad-navigation-styles';
+    gamepadCSS.textContent = `
+        .active-focus {
+            outline: 3px solid #66c0f4 !important;
+            outline-offset: 2px !important;
+            box-shadow: 0 0 0 4px rgba(102, 192, 244, 0.3),
+                        0 0 12px rgba(102, 192, 244, 0.5) !important;
+            position: relative !important;
+            z-index: 9999 !important;
+            transition: outline 0.15s ease, box-shadow 0.15s ease !important;
+        }
+
+        @keyframes gamepad-focus-pulse {
+            0%, 100% {
+                box-shadow: 0 0 0 4px rgba(102, 192, 244, 0.3),
+                            0 0 12px rgba(102, 192, 244, 0.5);
+            }
+            50% {
+                box-shadow: 0 0 0 4px rgba(102, 192, 244, 0.5),
+                            0 0 16px rgba(102, 192, 244, 0.7);
+            }
+        }
+
+        .active-focus {
+            animation: gamepad-focus-pulse 1.5s ease-in-out infinite;
+        }
+
+        button.active-focus,
+        a.active-focus {
+            background-color: rgba(102, 192, 244, 0.15) !important;
+            transform: scale(1.02);
+        }
+
+        .BasicUI .active-focus,
+        .touch .active-focus {
+            outline-width: 4px !important;
+            outline-offset: 3px !important;
+        }
+
+        input.active-focus,
+        select.active-focus,
+        textarea.active-focus {
+            border-color: #66c0f4 !important;
+            background-color: rgba(102, 192, 244, 0.1) !important;
+        }
+
+        .active-focus:focus {
+            outline: 3px solid #66c0f4 !important;
+        }
+
+        button,
+        a,
+        input,
+        select,
+        textarea,
+        .focusable {
+            transition: transform 0.15s ease, background-color 0.15s ease !important;
+        }
+
+        .luatools-button.active-focus,
+        .luatools-restart-button.active-focus,
+        .luatools-icon-button.active-focus {
+            transform: scale(1.05) !important;
+            background: linear-gradient(135deg, rgba(102, 192, 244, 0.3), rgba(102, 192, 244, 0.2)) !important;
+        }
+
+        .btnv6_blue_hoverfade.active-focus {
+            background: linear-gradient(to right, #47bfff 5%, #1a9fff 95%) !important;
+        }
+
+        .active-focus {
+            scroll-margin: 20px;
+        }
+    `;
+    document.head.appendChild(gamepadCSS);
+
+    // Gamepad Navigation System
+    // ALL LuaTools overlays that should block Steam navigation
+    const OVERLAY_SELECTORS = [
+        '.luatools-overlay',
+        '.luatools-settings-overlay',
+        '.luatools-fixes-results-overlay',
+        '.luatools-loading-fixes-overlay',
+        '.luatools-unfix-overlay',
+        '.luatools-settings-manager-overlay',
+        '.luatools-alert-overlay',
+        '.luatools-confirm-overlay',
+        '.luatools-loadedapps-overlay'
+    ];
+    const OVERLAY_SELECTOR_STRING = OVERLAY_SELECTORS.join(', ');
+
+    const CONFIG = {
+        deadzone: 0.4,          // Increased from 0.3 to prevent unwanted drift
+        debounceTime: 200,
+        pollRate: 16,
+        stickThreshold: 0.7,    // Increased threshold for stick navigation
+        buttonMap: {
+            A: 0, B: 1, X: 2, Y: 3,
+            LB: 4, RB: 5, LT: 6, RT: 7,
+            SELECT: 8, START: 9, L3: 10, R3: 11,
+            DPAD_UP: 12, DPAD_DOWN: 13, DPAD_LEFT: 14, DPAD_RIGHT: 15
+        },
+        axesMap: {
+            LEFT_STICK_X: 0, LEFT_STICK_Y: 1,
+            RIGHT_STICK_X: 2, RIGHT_STICK_Y: 3
+        }
+    };
+
+    const state = {
+        gamepadConnected: false,
+        gamepadIndex: null,
+        focusableElements: [],
+        currentFocusIndex: 0,
+        lastNavigationTime: 0,
+        lastAxisValues: { x: 0, y: 0 },
+        buttonStates: {},
+        animationFrameId: null
+    };
+
+    // B button handler removed - users should use the modal buttons directly
+    // This prevents conflicts with Steam's back navigation
+    let onBackHandler = function() {
+        console.log('[Gamepad] B button pressed - ignoring (use modal buttons instead)');
+        // Do nothing - let users navigate with D-pad/stick and press A on Cancel/Back buttons
+    };
+
+    function onGamepadConnected(event) {
+        console.log('[Gamepad] Gamepad conectado en Millennium:', event.gamepad.id);
+        state.gamepadConnected = true;
+        state.gamepadIndex = event.gamepad.index;
+        if (!state.animationFrameId) {
+            pollGamepad();
+        }
+        // Don't scan immediately - only scan when an overlay is opened
+        // scanFocusableElements() will be called by the overlay's setTimeout
+    }
+
+    function onGamepadDisconnected(event) {
+        console.log('[Gamepad] Gamepad disconnected:', event.gamepad.id);
+        if (state.gamepadIndex === event.gamepad.index) {
+            state.gamepadConnected = false;
+            state.gamepadIndex = null;
+            if (state.animationFrameId) {
+                cancelAnimationFrame(state.animationFrameId);
+                state.animationFrameId = null;
+            }
+        }
+    }
+
+    function scanFocusableElements() {
+        // Only scan if there's a LuaTools overlay active
+        const activeOverlay = document.querySelector(OVERLAY_SELECTOR_STRING);
+
+        if (!activeOverlay) {
+            console.log('[Gamepad] No LuaTools overlay active, skipping scan');
+            state.focusableElements = [];
+            state.currentFocusIndex = 0;
+            return;
+        }
+
+        // Only scan elements INSIDE the active overlay
+        const selectors = [
+            'button:not([disabled])',
+            'a[href]:not([disabled])',
+            'input:not([disabled])',
+            'select:not([disabled])',
+            'textarea:not([disabled])',
+            '[tabindex="0"]',
+            '[tabindex]:not([tabindex="-1"])',
+            '.focusable:not([disabled])'
+        ].join(', ');
+
+        // Use querySelectorAll on the overlay, not the whole document
+        const elements = Array.from(activeOverlay.querySelectorAll(selectors));
+        state.focusableElements = elements.filter(function(el) {
+            const rect = el.getBoundingClientRect();
+            const style = window.getComputedStyle(el);
+            return rect.width > 0 && rect.height > 0 &&
+                   style.display !== 'none' &&
+                   style.visibility !== 'hidden' &&
+                   style.opacity !== '0';
+        });
+
+        console.log('[Gamepad] Scanned ' + state.focusableElements.length + ' focusable elements inside overlay');
+
+        if (state.focusableElements.length > 0) {
+            focusElement(0);
+        }
+    }
+
+    function focusElement(index) {
+        const prevElement = state.focusableElements[state.currentFocusIndex];
+        if (prevElement) {
+            prevElement.blur();
+            prevElement.classList.remove('active-focus');
+        }
+
+        if (index < 0) index = 0;
+        if (index >= state.focusableElements.length) index = state.focusableElements.length - 1;
+
+        state.currentFocusIndex = index;
+
+        const element = state.focusableElements[index];
+        if (element) {
+            element.focus();
+            element.classList.add('active-focus');
+            element.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest',
+                inline: 'nearest'
+            });
+            console.log('[Gamepad] Focused element ' + index + ':', element);
+        }
+    }
+
+    function navigate(direction) {
+        const now = Date.now();
+        if (now - state.lastNavigationTime < CONFIG.debounceTime) {
+            return;
+        }
+        state.lastNavigationTime = now;
+
+        if (state.focusableElements.length === 0) {
+            scanFocusableElements();
+            return;
+        }
+
+        let newIndex = state.currentFocusIndex;
+
+        switch(direction) {
+            case 'up':
+                newIndex--;
+                break;
+            case 'down':
+                newIndex++;
+                break;
+            case 'left':
+                newIndex = findElementInDirection('left');
+                break;
+            case 'right':
+                newIndex = findElementInDirection('right');
+                break;
+        }
+
+        if (newIndex < 0) newIndex = state.focusableElements.length - 1;
+        if (newIndex >= state.focusableElements.length) newIndex = 0;
+
+        focusElement(newIndex);
+    }
+
+    function findElementInDirection(direction) {
+        const currentElement = state.focusableElements[state.currentFocusIndex];
+        if (!currentElement) return state.currentFocusIndex;
+
+        const currentRect = currentElement.getBoundingClientRect();
+        let closestIndex = state.currentFocusIndex;
+        let closestDistance = Infinity;
+
+        state.focusableElements.forEach(function(el, index) {
+            if (index === state.currentFocusIndex) return;
+
+            const rect = el.getBoundingClientRect();
+            let isInDirection = false;
+            let distance = 0;
+
+            if (direction === 'left') {
+                isInDirection = rect.right <= currentRect.left;
+                distance = currentRect.left - rect.right;
+            } else if (direction === 'right') {
+                isInDirection = rect.left >= currentRect.right;
+                distance = rect.left - currentRect.right;
+            }
+
+            if (isInDirection && distance < closestDistance) {
+                closestDistance = distance;
+                closestIndex = index;
+            }
+        });
+
+        return closestIndex;
+    }
+
+    function handleButtonPress(buttonIndex) {
+        const element = state.focusableElements[state.currentFocusIndex];
+
+        switch(buttonIndex) {
+            case CONFIG.buttonMap.A:
+                if (element) {
+                    console.log('[Gamepad] A button: clicking element', element);
+                    element.click();
+                    setTimeout(scanFocusableElements, 100);
+                }
+                break;
+
+            case CONFIG.buttonMap.B:
+                // B button disabled - users should use modal buttons
+                console.log('[Gamepad] B button pressed - ignoring');
+                break;
+
+            case CONFIG.buttonMap.DPAD_UP:
+                navigate('up');
+                break;
+
+            case CONFIG.buttonMap.DPAD_DOWN:
+                navigate('down');
+                break;
+
+            case CONFIG.buttonMap.DPAD_LEFT:
+                navigate('left');
+                break;
+
+            case CONFIG.buttonMap.DPAD_RIGHT:
+                navigate('right');
+                break;
+        }
+    }
+
+    function pollGamepad() {
+        if (!state.gamepadConnected) {
+            state.animationFrameId = null;
+            return;
+        }
+
+        // Check if there's an active LuaTools overlay
+        const hasActiveOverlay = document.querySelector(OVERLAY_SELECTOR_STRING);
+
+        // If no overlay is active, skip input processing but keep polling
+        if (!hasActiveOverlay) {
+            state.animationFrameId = requestAnimationFrame(pollGamepad);
+            return;
+        }
+
+        const gamepads = navigator.getGamepads();
+        const gamepad = gamepads[state.gamepadIndex];
+
+        if (!gamepad) {
+            state.animationFrameId = requestAnimationFrame(pollGamepad);
+            return;
+        }
+
+        // Buttons
+        gamepad.buttons.forEach(function(button, index) {
+            const wasPressed = state.buttonStates[index] || false;
+            const isPressed = button.pressed;
+
+            if (isPressed && !wasPressed) {
+                handleButtonPress(index);
+            }
+
+            state.buttonStates[index] = isPressed;
+        });
+
+        // Left stick
+        const axisX = gamepad.axes[CONFIG.axesMap.LEFT_STICK_X] || 0;
+        const axisY = gamepad.axes[CONFIG.axesMap.LEFT_STICK_Y] || 0;
+
+        const x = Math.abs(axisX) > CONFIG.deadzone ? axisX : 0;
+        const y = Math.abs(axisY) > CONFIG.deadzone ? axisY : 0;
+
+        const now = Date.now();
+        const threshold = CONFIG.stickThreshold; // Use higher threshold (0.7)
+        if (now - state.lastNavigationTime >= CONFIG.debounceTime) {
+            if (y < -threshold && state.lastAxisValues.y >= -threshold) {
+                navigate('up');
+            } else if (y > threshold && state.lastAxisValues.y <= threshold) {
+                navigate('down');
+            } else if (x < -threshold && state.lastAxisValues.x >= -threshold) {
+                navigate('left');
+            } else if (x > threshold && state.lastAxisValues.x <= threshold) {
+                navigate('right');
+            }
+        }
+
+        state.lastAxisValues.x = x;
+        state.lastAxisValues.y = y;
+
+        state.animationFrameId = requestAnimationFrame(pollGamepad);
+    }
+
+    // Disabled: MutationObserver was causing unwanted auto-scanning
+    // Only manual scanElements() calls from overlay setTimeout will trigger scans
+    /*
+    const observer = new MutationObserver(function(mutations) {
+        clearTimeout(observer.rescanTimeout);
+        observer.rescanTimeout = setTimeout(function() {
+            if (state.gamepadConnected) {
+                scanFocusableElements();
+            }
+        }, 300);
+    });
+    */
+
+    // Block Steam's gamepad navigation when overlay is active
+    function blockSteamNavigation(event) {
+        const hasActiveOverlay = document.querySelector(OVERLAY_SELECTOR_STRING);
+
+        if (hasActiveOverlay && state.gamepadConnected) {
+            // Block arrow keys, Enter, Escape, Backspace and other navigation keys
+            // Note: Steam may translate gamepad B button to Escape or Backspace
+            const navKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', 'Escape', 'Backspace', ' ', 'Tab'];
+            if (navKeys.includes(event.key)) {
+                event.preventDefault();
+                event.stopPropagation();
+                event.stopImmediatePropagation();
+                console.log('[Gamepad] Blocked Steam navigation key:', event.key);
+                return false;
+            }
+        }
+    }
+
+    // Block clicks on Steam UI when overlay is active
+    function blockSteamClicks(event) {
+        const hasActiveOverlay = document.querySelector(OVERLAY_SELECTOR_STRING);
+
+        if (hasActiveOverlay && state.gamepadConnected) {
+            // Only allow clicks inside the overlay
+            const clickedInsideOverlay = event.target.closest(OVERLAY_SELECTOR_STRING);
+
+            if (!clickedInsideOverlay) {
+                event.preventDefault();
+                event.stopPropagation();
+                event.stopImmediatePropagation();
+                console.log('[Gamepad] Blocked click outside overlay');
+                return false;
+            }
+        }
+    }
+
+    // Block browser history navigation when overlay is active
+    function blockHistoryNavigation(event) {
+        const hasActiveOverlay = document.querySelector(OVERLAY_SELECTOR_STRING);
+        if (hasActiveOverlay && state.gamepadConnected) {
+            console.log('[Gamepad] Blocked history navigation (popstate)');
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+            // Push the current state back to prevent navigation
+            window.history.pushState(null, '', window.location.href);
+            return false;
+        }
+    }
+
+    function init() {
+        console.log('[Gamepad] Initializing Gamepad Navigation System...');
+
+        window.addEventListener('gamepadconnected', onGamepadConnected);
+        window.addEventListener('gamepaddisconnected', onGamepadDisconnected);
+
+        // Block Steam's keyboard navigation when overlay is active
+        document.addEventListener('keydown', blockSteamNavigation, true);
+        document.addEventListener('keyup', blockSteamNavigation, true);
+
+        // Block clicks outside overlay when gamepad is active
+        document.addEventListener('click', blockSteamClicks, true);
+        document.addEventListener('mousedown', blockSteamClicks, true);
+
+        // Block browser history navigation (back button)
+        window.addEventListener('popstate', blockHistoryNavigation, true);
+
+        const gamepads = navigator.getGamepads();
+        for (let i = 0; i < gamepads.length; i++) {
+            if (gamepads[i]) {
+                onGamepadConnected({ gamepad: gamepads[i] });
+                break;
+            }
+        }
+
+        // Disabled: MutationObserver auto-scanning
+        /*
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+        */
+
+        // Don't scan on init - only scan when overlays are opened
+        // scanFocusableElements();
+
+        console.log('[Gamepad] Initialization complete');
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+    window.GamepadNav = {
+        scanElements: scanFocusableElements,
+        setBackHandler: function(fn) {
+            if (typeof fn === 'function') {
+                onBackHandler = fn;
+            }
+        },
+        focusElement: focusElement,
+        getCurrentIndex: function() { return state.currentFocusIndex; },
+        getElements: function() { return state.focusableElements; },
+        isConnected: function() { return state.gamepadConnected; }
+    };
+})();
+
+// ============================================
+// LUATOOLS MAIN CODE
+// ============================================
+(function() {
+    'use strict';
+
+    // Big Picture Mode Detector - Multi-method system for maximum reliability
+    function isBigPictureMode() {
+        const htmlClasses = document.documentElement.className;
+        const userAgent = navigator.userAgent;
+
+        // METHOD 1: HTML Classes
+        // Big Picture: 'BasicUI' + 'touch'
+        // Normal Mode: 'DesktopUI' (without 'touch')
+        const hasBigPictureClass = htmlClasses.includes('BasicUI');
+        const hasDesktopClass = htmlClasses.includes('DesktopUI');
+        const hasTouchClass = htmlClasses.includes('touch');
+
+        // METHOD 2: User Agent
+        // Big Picture: 'Valve Steam Gamepad'
+        // Normal Mode: 'Valve Steam Client'
+        const isGamepadUA = userAgent.includes('Valve Steam Gamepad');
+        const isClientUA = userAgent.includes('Valve Steam Client');
+
+        // Scoring system: each indicator adds points
+        let bigPictureScore = 0;
+
+        // BasicUI/DesktopUI class (weight: 3 points - highly reliable)
+        if (hasBigPictureClass) bigPictureScore += 3;
+        if (hasDesktopClass) bigPictureScore -= 3;
+
+        // User Agent (weight: 2 points - reliable)
+        if (isGamepadUA) bigPictureScore += 2;
+        if (isClientUA) bigPictureScore -= 2;
+
+        // Touch class (weight: 1 point - additional indicator)
+        if (hasTouchClass) bigPictureScore += 1;
+
+        // Positive score = Big Picture, negative/zero = Normal
+        const isBigPicture = bigPictureScore > 0;
+
+        return isBigPicture;
+    }
+
+    // Detect and save mode at startup
+    window.__LUATOOLS_IS_BIG_PICTURE__ = isBigPictureMode();
+
     // Forward logs to Millennium backend so they appear in the dev console
     function backendLog(message) {
         try {
@@ -14,8 +568,9 @@
             }
         }
     }
-    
+
     backendLog('LuaTools script loaded');
+    backendLog('Mode Detection: ' + (window.__LUATOOLS_IS_BIG_PICTURE__ ? 'BIG PICTURE MODE' : 'NORMAL MODE'));
     // anti-spam state
     const logState = { missingOnce: false, existsOnce: false };
     // click/run debounce state
@@ -523,6 +1078,14 @@
             const body = document.createElement('div');
             body.style.cssText = 'font-size:14px;line-height:1.6;margin-bottom:12px;';
 
+            // Add mouse mode tip for Big Picture
+            if (window.__LUATOOLS_IS_BIG_PICTURE__) {
+                const tip = document.createElement('div');
+                tip.style.cssText = 'background:rgba(102,192,244,0.15);border-left:3px solid #66c0f4;padding:12px 16px;border-radius:6px;font-size:13px;color:#c7d5e0;margin-bottom:16px;line-height:1.5;';
+                tip.innerHTML = '<i class="fa-solid fa-info-circle" style="margin-right:8px;color:#66c0f4;"></i>' + t('bigpicture.mouseTip', 'To use mouse mode in Steam: Guide Button + Right Joystick, click with RB');
+                body.appendChild(tip);
+            }
+
             const container = document.createElement('div');
             container.style.cssText = 'margin-top:16px;display:flex;flex-direction:column;gap:12px;align-items:stretch;';
 
@@ -574,6 +1137,13 @@
             modal.appendChild(body);
             overlay.appendChild(modal);
             document.body.appendChild(overlay);
+
+            // Re-scan elements for gamepad navigation
+            setTimeout(function() {
+                if (window.GamepadNav) {
+                    window.GamepadNav.scanElements();
+                }
+            }, 150);
 
             if (checkBtn) {
                 checkBtn.addEventListener('click', function(e){
@@ -922,6 +1492,13 @@
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
 
+        // Re-scan elements for gamepad navigation
+        setTimeout(function() {
+            if (window.GamepadNav) {
+                window.GamepadNav.scanElements();
+            }
+        }, 150);
+
         function cleanup(){
             overlay.remove();
         }
@@ -1012,6 +1589,14 @@
                 body.style.backgroundSize = 'cover';
             }
         } catch(_) {}
+
+        // Add mouse mode tip for Big Picture
+        if (window.__LUATOOLS_IS_BIG_PICTURE__) {
+            const tip = document.createElement('div');
+            tip.style.cssText = 'background:rgba(102,192,244,0.15);border-left:3px solid #66c0f4;padding:12px 16px;border-radius:6px;font-size:13px;color:#c7d5e0;margin-bottom:16px;line-height:1.5;';
+            tip.innerHTML = '<i class="fa-solid fa-info-circle" style="margin-right:8px;color:#66c0f4;"></i>' + t('bigpicture.mouseTip', 'To use mouse mode in Steam: Guide Button + Right Joystick, click with RB');
+            body.appendChild(tip);
+        }
 
         const gameHeader = document.createElement('div');
         gameHeader.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:16px;';
@@ -1258,9 +1843,16 @@
         // final modal
         modal.appendChild(header);
         modal.appendChild(body);
-        modal.appendChild(btnRow);  
+        modal.appendChild(btnRow);
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
+
+        // Re-scan elements for gamepad navigation
+        setTimeout(function() {
+            if (window.GamepadNav) {
+                window.GamepadNav.scanElements();
+            }
+        }, 150);
 
         closeIconBtn.onclick = function(e) { e.preventDefault(); overlay.remove(); };
         discordBtn.onclick = function(e) {
@@ -1333,6 +1925,13 @@
         modal.appendChild(progressWrap);
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
+
+        // Re-scan elements for gamepad navigation
+        setTimeout(function() {
+            if (window.GamepadNav) {
+                window.GamepadNav.scanElements();
+            }
+        }, 150);
 
         let progress = 0;
         const progressInterval = setInterval(function() {
@@ -1501,6 +2100,13 @@
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
 
+        // Re-scan elements for gamepad navigation
+        setTimeout(function() {
+            if (window.GamepadNav) {
+                window.GamepadNav.scanElements();
+            }
+        }, 150);
+
         // Start polling for progress
         pollFixProgress(appid, fixType);
     }
@@ -1608,6 +2214,13 @@
         modal.appendChild(btnRow);
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
+
+        // Re-scan elements for gamepad navigation
+        setTimeout(function() {
+            if (window.GamepadNav) {
+                window.GamepadNav.scanElements();
+            }
+        }, 150);
 
         // Start polling for progress
         pollUnfixProgress(appid);
@@ -1804,6 +2417,14 @@
         const contentColors = getThemeColors();
         contentWrap.style.cssText = `flex:1 1 auto;overflow-y:auto;overflow-x:hidden;padding:20px;margin:0 24px;border:1px solid ${contentColors.border};border-radius:12px;background:${contentColors.bgContainer};`;
 
+        // Add mouse mode tip for Big Picture
+        if (window.__LUATOOLS_IS_BIG_PICTURE__) {
+            const tip = document.createElement('div');
+            tip.style.cssText = 'background:rgba(102,192,244,0.15);border-left:3px solid #66c0f4;padding:12px 16px;border-radius:6px;font-size:13px;color:#c7d5e0;margin-bottom:16px;line-height:1.5;';
+            tip.innerHTML = '<i class="fa-solid fa-info-circle" style="margin-right:8px;color:#66c0f4;"></i>' + t('bigpicture.mouseTip', 'To use mouse mode in Steam: Guide Button + Right Joystick, click with RB');
+            contentWrap.appendChild(tip);
+        }
+
         const btnRow = document.createElement('div');
         btnRow.style.cssText = 'padding:20px 24px 24px;display:flex;gap:12px;justify-content:space-between;align-items:center;';
 
@@ -1818,6 +2439,13 @@
         modal.appendChild(btnRow);
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
+
+        // Re-scan elements for gamepad navigation
+        setTimeout(function() {
+            if (window.GamepadNav) {
+                window.GamepadNav.scanElements();
+            }
+        }, 150);
 
         const state = {
             config: null,
@@ -2873,6 +3501,13 @@
         });
 
         document.body.appendChild(overlay);
+
+        // Re-scan elements for gamepad navigation
+        setTimeout(function() {
+            if (window.GamepadNav) {
+                window.GamepadNav.scanElements();
+            }
+        }, 150);
     }
 
     // Helper to show alert with fallback
@@ -2954,6 +3589,13 @@
         });
 
         document.body.appendChild(overlay);
+
+        // Re-scan elements for gamepad navigation
+        setTimeout(function() {
+            if (window.GamepadNav) {
+                window.GamepadNav.scanElements();
+            }
+        }, 150);
     }
 
     // Ensure consistent spacing for our buttons
@@ -2980,7 +3622,7 @@
                     rspan.textContent = restartText;
                 }
             }
-            
+
             // Update Add via LuaTools button
             const luatoolsBtn = document.querySelector('.luatools-button');
             if (luatoolsBtn) {
@@ -2998,7 +3640,18 @@
     }
 
     // Function to add the LuaTools button
+    // Add throttle to prevent excessive executions
+    let lastButtonCheckTime = 0;
+    const BUTTON_CHECK_THROTTLE = 500; // Only run once every 500ms
+
     function addLuaToolsButton() {
+        // Throttle to prevent blocking gamepad input
+        const now = Date.now();
+        if (now - lastButtonCheckTime < BUTTON_CHECK_THROTTLE) {
+            return; // Skip this execution, too soon
+        }
+        lastButtonCheckTime = now;
+
         // Track current URL to detect page changes
         const currentUrl = window.location.href;
         if (window.__LuaToolsLastUrl !== currentUrl) {
@@ -3014,13 +3667,25 @@
                 updateButtonTranslations();
             });
         }
-        
-        // Look for the SteamDB buttons container
-        const steamdbContainer = document.querySelector('.steamdb-buttons') || 
-                                document.querySelector('[data-steamdb-buttons]') ||
-                                document.querySelector('.apphub_OtherSiteInfo');
 
-        if (steamdbContainer) {
+        // Check if we're in Big Picture mode
+        const isBigPicture = window.__LUATOOLS_IS_BIG_PICTURE__;
+
+        // Look for the appropriate container based on mode
+        let targetContainer;
+        if (isBigPicture) {
+            // In Big Picture mode, use the queue button's parent as reference
+            const queueBtn = document.querySelector('#queueBtnFollow');
+            targetContainer = queueBtn ? queueBtn.parentElement : null;
+        } else {
+            // In normal mode, use the SteamDB buttons container
+            targetContainer = document.querySelector('.steamdb-buttons') ||
+                            document.querySelector('[data-steamdb-buttons]') ||
+                            document.querySelector('.apphub_OtherSiteInfo');
+        }
+
+        if (targetContainer) {
+            const steamdbContainer = targetContainer;
             // Always update translations for existing buttons (even if not a page change)
             const existingBtn = document.querySelector('.luatools-button');
             if (existingBtn) {
@@ -3040,7 +3705,12 @@
             try {
                 if (!document.querySelector('.luatools-restart-button') && !window.__LuaToolsRestartInserted) {
                     ensureStyles();
-                    const referenceBtn = steamdbContainer.querySelector('a');
+                    // In Big Picture mode, use queue button as reference; otherwise use first link in container
+                    const referenceBtn = isBigPicture
+                        ? document.querySelector('#queueBtnFollow')
+                        : steamdbContainer.querySelector('a');
+
+                    // Use same custom button for both modes
                     const restartBtn = document.createElement('a');
                     if (referenceBtn && referenceBtn.className) {
                         restartBtn.className = referenceBtn.className + ' luatools-restart-button';
@@ -3054,6 +3724,7 @@
                     const rspan = document.createElement('span');
                     rspan.textContent = restartText;
                     restartBtn.appendChild(rspan);
+
                     // Normalize margins to match native buttons
                     try {
                         if (referenceBtn) {
@@ -3088,6 +3759,7 @@
                     // Insert icon button right after Restart (only once)
                     try {
                         if (!document.querySelector('.luatools-icon-button') && !window.__LuaToolsIconInserted) {
+                            // Use same custom button for both modes
                             const iconBtn = document.createElement('a');
                             if (referenceBtn && referenceBtn.className) {
                                 iconBtn.className = referenceBtn.className + ' luatools-icon-button';
@@ -3097,6 +3769,7 @@
                             iconBtn.href = '#';
                             iconBtn.title = 'LuaTools Helper';
                             iconBtn.setAttribute('data-tooltip-text', 'LuaTools Helper');
+
                             // Normalize margins to match native buttons
                             try {
                                 if (referenceBtn) {
@@ -3105,6 +3778,7 @@
                                     iconBtn.style.marginRight = cs.marginRight;
                                 }
                             } catch(_) {}
+
                             const ispan = document.createElement('span');
                             const img = document.createElement('img');
                             img.alt = '';
@@ -3133,7 +3807,9 @@
                             ispan.appendChild(img);
                             iconBtn.appendChild(ispan);
                             iconBtn.addEventListener('click', function(e){ e.preventDefault(); showSettingsPopup(); });
+
                             restartBtn.after(iconBtn);
+
                             window.__LuaToolsIconInserted = true;
                             backendLog('Inserted Icon button');
                         }
@@ -3147,9 +3823,14 @@
             if (document.querySelector('.luatools-button') || window.__LuaToolsButtonInserted) {
                 return;
             }
-            
+
             // Create the LuaTools button modeled after existing SteamDB/PCGW buttons
-            let referenceBtn = steamdbContainer.querySelector('a');
+            // In Big Picture mode, use queue button as reference; otherwise use first link in container
+            let referenceBtn = isBigPicture
+                ? document.querySelector('#queueBtnFollow')
+                : steamdbContainer.querySelector('a');
+
+            // Use same custom button for both modes
             const luatoolsButton = document.createElement('a');
             luatoolsButton.href = '#';
             // Copy classes from an existing button to match look-and-feel, but set our own label
@@ -3165,6 +3846,7 @@
             // Tooltip/title
             luatoolsButton.title = addViaText;
             luatoolsButton.setAttribute('data-tooltip-text', addViaText);
+
             // Normalize margins to match native buttons
             try {
                 if (referenceBtn) {
@@ -3202,8 +3884,12 @@
                             }
                             // Re-check in case another caller inserted during async
                             if (!document.querySelector('.luatools-button') && !window.__LuaToolsButtonInserted) {
+                                // Insert after icon button (order: Restart → Icon → Add)
+                                const iconExisting = steamdbContainer.querySelector('.luatools-icon-button');
                                 const restartExisting = steamdbContainer.querySelector('.luatools-restart-button');
-                                if (restartExisting && restartExisting.after) {
+                                if (iconExisting && iconExisting.after) {
+                                    iconExisting.after(luatoolsButton);
+                                } else if (restartExisting && restartExisting.after) {
                                     restartExisting.after(luatoolsButton);
                                 } else if (referenceBtn && referenceBtn.after) {
                                     referenceBtn.after(luatoolsButton);
@@ -3225,8 +3911,12 @@
                     });
                 } else {
                     if (!document.querySelector('.luatools-button') && !window.__LuaToolsButtonInserted) {
+                        // Insert after icon button (order: Restart → Icon → Add)
+                        const iconExisting = steamdbContainer.querySelector('.luatools-icon-button');
                         const restartExisting = steamdbContainer.querySelector('.luatools-restart-button');
-                        if (restartExisting && restartExisting.after) {
+                        if (iconExisting && iconExisting.after) {
+                            iconExisting.after(luatoolsButton);
+                        } else if (restartExisting && restartExisting.after) {
                             restartExisting.after(luatoolsButton);
                         } else if (referenceBtn && referenceBtn.after) {
                             referenceBtn.after(luatoolsButton);
@@ -3255,7 +3945,7 @@
             if (!logState.missingOnce) { backendLog('LuaTools: steamdbContainer not found on this page'); logState.missingOnce = true; }
         }
     }
-    
+
     // Try to add the button immediately if DOM is ready
     function onFrontendReady() {
         // Fetch settings on startup to ensure saved theme is applied across pages
@@ -3266,6 +3956,59 @@
         } catch(_) {}
 
         addLuaToolsButton();
+
+        // Show gamepad hint if connected (only in Big Picture mode)
+        setTimeout(function() {
+            if (window.GamepadNav && window.GamepadNav.isConnected && window.GamepadNav.isConnected()) {
+                backendLog('[LuaTools] Gamepad detected - Navigation enabled');
+
+                // Only show visual hint in Big Picture mode
+                if (window.__LUATOOLS_IS_BIG_PICTURE__) {
+                    const hint = document.createElement('div');
+                    hint.id = 'luatools-gamepad-hint';
+                    hint.innerHTML = '🎮 ' + lt('bigpicture.mouseTip');
+                    hint.style.cssText = '\
+                        position: fixed;\
+                        bottom: 20px;\
+                        right: 20px;\
+                        background: rgba(11, 20, 30, 0.9);\
+                        color: #66c0f4;\
+                        padding: 12px 16px;\
+                        border-radius: 8px;\
+                        font-size: 14px;\
+                        z-index: 99998;\
+                        border: 1px solid rgba(102, 192, 244, 0.3);\
+                        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);\
+                        animation: fadeInOut 3s ease-in-out;\
+                    ';
+
+                    // Add CSS animation if not already present
+                    if (!document.querySelector('#luatools-gamepad-hint-styles')) {
+                        const style = document.createElement('style');
+                        style.id = 'luatools-gamepad-hint-styles';
+                        style.textContent = '\
+                            @keyframes fadeInOut {\
+                                0% { opacity: 0; transform: translateY(10px); }\
+                                10% { opacity: 1; transform: translateY(0); }\
+                                90% { opacity: 1; transform: translateY(0); }\
+                                100% { opacity: 0; transform: translateY(10px); }\
+                            }\
+                        ';
+                        document.head.appendChild(style);
+                    }
+
+                    document.body.appendChild(hint);
+
+                    // Auto-remove after animation
+                    setTimeout(function() {
+                        if (hint && hint.parentElement) {
+                            hint.remove();
+                        }
+                    }, 3000);
+                }
+            }
+        }, 500);
+
         // Ask backend if there is a queued startup message from InitApis
         try {
             if (typeof Millennium !== 'undefined' && typeof Millennium.callServerMethod === 'function') {
@@ -3317,10 +4060,15 @@
     }
     
     // Delegate click handling in case the DOM is re-rendered and listeners are lost
+    // Use bubble phase instead of capture phase to avoid interfering with gamepad navigation
     document.addEventListener('click', function(evt) {
-        const anchor = evt.target && (evt.target.closest ? evt.target.closest('.luatools-button') : null);
+        // Quick exit if target doesn't have closest method or isn't an element
+        if (!evt.target || !evt.target.closest) return;
+
+        const anchor = evt.target.closest('.luatools-button');
         if (anchor) {
             evt.preventDefault();
+            evt.stopPropagation(); // Stop propagation to avoid conflicts
             backendLog('LuaTools delegated click');
             // Use the same loading modal on delegated clicks
             if (!document.querySelector('.luatools-overlay')) {
@@ -3341,7 +4089,7 @@
                 }
             } catch(_) {}
         }
-    }, true);
+    }, false); // Changed from true to false (bubble phase instead of capture phase)
 
     // Poll backend for progress and update progress bar and text
     function startPolling(appid){
@@ -3503,7 +4251,7 @@
                             }
                             done = true; clearInterval(timer);
                             runState.inProgress = false; runState.appid = null;
-                            // remove button since game is added (works even if popup is hidden)
+                            // Remove button since game is added (works even if popup is hidden)
                             const btnEl = document.querySelector('.luatools-button');
                             if (btnEl && btnEl.parentElement) {
                                 btnEl.parentElement.removeChild(btnEl);
@@ -3569,7 +4317,8 @@
         }
     }
     // Check URL changes periodically and on popstate
-    setInterval(checkUrlChange, 500);
+    // Reduced frequency to avoid blocking gamepad input
+    setInterval(checkUrlChange, 2000); // Changed from 500ms to 2000ms (2 seconds)
     window.addEventListener('popstate', checkUrlChange);
     // Override pushState/replaceState to detect navigation
     const originalPushState = history.pushState;
@@ -3584,17 +4333,59 @@
     };
     
     // Use MutationObserver to catch dynamically added content
+    // Heavily optimized and throttled version to avoid blocking gamepad
     if (typeof MutationObserver !== 'undefined') {
+        let mutationTimeout;
+        let lastMutationProcessTime = 0;
+        const MUTATION_THROTTLE = 1000; // Only process once per second
+
         const observer = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                    // Always update translations when DOM changes
+            // Additional throttle on top of debounce
+            const now = Date.now();
+            if (now - lastMutationProcessTime < MUTATION_THROTTLE) {
+                return; // Skip if processed recently
+            }
+
+            // Debounce mutations to avoid blocking the UI
+            clearTimeout(mutationTimeout);
+            mutationTimeout = setTimeout(function() {
+                lastMutationProcessTime = Date.now();
+
+                let shouldUpdate = false;
+                // Quick check: only process first 10 mutations to avoid long loops
+                const mutationsToCheck = Math.min(mutations.length, 10);
+
+                for (let i = 0; i < mutationsToCheck; i++) {
+                    const mutation = mutations[i];
+                    if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                        // Only check first 3 added nodes to avoid blocking
+                        const nodesToCheck = Math.min(mutation.addedNodes.length, 3);
+
+                        for (let j = 0; j < nodesToCheck; j++) {
+                            const node = mutation.addedNodes[j];
+                            if (node.nodeType === 1) { // Element node
+                                // Quick class check without querySelector (faster)
+                                if (node.classList && (
+                                    node.classList.contains('steamdb-buttons') ||
+                                    node.classList.contains('apphub_OtherSiteInfo') ||
+                                    node.id === 'queueBtnFollow'
+                                )) {
+                                    shouldUpdate = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (shouldUpdate) break;
+                }
+
+                if (shouldUpdate) {
                     updateButtonTranslations();
                     addLuaToolsButton();
                 }
-            });
+            }, 300); // Increased debounce to 300ms
         });
-        
+
         observer.observe(document.body, {
             childList: true,
             subtree: true
@@ -3661,5 +4452,19 @@
         overlay.appendChild(modal);
         overlay.addEventListener('click', function(e){ if (e.target === overlay) overlay.remove(); });
         document.body.appendChild(overlay);
+
+        // Re-scan elements for gamepad navigation
+        setTimeout(function() {
+            if (window.GamepadNav) {
+                window.GamepadNav.scanElements();
+            }
+        }, 150);
     }
+
+    // ============================================
+    // GAMEPAD NAVIGATION INTEGRATION
+    // ============================================
+    // Note: The gamepad back handler is configured in the gamepad system at the top of this file
+    // It already handles all overlay types automatically using OVERLAY_SELECTOR_STRING
+
 })();
