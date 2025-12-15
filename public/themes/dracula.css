@@ -1,0 +1,50 @@
+:root {
+    --lt-bg-primary: #282a36;
+    --lt-bg-secondary: #44475a;
+    --lt-bg-tertiary: rgba(40, 42, 54, 0.95);
+    --lt-bg-hover: rgba(68, 71, 90, 0.95);
+    --lt-bg-container: rgba(40,42,54,0.8);
+    --lt-bg-container-gradient: rgba(40, 42, 54, 0.9), #282a36;
+    --lt-accent: #ff79c6;
+    --lt-accent-light: #f1fa8c;
+    --lt-accent-dark: #ff92df;
+    --lt-border: rgba(255, 121, 198, 0.3);
+    --lt-border-hover: rgba(255, 121, 198, 0.8);
+    --lt-text: #f8f8f2;
+    --lt-text-secondary: #e0e0e0;
+    --lt-gradient: linear-gradient(135deg, #ff79c6 0%, #bd93f9 100%);
+    --lt-gradient-light: linear-gradient(135deg, #8be9fd 0%, #ff79c6 100%);
+    --lt-shadow: rgba(255, 121, 198, 0.4);
+    --lt-shadow-hover: rgba(255, 121, 198, 0.6);
+    --lt-shadow-rgba: rgba(255, 121, 198, 0.3);
+    --lt-rgb: 255,121,198;
+}
+
+/* Select dropdown styling for dracula theme */
+select {
+    background-color: rgba(40, 42, 54, 0.95) !important;
+    color: #f8f8f2 !important;
+    border: 1px solid rgba(255, 121, 198, 0.3) !important;
+    border-radius: 3px;
+}
+
+select option {
+    background-color: #282a36;
+    color: #f8f8f2;
+}
+
+select option:checked {
+    background: linear-gradient(#ff79c6, #ff79c6);
+    background-color: #ff79c6 !important;
+    color: #282a36 !important;
+}
+
+select:hover {
+    border-color: rgba(255, 121, 198, 0.8) !important;
+}
+
+select:focus {
+    outline: none;
+    border-color: #ff79c6 !important;
+    box-shadow: 0 0 0 2px rgba(255, 121, 198, 0.3);
+}
