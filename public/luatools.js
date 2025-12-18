@@ -4089,23 +4089,21 @@
                                 status = 'needs_fixes';
                             }
 
-                            const pill = document.createElement('span');
-                            pill.className = 'luatools-pill';
-
-                            if (status === 'untested') {
-                                pill.classList.add('gray');
-                                pill.textContent = 'Untested';
-                            } else if (status === 'playable') {
-                                pill.classList.add('green');
-                                pill.textContent = 'Playable';
-                            } else if (status === 'unplayable') {
-                                pill.classList.add('red');
-                                pill.textContent = 'Unplayable';
-                            } else if (status === 'needs_fixes') {
-                                pill.classList.add('yellow');
-                                pill.textContent = 'Needs fixes';
+                            if (status !== 'untested') {
+                                const pill = document.createElement('span');
+                                pill.className = 'luatools-pill';
+                                if (status === 'playable') {
+                                    pill.classList.add('green');
+                                    pill.textContent = 'Playable';
+                                } else if (status === 'unplayable') {
+                                    pill.classList.add('red');
+                                    pill.textContent = 'Unplayable';
+                                } else if (status === 'needs_fixes') {
+                                    pill.classList.add('yellow');
+                                    pill.textContent = 'Needs fixes';
+                                }
+                                pillsContainer.appendChild(pill);
                             }
-                            pillsContainer.appendChild(pill);
 
                             // reset button state
                             const btn = steamdbContainer.querySelector('.luatools-button');
