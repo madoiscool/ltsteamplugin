@@ -46,6 +46,14 @@ SETTINGS_GROUPS: List[SettingGroup] = [
                 default=True,
                 metadata={"yesLabel": "Yes", "noLabel": "No"},
             ),
+            SettingOption(
+                key="theme",
+                label="Theme",
+                option_type="select",
+                description="Choose the color theme for LuaTools interface.",
+                default="original",
+                metadata={"dynamicChoices": "themes"},
+            ),
         ],
     ),
 ]

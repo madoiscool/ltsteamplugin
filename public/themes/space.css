@@ -1,0 +1,50 @@
+:root {
+    --lt-bg-primary: #0a0e27;
+    --lt-bg-secondary: #1a1f3a;
+    --lt-bg-tertiary: rgba(10, 14, 39, 0.95);
+    --lt-bg-hover: rgba(26, 31, 58, 0.95);
+    --lt-bg-container: rgba(10,14,39,0.8);
+    --lt-bg-container-gradient: rgba(10, 14, 39, 0.9), #0a0e27;
+    --lt-accent: #6366f1;
+    --lt-accent-light: #818cf8;
+    --lt-accent-dark: #4f46e5;
+    --lt-border: rgba(99, 102, 241, 0.3);
+    --lt-border-hover: rgba(99, 102, 241, 0.8);
+    --lt-text: #fff;
+    --lt-text-secondary: #e0e7ff;
+    --lt-gradient: linear-gradient(135deg, #818cf8 0%, #6366f1 100%);
+    --lt-gradient-light: linear-gradient(135deg, #a5b4fc 0%, #818cf8 100%);
+    --lt-shadow: rgba(99, 102, 241, 0.4);
+    --lt-shadow-hover: rgba(99, 102, 241, 0.6);
+    --lt-shadow-rgba: rgba(99, 102, 241, 0.3);
+    --lt-rgb: 99,102,241;
+}
+
+/* Select dropdown styling for space theme */
+select {
+    background-color: rgba(10, 14, 39, 0.95) !important;
+    color: #fff !important;
+    border: 1px solid rgba(99, 102, 241, 0.3) !important;
+    border-radius: 3px;
+}
+
+select option {
+    background-color: #0a0e27;
+    color: #fff;
+}
+
+select option:checked {
+    background: linear-gradient(#6366f1, #6366f1);
+    background-color: #6366f1 !important;
+    color: #0a0e27 !important;
+}
+
+select:hover {
+    border-color: rgba(99, 102, 241, 0.8) !important;
+}
+
+select:focus {
+    outline: none;
+    border-color: #6366f1 !important;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
+}

@@ -576,6 +576,40 @@
     // click/run debounce state
     const runState = { inProgress: false, appid: null };
     
+    // Games Database Cache
+    let gamesDatabase = null;
+    let gamesDatabaseFetching = false;
+
+    function fetchGamesDatabase() {
+        if (gamesDatabase) return Promise.resolve(gamesDatabase);
+        if (gamesDatabaseFetching) return new Promise(function(resolve) {
+            const check = setInterval(function() {
+                if (gamesDatabase) { clearInterval(check); resolve(gamesDatabase); }
+            }, 100);
+        });
+
+        gamesDatabaseFetching = true;
+        if (typeof Millennium !== 'undefined' && typeof Millennium.callServerMethod === 'function') {
+            return Millennium.callServerMethod('luatools', 'GetGamesDatabase', { contentScriptQuery: '' })
+                .then(function(res) {
+                    var payload = (res && (res.result || res.value)) || res;
+                    if (typeof payload === 'string') {
+                        try { payload = JSON.parse(payload); } catch(e) {}
+                    }
+                    gamesDatabase = payload || {};
+                    return gamesDatabase;
+                })
+                .catch(function(err) {
+                    console.warn('[LuaTools] Failed to fetch games database', err);
+                    gamesDatabase = {};
+                    return {};
+                });
+        }
+
+        gamesDatabase = {};
+        return Promise.resolve({});
+    }
+
     const TRANSLATION_PLACEHOLDER = 'translation missing';
 
     function applyTranslationBundle(bundle) {
@@ -601,68 +635,307 @@
         window.__LuaToolsI18n = stored;
     }
 
+    // Theme definitions (pulled from themes.json; inline only used as fallback)
+    const DEFAULT_THEMES = {
+        original: {
+            name: 'Original',
+            bgPrimary: '#1b2838',
+            bgSecondary: '#2a475e',
+            bgTertiary: 'rgba(7, 7, 7, 0.86)',
+            bgHover: 'rgba(7, 7, 7, 0.86)',
+            bgContainer: 'rgba(11,20,30,0.6)',
+            bgContainerGradient: 'rgba(11, 20, 30, 0.85), #0b141e',
+            accent: '#66c0f4',
+            accentLight: '#a4d7f5',
+            accentDark: '#4a9ece',
+            border: 'rgba(102,192,244,0.3)',
+            borderHover: 'rgba(102,192,244,0.8)',
+            text: '#fff',
+            textSecondary: '#c7d5e0',
+            gradient: 'linear-gradient(135deg, #66c0f4 0%, #a4d7f5 100%)',
+            gradientLight: 'linear-gradient(135deg, #a4d7f5 0%, #7dd4ff 100%)',
+            shadow: 'rgba(102,192,244,0.4)',
+            shadowHover: 'rgba(102,192,244,0.6)',
+        }
+    };
+
+    // Runtime THEMES map - start with fallback, then hydrate from themes.json/backend.
+    let THEMES = DEFAULT_THEMES;
+
+    function normalizeThemesPayload(input) {
+        try {
+            let payload = input;
+            if (typeof payload === 'string') payload = JSON.parse(payload);
+            if (payload && typeof payload === 'object') {
+                if (Array.isArray(payload.themes)) return payload.themes;
+                if (Array.isArray(payload.result)) return payload.result;
+                if (payload.result && Array.isArray(payload.result.themes)) return payload.result.themes;
+                if (Array.isArray(payload.value)) return payload.value;
+            }
+            if (Array.isArray(payload)) return payload;
+        } catch (_) { /* ignore */ }
+        return [];
+    }
+
+    function _applyBackendThemes(themesArray) {
+        try {
+            const themes = normalizeThemesPayload(themesArray);
+            if (!Array.isArray(themes) || themes.length === 0) return;
+            const map = {};
+            themes.forEach(function (t) {
+                if (!t || (!t.value && !t.key)) return;
+                const key = t.value || t.key;
+                map[key] = Object.assign({}, t, { value: key, name: t.name || key });
+            });
+            if (Object.keys(map).length === 0) return;
+            THEMES = Object.assign({}, DEFAULT_THEMES, map);
+            try { ensureLuaToolsStyles(); } catch(_) {}
+        } catch (e) {
+            console.warn('Failed to apply backend themes', e);
+        }
+    }
+
+    function loadThemesFromFile() {
+        try {
+            return fetch('themes/themes.json', { cache: 'no-store' }).then(function (res) {
+                if (!res || !res.ok) return null;
+                return res.json();
+            }).then(function (json) {
+                if (!json) return null;
+                _applyBackendThemes(json);
+                return json;
+            }).catch(function () { return null; });
+        } catch (_) {
+            return Promise.resolve(null);
+        }
+    }
+
+    function loadThemesFromBackend() {
+        if (typeof Millennium === 'undefined' || typeof Millennium.callServerMethod !== 'function') {
+            return Promise.resolve(null);
+        }
+        return Millennium.callServerMethod('luatools', 'GetThemes', { contentScriptQuery: '' }).then(function (res) {
+            _applyBackendThemes(res);
+            return res;
+        }).catch(function () { return null; });
+    }
+
+    function loadThemes() {
+        return Promise.all([
+            loadThemesFromFile(),
+            loadThemesFromBackend()
+        ]).catch(function () { /* ignore */ });
+    }
+
+    // Trigger load (non-blocking). Keeps DEFAULT_THEMES as a safe fallback.
+    const themeLoadPromise = loadThemes();
+
+    function getCurrentThemeKey() {
+        try {
+            const settings = window.__LuaToolsSettings || {};
+            const themeKey = (settings.values || {}).general || {};
+            return themeKey.theme || 'original';
+        } catch (e) {
+            return 'original';
+        }
+    }
+
+    function getCurrentTheme() {
+        try {
+            const themeName = getCurrentThemeKey();
+            return THEMES[themeName] || THEMES.original;
+        } catch (e) {
+            return THEMES.original;
+        }
+    }
+
+    function hexToRgb(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? [
+            parseInt(result[1], 16),
+            parseInt(result[2], 16),
+            parseInt(result[3], 16)
+        ] : [102, 192, 244];
+    }
+
+    function getThemeColors() {
+        const theme = getCurrentTheme();
+        const rgb = hexToRgb(theme.accent);
+        return {
+            modalBg: `linear-gradient(135deg, ${theme.bgPrimary} 0%, ${theme.bgSecondary} 100%)`,
+            border: theme.accent,
+            borderRgba: theme.border,
+            borderRgbaHover: theme.borderHover,
+            text: theme.text,
+            textSecondary: theme.textSecondary,
+            accent: theme.accent,
+            accentLight: theme.accentLight,
+            accentDark: theme.accentDark,
+            gradient: theme.gradient,
+            gradientLight: theme.gradientLight,
+            shadow: theme.shadow,
+            shadowHover: theme.shadowHover,
+            shadowRgba: theme.shadow.replace('0.4', '0.3'),
+            bgContainer: theme.bgContainer,
+            bgContainerGradient: theme.bgContainerGradient,
+            rgbString: rgb.join(',')
+        };
+    }
+
+    function generateThemeStyles(theme) {
+        return `
+            /* Force overlay backdrops to follow the active theme (overrides inline styles) */
+            .luatools-settings-overlay,
+            .luatools-overlay,
+            .luatools-fixes-results-overlay,
+            .luatools-loading-fixes-overlay,
+            .luatools-unfix-overlay,
+            .luatools-settings-manager-overlay,
+            .luatools-loadedapps-overlay {
+                background: rgba(${theme.rgbString}, 0.12) !important;
+                backdrop-filter: blur(8px) !important;
+            }
+
+            /* Prefer overlay-scoped select rules to override theme CSS files */
+            .luatools-settings-overlay select,
+            .luatools-settings-manager-overlay select,
+            .luatools-overlay select,
+            .luatools-fixes-results-overlay select,
+            .luatools-loadedapps-overlay select {
+                background-color: ${theme.bgTertiary} !important;
+                color: ${theme.text} !important;
+                border: 1px solid ${theme.border} !important;
+                border-radius: 3px !important;
+                padding: 6px 8px !important;
+                font-size: 14px !important;
+            }
+            .luatools-settings-overlay select option,
+            .luatools-settings-manager-overlay select option,
+            .luatools-overlay select option,
+            .luatools-fixes-results-overlay select option,
+            .luatools-loadedapps-overlay select option {
+                background-color: ${theme.bgPrimary} !important;
+                color: ${theme.text} !important;
+            }
+            .luatools-settings-overlay select option:checked,
+            .luatools-settings-manager-overlay select option:checked,
+            .luatools-overlay select option:checked,
+            .luatools-fixes-results-overlay select option:checked,
+            .luatools-loadedapps-overlay select option:checked {
+                background: ${theme.accent} !important;
+                color: ${theme.text} !important;
+            }
+            .luatools-settings-overlay select:hover,
+            .luatools-settings-manager-overlay select:hover,
+            .luatools-overlay select:hover,
+            .luatools-fixes-results-overlay select:hover,
+            .luatools-loadedapps-overlay select:hover {
+                border-color: ${theme.borderHover} !important;
+            }
+            .luatools-settings-overlay select:focus,
+            .luatools-settings-manager-overlay select:focus,
+            .luatools-overlay select:focus,
+            .luatools-fixes-results-overlay select:focus,
+            .luatools-loadedapps-overlay select:focus {
+                outline: none !important;
+                border-color: ${theme.accent} !important;
+                box-shadow: 0 0 0 2px ${theme.shadow} !important;
+            }
+            .luatools-btn {
+                padding: 12px 24px;
+                background: ${theme.bgTertiary};
+                border: 2px solid ${theme.border.replace('0.3', '0.5')};
+                border-radius: 12px;
+                color: ${theme.text};
+                font-size: 15px;
+                font-weight: 600;
+                text-decoration: none;
+                transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                cursor: pointer;
+                box-shadow: 0 2px 8px ${theme.shadow};
+                letter-spacing: 0.3px;
+            }
+            .luatools-btn:hover:not([data-disabled="1"]) {
+                background: ${theme.bgHover};
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px ${theme.shadowHover};
+                border-color: ${theme.borderHover};
+            }
+            .luatools-btn.primary {
+                background: ${theme.gradient};
+                border-color: ${theme.borderHover.replace('0.8', '0.8')};
+                color: ${theme.text};
+                font-weight: 700;
+                box-shadow: 0 4px 15px ${theme.shadow}, inset 0 1px 0 rgba(255,255,255,0.3);
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            }
+            .luatools-btn.primary:hover:not([data-disabled="1"]) {
+                background: ${theme.gradientLight};
+                transform: translateY(-3px) scale(1.03);
+                box-shadow: 0 8px 25px ${theme.shadowHover}, inset 0 1px 0 rgba(255,255,255,0.4);
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            @keyframes slideUp {
+                from {
+                    opacity: 0;
+                    transform: scale(0.9);
+                }
+                to {
+                    opacity: 1;
+                    transform: scale(1);
+                }
+            }
+            @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+            @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.7; }
+            }
+        `;
+    }
+
+    function ensureThemeStylesheet(themeKey) {
+        const id = 'luatools-theme-css';
+        const href = 'themes/' + themeKey + '.css';
+        const link = document.getElementById(id);
+        if (link) {
+            const currentTheme = link.getAttribute('data-theme');
+            if (currentTheme === themeKey) return;
+            link.href = href;
+            link.setAttribute('data-theme', themeKey);
+            return;
+        }
+        try {
+            const el = document.createElement('link');
+            el.id = id;
+            el.rel = 'stylesheet';
+            el.href = href;
+            el.setAttribute('data-theme', themeKey);
+            document.head.appendChild(el);
+        } catch(err) { backendLog('LuaTools: Theme CSS injection failed: ' + err); }
+    }
+
     function ensureLuaToolsStyles() {
-        if (document.getElementById('luatools-styles')) return;
+        const styleEl = document.getElementById('luatools-styles');
+        const themeKey = getCurrentThemeKey();
+        const theme = getCurrentTheme();
+        const styles = generateThemeStyles(theme);
+
+        try { ensureThemeStylesheet(themeKey); } catch(_) {}
+
+        if (styleEl) {
+            styleEl.textContent = styles;
+            return;
+        }
         try {
             const style = document.createElement('style');
             style.id = 'luatools-styles';
-            style.textContent = `
-                .luatools-btn {
-                    padding: 12px 24px;
-                    background: rgba(102,192,244,0.15);
-                    border: 2px solid rgba(102,192,244,0.4);
-                    border-radius: 12px;
-                    color: #66c0f4;
-                    font-size: 15px;
-                    font-weight: 600;
-                    text-decoration: none;
-                    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-                    cursor: pointer;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                    letter-spacing: 0.3px;
-                }
-                .luatools-btn:hover:not([data-disabled="1"]) {
-                    background: rgba(102,192,244,0.25);
-                    transform: translateY(-2px);
-                    box-shadow: 0 6px 20px rgba(102,192,244,0.3);
-                    border-color: #66c0f4;
-                }
-                .luatools-btn.primary {
-                    background: linear-gradient(135deg, #66c0f4 0%, #4a9ece 100%);
-                    border-color: #66c0f4;
-                    color: #0f1923;
-                    font-weight: 700;
-                    box-shadow: 0 4px 15px rgba(102,192,244,0.4), inset 0 1px 0 rgba(255,255,255,0.3);
-                    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-                }
-                .luatools-btn.primary:hover:not([data-disabled="1"]) {
-                    background: linear-gradient(135deg, #7dd4ff 0%, #5ab3e8 100%);
-                    transform: translateY(-3px) scale(1.03);
-                    box-shadow: 0 8px 25px rgba(102,192,244,0.6), inset 0 1px 0 rgba(255,255,255,0.4);
-                }
-                @keyframes fadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-                @keyframes slideUp {
-                    from {
-                        opacity: 0;
-                        transform: scale(0.9);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: scale(1);
-                    }
-                }
-                @keyframes spin {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
-                }
-                @keyframes pulse {
-                    0%, 100% { opacity: 1; }
-                    50% { opacity: 0.7; }
-                }
-            `;
+            style.textContent = styles;
             document.head.appendChild(style);
         } catch(err) { backendLog('LuaTools: Styles injection failed: ' + err); }
     }
@@ -698,13 +971,14 @@
             overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;';
 
             const modal = document.createElement('div');
-            modal.style.cssText = 'position:relative;background:linear-gradient(135deg, #1b2838 0%, #2a475e 100%);color:#fff;border:2px solid #66c0f4;border-radius:8px;min-width:420px;max-width:600px;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px rgba(102,192,244,0.3);animation:slideUp 0.1s ease-out;';
+            const colors = getThemeColors();
+            modal.style.cssText = `position:relative;background:${colors.modalBg};color:${colors.text};border:2px solid ${colors.border};border-radius:8px;min-width:420px;max-width:600px;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px ${colors.shadowRgba};animation:slideUp 0.1s ease-out;`;
 
             const header = document.createElement('div');
-            header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid rgba(102,192,244,0.3);';
+            header.style.cssText = `display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid ${colors.borderRgba};`;
 
             const title = document.createElement('div');
-            title.style.cssText = 'font-size:24px;color:#fff;font-weight:700;text-shadow:0 2px 8px rgba(102,192,244,0.4);background:linear-gradient(135deg, #66c0f4 0%, #a4d7f5 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;';
+            title.style.cssText = `font-size:24px;color:${colors.text};font-weight:700;text-shadow:0 2px 8px ${colors.shadow};background:${colors.gradientLight};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;`;
             title.textContent = t('menu.title', 'LuaTools · Menu');
 
             const iconButtons = document.createElement('div');
@@ -714,11 +988,12 @@
                 const btn = document.createElement('a');
                 btn.id = id;
                 btn.href = '#';
-                btn.style.cssText = 'display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:rgba(102,192,244,0.1);border:1px solid rgba(102,192,244,0.3);border-radius:10px;color:#66c0f4;font-size:18px;text-decoration:none;transition:all 0.3s ease;cursor:pointer;';
+                const btnColors = getThemeColors();
+                btn.style.cssText = `display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:rgba(${btnColors.rgbString},0.1);border:1px solid ${btnColors.borderRgba};border-radius:10px;color:${btnColors.accent};font-size:18px;text-decoration:none;transition:all 0.3s ease;cursor:pointer;`;
                 btn.innerHTML = '<i class="fa-solid ' + iconClass + '"></i>';
                 btn.title = t(titleKey, titleFallback);
-                btn.onmouseover = function() { this.style.background = 'rgba(102,192,244,0.25)'; this.style.transform = 'translateY(-2px) scale(1.05)'; this.style.boxShadow = '0 8px 16px rgba(102,192,244,0.3)'; this.style.borderColor = '#66c0f4'; };
-                btn.onmouseout = function() { this.style.background = 'rgba(102,192,244,0.1)'; this.style.transform = 'translateY(0) scale(1)'; this.style.boxShadow = 'none'; this.style.borderColor = 'rgba(102,192,244,0.3)'; };
+                btn.onmouseover = function() { this.style.background = `rgba(${btnColors.rgbString},0.25)`; this.style.transform = 'translateY(-2px) scale(1.05)'; this.style.boxShadow = `0 8px 16px ${btnColors.shadowRgba}`; this.style.borderColor = btnColors.accent; };
+                btn.onmouseout = function() { this.style.background = `rgba(${btnColors.rgbString},0.1)`; this.style.transform = 'translateY(0) scale(1)'; this.style.boxShadow = 'none'; this.style.borderColor = btnColors.borderRgba; };
                 iconButtons.appendChild(btn);
                 return btn;
             }
@@ -740,7 +1015,8 @@
             function createSectionLabel(key, fallback, marginTop) {
                 const label = document.createElement('div');
                 const topValue = typeof marginTop === 'number' ? marginTop : 12;
-                label.style.cssText = 'font-size:12px;color:#66c0f4;margin-top:' + topValue + 'px;margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;text-align:center;';
+                const labelColors = getThemeColors();
+                label.style.cssText = `font-size:12px;color:${labelColors.accent};margin-top:${topValue}px;margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;text-align:center;`;
                 label.textContent = t(key, fallback);
                 container.appendChild(label);
                 return label;
@@ -750,12 +1026,13 @@
                 const btn = document.createElement('a');
                 btn.id = id;
                 btn.href = '#';
-                btn.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 24px;background:linear-gradient(135deg, rgba(102,192,244,0.15) 0%, rgba(102,192,244,0.05) 100%);border:1px solid rgba(102,192,244,0.3);border-radius:12px;color:#fff;font-size:15px;font-weight:500;text-decoration:none;transition:all 0.3s ease;cursor:pointer;position:relative;overflow:hidden;text-align:center;';
+                const btnColors = getThemeColors();
+                btn.style.cssText = `display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 24px;background:linear-gradient(135deg, rgba(${btnColors.rgbString},0.15) 0%, rgba(${btnColors.rgbString},0.05) 100%);border:1px solid ${btnColors.borderRgba};border-radius:12px;color:${btnColors.text};font-size:15px;font-weight:500;text-decoration:none;transition:all 0.3s ease;cursor:pointer;position:relative;overflow:hidden;text-align:center;`;
                 const iconHtml = iconClass ? '<i class="fa-solid ' + iconClass + '" style="font-size:16px;"></i>' : '';
                 const textSpan = '<span style="text-align:center;">' + t(key, fallback) + '</span>';
                 btn.innerHTML = iconHtml + textSpan;
-                btn.onmouseover = function() { this.style.background = 'linear-gradient(135deg, rgba(102,192,244,0.3) 0%, rgba(102,192,244,0.15) 100%)'; this.style.transform = 'translateY(-2px)'; this.style.boxShadow = '0 8px 20px rgba(102,192,244,0.25)'; this.style.borderColor = '#66c0f4'; };
-                btn.onmouseout = function() { this.style.background = 'linear-gradient(135deg, rgba(102,192,244,0.15) 0%, rgba(102,192,244,0.05) 100%)'; this.style.transform = 'translateY(0)'; this.style.boxShadow = 'none'; this.style.borderColor = 'rgba(102,192,244,0.3)'; };
+                btn.onmouseover = function() { const c = getThemeColors(); this.style.background = `linear-gradient(135deg, rgba(${c.rgbString},0.3) 0%, rgba(${c.rgbString},0.15) 100%)`; this.style.transform = 'translateY(-2px)'; this.style.boxShadow = `0 8px 20px ${c.shadow.replace('0.4', '0.25')}`; this.style.borderColor = c.accent; };
+                btn.onmouseout = function() { const c = getThemeColors(); this.style.background = `linear-gradient(135deg, rgba(${c.rgbString},0.15) 0%, rgba(${c.rgbString},0.05) 100%)`; this.style.transform = 'translateY(0)'; this.style.boxShadow = 'none'; this.style.borderColor = c.borderRgba; };
                 container.appendChild(btn);
                 return btn;
             }
@@ -1025,10 +1302,12 @@
         overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;';
 
         const modal = document.createElement('div');
-        modal.style.cssText = 'background:linear-gradient(135deg, #1b2838 0%, #2a475e 100%);color:#fff;border:2px solid #66c0f4;border-radius:8px;min-width:450px;max-width:600px;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px rgba(102,192,244,0.3);animation:slideUp 0.1s ease-out;';
+        const colors = getThemeColors();
+        modal.style.cssText = `background:${colors.modalBg};color:${colors.text};border:2px solid ${colors.border};border-radius:8px;min-width:450px;max-width:600px;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px ${colors.shadowRgba};animation:slideUp 0.1s ease-out;`;
 
         const title = document.createElement('div');
-        title.style.cssText = 'font-size:22px;color:#fff;margin-bottom:20px;font-weight:700;text-shadow:0 2px 8px rgba(102,192,244,0.4);background:linear-gradient(135deg, #66c0f4 0%, #a4d7f5 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;';
+        const titleColors = getThemeColors();
+        title.style.cssText = `font-size:22px;color:${titleColors.text};margin-bottom:20px;font-weight:700;text-shadow:0 2px 8px ${titleColors.shadow};background:${titleColors.gradientLight};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;`;
         title.className = 'luatools-title';
         title.textContent = 'LuaTools';
 
@@ -1039,7 +1318,7 @@
 
         // Placeholder while loading APIs
         const loadingItem = document.createElement('div');
-        loadingItem.style.cssText = 'text-align:center;padding:10px;color:#8f98a0;font-size:13px;';
+        loadingItem.style.cssText = `text-align:center;padding:10px;color:${colors.textSecondary};font-size:13px;`;
         loadingItem.textContent = lt('Loading APIs...');
         apiListContainer.appendChild(loadingItem);
 
@@ -1057,16 +1336,16 @@
                             const apiItem = document.createElement('div');
                             apiItem.className = `luatools-api-item luatools-api-${index}`;
                             apiItem.setAttribute('data-api-name', api.name);
-                            apiItem.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;margin-bottom:8px;background:rgba(42,71,94,0.3);border:1px solid rgba(102,192,244,0.2);border-radius:6px;transition:all 0.2s;';
+                            apiItem.style.cssText = `display:flex;align-items:center;justify-content:space-between;padding:10px 14px;margin-bottom:8px;background:rgba(${colors.rgbString},0.1);border:1px solid ${colors.borderRgba};border-radius:6px;transition:all 0.2s;`;
 
                             const apiName = document.createElement('div');
                             apiName.className = 'luatools-api-name';
-                            apiName.style.cssText = 'font-size:14px;color:#c7d5e0;font-weight:500;';
+                            apiName.style.cssText = `font-size:14px;color:${colors.textSecondary};font-weight:500;`;
                             apiName.textContent = api.name;
 
                             const apiStatus = document.createElement('div');
                             apiStatus.className = 'luatools-api-status';
-                            apiStatus.style.cssText = 'font-size:14px;color:#8f98a0;display:flex;align-items:center;gap:6px;';
+                            apiStatus.style.cssText = `font-size:14px;color:${colors.textSecondary};display:flex;align-items:center;gap:6px;`;
                             apiStatus.innerHTML = '<span>' + lt('Waiting…') + '</span><i class="fa-solid fa-spinner" style="animation: spin 1.5s linear infinite;"></i>';
 
                             apiItem.appendChild(apiName);
@@ -1083,20 +1362,20 @@
         }
 
         const body = document.createElement('div');
-        body.style.cssText = 'font-size:14px;line-height:1.4;margin-bottom:12px;color:#8f98a0;';
+        body.style.cssText = `font-size:14px;line-height:1.4;margin-bottom:12px;color:${colors.textSecondary};`;
         body.className = 'luatools-status';
         body.textContent = lt('Checking availability…');
 
         const progressWrap = document.createElement('div');
-        progressWrap.style.cssText = 'background:rgba(42,71,94,0.5);height:20px;border-radius:4px;overflow:hidden;position:relative;display:none;border:1px solid rgba(102,192,244,0.3);margin-top:12px;';
+        progressWrap.style.cssText = `background:rgba(0,0,0,0.3);height:20px;border-radius:4px;overflow:hidden;position:relative;display:none;border:1px solid ${colors.border};margin-top:12px;`;
         progressWrap.className = 'luatools-progress-wrap';
         const progressBar = document.createElement('div');
-        progressBar.style.cssText = 'height:100%;width:0%;background:linear-gradient(90deg, #66c0f4 0%, #a4d7f5 100%);transition:width 0.3s ease;box-shadow:0 0 10px rgba(102,192,244,0.5);';
+        progressBar.style.cssText = `height:100%;width:0%;background:${colors.gradient};transition:width 0.3s ease;box-shadow:0 0 10px ${colors.shadow};`;
         progressBar.className = 'luatools-progress-bar';
         progressWrap.appendChild(progressBar);
 
         const progressInfo = document.createElement('div');
-        progressInfo.style.cssText = 'display:none;margin-top:8px;font-size:12px;color:#8f98a0;';
+        progressInfo.style.cssText = `display:none;margin-top:8px;font-size:12px;color:${colors.textSecondary};`;
         progressInfo.className = 'luatools-progress-info';
 
         const percent = document.createElement('span');
@@ -1191,13 +1470,14 @@
         overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;';
 
         const modal = document.createElement('div');
-        modal.style.cssText = 'position:relative;background:linear-gradient(135deg, #1b2838 0%, #2a475e 100%);color:#fff;border:2px solid #66c0f4;border-radius:8px;min-width:580px;max-width:700px;max-height:80vh;display:flex;flex-direction:column;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px rgba(102,192,244,0.3);animation:slideUp 0.1s ease-out;';
+        const colors = getThemeColors();
+        modal.style.cssText = `position:relative;background:${colors.modalBg};color:${colors.text};border:2px solid ${colors.border};border-radius:8px;min-width:580px;max-width:700px;max-height:80vh;display:flex;flex-direction:column;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px ${colors.shadowRgba};animation:slideUp 0.1s ease-out;`;
 
         const header = document.createElement('div');
-        header.style.cssText = 'flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid rgba(102,192,244,0.3);';
+        header.style.cssText = `flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid ${colors.borderRgba};`;
 
         const title = document.createElement('div');
-        title.style.cssText = 'font-size:24px;color:#fff;font-weight:700;text-shadow:0 2px 8px rgba(102,192,244,0.4);background:linear-gradient(135deg, #66c0f4 0%, #a4d7f5 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;';
+        title.style.cssText = `font-size:24px;color:${colors.text};font-weight:700;text-shadow:0 2px 8px ${colors.shadow};background:${colors.gradientLight};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;`;
         title.textContent = lt('LuaTools · Fixes Menu');
 
         const iconButtons = document.createElement('div');
@@ -1207,11 +1487,12 @@
             const btn = document.createElement('a');
             btn.id = id;
             btn.href = '#';
-            btn.style.cssText = 'display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:rgba(102,192,244,0.1);border:1px solid rgba(102,192,244,0.3);border-radius:10px;color:#66c0f4;font-size:18px;text-decoration:none;transition:all 0.3s ease;cursor:pointer;';
+            const btnColors = getThemeColors();
+            btn.style.cssText = `display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:rgba(${btnColors.rgbString},0.1);border:1px solid ${btnColors.borderRgba};border-radius:10px;color:${btnColors.accent};font-size:18px;text-decoration:none;transition:all 0.3s ease;cursor:pointer;`;
             btn.innerHTML = '<i class="fa-solid ' + iconClass + '"></i>';
             btn.title = t(titleKey, titleFallback);
-            btn.onmouseover = function() { this.style.background = 'rgba(102,192,244,0.25)'; this.style.transform = 'translateY(-2px) scale(1.05)'; this.style.boxShadow = '0 8px 16px rgba(102,192,244,0.3)'; this.style.borderColor = '#66c0f4'; };
-            btn.onmouseout = function() { this.style.background = 'rgba(102,192,244,0.1)'; this.style.transform = 'translateY(0) scale(1)'; this.style.boxShadow = 'none'; this.style.borderColor = 'rgba(102,192,244,0.3)'; };
+            btn.onmouseover = function() { this.style.background = `rgba(${btnColors.rgbString},0.25)`; this.style.transform = 'translateY(-2px) scale(1.05)'; this.style.boxShadow = `0 8px 16px ${btnColors.shadowRgba}`; this.style.borderColor = btnColors.accent; };
+            btn.onmouseout = function() { this.style.background = `rgba(${btnColors.rgbString},0.1)`; this.style.transform = 'translateY(0) scale(1)'; this.style.boxShadow = 'none'; this.style.borderColor = btnColors.borderRgba; };
             iconButtons.appendChild(btn);
             return btn;
         }
@@ -1221,12 +1502,13 @@
         const closeIconBtn = createIconButton('lt-fixes-close', 'fa-xmark', 'settings.close', 'Close');
 
         const body = document.createElement('div');
-        body.style.cssText = 'flex:1 1 auto;overflow-y:auto;padding:20px;border:1px solid rgba(102,192,244,0.3);border-radius:12px;background:rgba(11,20,30,0.6);';
+        const bodyColors = getThemeColors();
+        body.style.cssText = `flex:1 1 auto;overflow-y:auto;padding:20px;border:1px solid ${bodyColors.border};border-radius:12px;background:${bodyColors.bgContainer};`
 
         try {
             const bannerImg = document.querySelector('.game_header_image_full');
             if (bannerImg && bannerImg.src) {
-                body.style.background = `linear-gradient(to bottom, rgba(11, 20, 30, 0.85), #0b141e 70%), url('${bannerImg.src}') no-repeat top center`;
+                body.style.background = `linear-gradient(to bottom, rgba(15, 15, 15, 0.85), #0f0f0f 70%), url('${bannerImg.src}') no-repeat top center`;
                 body.style.backgroundSize = 'cover';
             }
         } catch(_) {}
@@ -1274,13 +1556,33 @@
             section.style.cssText = 'width:100%;text-align:center;';
 
             const sectionLabel = document.createElement('div');
-            sectionLabel.style.cssText = 'font-size:12px;color:#66c0f4;margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:1px;';
+            const labelColors = getThemeColors();
+            sectionLabel.style.cssText = `font-size:12px;color:${labelColors.accent};margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:1px;`;
             sectionLabel.textContent = label;
 
             const btn = document.createElement('a');
             btn.href = '#';
-            btn.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:10px;width:100%;box-sizing:border-box;padding:14px 24px;background:linear-gradient(135deg, rgba(102,192,244,0.15) 0%, rgba(102,192,244,0.05) 100%);border:1px solid rgba(102,192,244,0.3);border-radius:12px;color:#fff;font-size:15px;font-weight:500;text-decoration:none;transition:all 0.3s ease;cursor:pointer;';
+            const btnColors = getThemeColors();
+            btn.style.cssText = `display:flex;align-items:center;justify-content:center;gap:10px;width:100%;box-sizing:border-box;padding:14px 24px;background:linear-gradient(135deg, rgba(${btnColors.rgbString},0.15) 0%, rgba(${btnColors.rgbString},0.05) 100%);border:1px solid ${btnColors.border};border-radius:12px;color:${btnColors.text};font-size:15px;font-weight:500;text-decoration:none;transition:all 0.3s ease;cursor:pointer;`;
             btn.innerHTML = '<i class="fa-solid ' + icon + '" style="font-size:16px;"></i><span>' + text + '</span>';
+
+            // If the active theme is light, make certain fix action texts/icons white for readability.
+            try {
+                const currentThemeKey = (((window.__LuaToolsSettings || {}).values || {}).general || {}).theme || 'original';
+                // Use localized labels so this works in other languages
+                const applyLabel = lt('Apply');
+                const onlineUnsteamLabel = lt('Online Fix (Unsteam)');
+                const noOnlineLabel = lt('No online-fix');
+                const unfixLabel = lt('Un-Fix (verify game)');
+                const noGenericLabel = lt('No generic fix');
+                const whiteTexts = new Set([applyLabel, onlineUnsteamLabel, noOnlineLabel, unfixLabel, noGenericLabel]);
+                if (currentThemeKey === 'light' && whiteTexts.has(String(text))) {
+                    const spanEl = btn.querySelector('span');
+                    const iconEl = btn.querySelector('i');
+                    if (spanEl) spanEl.style.color = '#ffffff';
+                    if (iconEl) iconEl.style.color = '#ffffff';
+                }
+            } catch (_) {}
 
             if (isSuccess) {
                 btn.style.background = 'linear-gradient(135deg, rgba(92,156,62,0.4) 0%, rgba(92,156,62,0.2) 100%)';
@@ -1291,8 +1593,9 @@
                 btn.style.opacity = '0.5';
                 btn.style.cursor = 'not-allowed';
             } else {
-                btn.onmouseover = function() { this.style.background = 'linear-gradient(135deg, rgba(102,192,244,0.3) 0%, rgba(102,192,244,0.15) 100%)'; this.style.transform = 'translateY(-2px)'; this.style.boxShadow = '0 8px 20px rgba(102,192,244,0.25)'; this.style.borderColor = '#66c0f4'; };
-                btn.onmouseout = function() { this.style.background = 'linear-gradient(135deg, rgba(102,192,244,0.15) 0%, rgba(102,192,244,0.05) 100%)'; this.style.transform = 'translateY(0)'; this.style.boxShadow = 'none'; this.style.borderColor = 'rgba(102,192,244,0.3)'; };
+                const mutableColors = getThemeColors();
+                btn.onmouseover = function() { const c = getThemeColors(); this.style.background = `linear-gradient(135deg, rgba(${c.rgbString},0.3) 0%, rgba(${c.rgbString},0.15) 100%)`; this.style.transform = 'translateY(-2px)'; this.style.boxShadow = `0 8px 20px rgba(${c.rgbString},0.25)`; this.style.borderColor = c.accent; };
+                btn.onmouseout = function() { const c = getThemeColors(); this.style.background = `linear-gradient(135deg, rgba(${c.rgbString},0.15) 0%, rgba(${c.rgbString},0.05) 100%)`; this.style.transform = 'translateY(0)'; this.style.boxShadow = 'none'; this.style.borderColor = c.border; };
             }
 
             btn.onclick = onClick;
@@ -1389,9 +1692,10 @@
 
         // Credit message
         const creditMsg = document.createElement('div');
-        creditMsg.style.cssText = 'margin-top:16px;text-align:center;font-size:13px;color:#8f98a0;';
+        const creditColors = getThemeColors();
+        creditMsg.style.cssText = `margin-top:16px;text-align:center;font-size:13px;color:${creditColors.textSecondary};`;
         const creditTemplate = lt('Only possible thanks to {name} 💜');
-        creditMsg.innerHTML = creditTemplate.replace('{name}', '<a href="#" id="lt-shayenvi-link" style="color:#66c0f4;text-decoration:none;font-weight:600;">ShayneVi</a>');
+        creditMsg.innerHTML = creditTemplate.replace('{name}', `<a href="#" id="lt-shayenvi-link" style="color:${creditColors.accent};text-decoration:none;font-weight:600;">ShayneVi</a>`);
         
         // Wire up ShayneVi link
         setTimeout(function(){
@@ -1519,20 +1823,24 @@
         overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;';
 
         const modal = document.createElement('div');
-        modal.style.cssText = 'background:linear-gradient(135deg, #1b2838 0%, #2a475e 100%);color:#fff;border:2px solid #66c0f4;border-radius:8px;min-width:400px;max-width:560px;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px rgba(102,192,244,0.3);animation:slideUp 0.1s ease-out;';
+        const colors = getThemeColors();
+        modal.style.cssText = `background:${colors.modalBg};color:${colors.text};border:2px solid ${colors.border};border-radius:8px;min-width:400px;max-width:560px;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px ${colors.shadowRgba};animation:slideUp 0.1s ease-out;`;
 
         const title = document.createElement('div');
-        title.style.cssText = 'font-size:22px;color:#fff;margin-bottom:16px;font-weight:700;text-shadow:0 2px 8px rgba(102,192,244,0.4);background:linear-gradient(135deg, #66c0f4 0%, #a4d7f5 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;';
+        const titleColorsLoading = getThemeColors();
+        title.style.cssText = `font-size:22px;color:${titleColorsLoading.text};margin-bottom:16px;font-weight:700;text-shadow:0 2px 8px ${titleColorsLoading.shadow};background:${titleColorsLoading.gradientLight};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;`;
         title.textContent = lt('Loading fixes...');
 
         const body = document.createElement('div');
-        body.style.cssText = 'font-size:14px;line-height:1.6;margin-bottom:16px;color:#c7d5e0;';
+        const bodyColorsLoading = getThemeColors();
+        body.style.cssText = `font-size:14px;line-height:1.6;margin-bottom:16px;color:${bodyColorsLoading.textSecondary};`;
         body.textContent = lt('Checking availability…');
 
         const progressWrap = document.createElement('div');
-        progressWrap.style.cssText = 'background:rgba(42,71,94,0.5);height:12px;border-radius:4px;overflow:hidden;position:relative;border:1px solid rgba(102,192,244,0.3);';
+        const progressColorsLoading = getThemeColors();
+        progressWrap.style.cssText = `background:rgba(0,0,0,0.3);height:12px;border-radius:4px;overflow:hidden;position:relative;border:1px solid ${progressColorsLoading.border};`;
         const progressBar = document.createElement('div');
-        progressBar.style.cssText = 'height:100%;width:0%;background:linear-gradient(90deg, #66c0f4 0%, #a4d7f5 100%);transition:width 0.2s linear;box-shadow:0 0 10px rgba(102,192,244,0.5);';
+        progressBar.style.cssText = `height:100%;width:0%;background:${progressColorsLoading.gradient};transition:width 0.2s linear;box-shadow:0 0 10px ${progressColorsLoading.shadow};`;
         progressWrap.appendChild(progressBar);
 
         modal.appendChild(title);
@@ -1643,14 +1951,17 @@
         overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;';
 
         const modal = document.createElement('div');
-        modal.style.cssText = 'background:linear-gradient(135deg, #1b2838 0%, #2a475e 100%);color:#fff;border:2px solid #66c0f4;border-radius:8px;min-width:400px;max-width:560px;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px rgba(102,192,244,0.3);animation:slideUp 0.1s ease-out;';
+        const colors = getThemeColors();
+        modal.style.cssText = `background:${colors.modalBg};color:${colors.text};border:2px solid ${colors.border};border-radius:8px;min-width:400px;max-width:560px;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px ${colors.shadowRgba};animation:slideUp 0.1s ease-out;`;
 
         const title = document.createElement('div');
-        title.style.cssText = 'font-size:22px;color:#fff;margin-bottom:16px;font-weight:700;text-shadow:0 2px 8px rgba(102,192,244,0.4);background:linear-gradient(135deg, #66c0f4 0%, #a4d7f5 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;';
+        const applyFixTitleColors = getThemeColors();
+        title.style.cssText = `font-size:22px;color:${applyFixTitleColors.text};margin-bottom:16px;font-weight:700;text-shadow:0 2px 8px ${applyFixTitleColors.shadow};background:${applyFixTitleColors.gradientLight};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;`;
         title.textContent = lt('Applying {fix}').replace('{fix}', fixType);
 
         const body = document.createElement('div');
-        body.style.cssText = 'font-size:15px;line-height:1.6;margin-bottom:20px;color:#c7d5e0;';
+        const applyFixBodyColors = getThemeColors();
+        body.style.cssText = `font-size:15px;line-height:1.6;margin-bottom:20px;color:${applyFixBodyColors.textSecondary};`;
         body.innerHTML = '<div id="lt-fix-progress-msg">' + lt('Downloading...') + '</div>';
 
         const btnRow = document.createElement('div');
@@ -1799,10 +2110,12 @@
         overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;';
 
         const modal = document.createElement('div');
-        modal.style.cssText = 'background:linear-gradient(135deg, #1b2838 0%, #2a475e 100%);color:#fff;border:2px solid #66c0f4;border-radius:8px;min-width:400px;max-width:560px;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px rgba(102,192,244,0.3);animation:slideUp 0.1s ease-out;';
+        const colors = getThemeColors();
+        modal.style.cssText = `background:${colors.modalBg};color:${colors.text};border:2px solid ${colors.border};border-radius:8px;min-width:400px;max-width:560px;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px ${colors.shadowRgba};animation:slideUp 0.1s ease-out;`;
 
         const title = document.createElement('div');
-        title.style.cssText = 'font-size:22px;color:#fff;margin-bottom:16px;font-weight:700;text-shadow:0 2px 8px rgba(102,192,244,0.4);background:linear-gradient(135deg, #66c0f4 0%, #a4d7f5 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;';
+        const unfixTitleColors = getThemeColors();
+        title.style.cssText = `font-size:22px;color:${unfixTitleColors.text};margin-bottom:16px;font-weight:700;text-shadow:0 2px 8px ${unfixTitleColors.shadow};background:${unfixTitleColors.gradientLight};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;`;
         title.textContent = lt('Un-Fixing game');
 
         const body = document.createElement('div');
@@ -1987,13 +2300,16 @@
         overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:100000;display:flex;align-items:center;justify-content:center;';
 
         const modal = document.createElement('div');
-        modal.style.cssText = 'position:relative;background:linear-gradient(135deg, #1b2838 0%, #2a475e 100%);color:#fff;border:2px solid #66c0f4;border-radius:8px;min-width:650px;max-width:750px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px rgba(102,192,244,0.3);animation:slideUp 0.1s ease-out;overflow:hidden;';
+        const settingsModalColors = getThemeColors();
+        modal.style.cssText = `position:relative;background:${settingsModalColors.modalBg};color:${settingsModalColors.text};border:2px solid ${settingsModalColors.border};border-radius:8px;min-width:650px;max-width:750px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px ${settingsModalColors.shadowRgba};animation:slideUp 0.1s ease-out;overflow:hidden;`;
 
         const header = document.createElement('div');
-        header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding:28px 32px 16px;border-bottom:2px solid rgba(102,192,244,0.3);';
+        const settingsHeaderColors = getThemeColors();
+        header.style.cssText = `display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding:28px 32px 16px;border-bottom:2px solid ${settingsHeaderColors.border.replace('0.3', '0.2')};`;
 
         const title = document.createElement('div');
-        title.style.cssText = 'font-size:24px;color:#fff;font-weight:700;text-shadow:0 2px 8px rgba(102,192,244,0.4);background:linear-gradient(135deg, #66c0f4 0%, #a4d7f5 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;';
+        const settingsTitleColors = getThemeColors();
+        title.style.cssText = `font-size:24px;color:${settingsTitleColors.text};font-weight:700;text-shadow:0 2px 8px ${settingsTitleColors.shadow};background:${settingsTitleColors.gradientLight};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;`;
         title.textContent = t('settings.title', 'LuaTools · Settings');
 
         const iconButtons = document.createElement('div');
@@ -2001,24 +2317,28 @@
 
         const discordIconBtn = document.createElement('a');
         discordIconBtn.href = '#';
-        discordIconBtn.style.cssText = 'display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:rgba(102,192,244,0.1);border:1px solid rgba(102,192,244,0.3);border-radius:10px;color:#66c0f4;font-size:18px;text-decoration:none;transition:all 0.3s ease;cursor:pointer;';
+        const discordBtnColors = getThemeColors();
+        discordIconBtn.style.cssText = `display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:rgba(${discordBtnColors.rgbString},0.1);border:1px solid ${discordBtnColors.border};border-radius:10px;color:${discordBtnColors.accent};font-size:18px;text-decoration:none;transition:all 0.3s ease;cursor:pointer;`;
         discordIconBtn.innerHTML = '<i class="fa-brands fa-discord"></i>';
         discordIconBtn.title = t('menu.discord', 'Discord');
-        discordIconBtn.onmouseover = function() { this.style.background = 'rgba(102,192,244,0.25)'; this.style.transform = 'translateY(-2px) scale(1.05)'; this.style.boxShadow = '0 8px 16px rgba(102,192,244,0.3)'; this.style.borderColor = '#66c0f4'; };
-        discordIconBtn.onmouseout = function() { this.style.background = 'rgba(102,192,244,0.1)'; this.style.transform = 'translateY(0) scale(1)'; this.style.boxShadow = 'none'; this.style.borderColor = 'rgba(102,192,244,0.3)'; };
+        discordIconBtn.onmouseover = function() { const c = getThemeColors(); this.style.background = `rgba(${c.rgbString},0.25)`; this.style.transform = 'translateY(-2px) scale(1.05)'; this.style.boxShadow = `0 8px 16px ${c.shadow}`; this.style.borderColor = c.accent; };
+        discordIconBtn.onmouseout = function() { const c = getThemeColors(); this.style.background = `rgba(${c.rgbString},0.1)`; this.style.transform = 'translateY(0) scale(1)'; this.style.boxShadow = 'none'; this.style.borderColor = c.border; };
         iconButtons.appendChild(discordIconBtn);
 
         const closeIconBtn = document.createElement('a');
         closeIconBtn.href = '#';
-        closeIconBtn.style.cssText = 'display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:rgba(102,192,244,0.1);border:1px solid rgba(102,192,244,0.3);border-radius:10px;color:#66c0f4;font-size:18px;text-decoration:none;transition:all 0.3s ease;cursor:pointer;';
+        const closeBtnColors = getThemeColors();
+        closeIconBtn.style.cssText = `display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:rgba(${closeBtnColors.rgbString},0.1);border:1px solid ${closeBtnColors.border};border-radius:10px;color:${closeBtnColors.accent};font-size:18px;text-decoration:none;transition:all 0.3s ease;cursor:pointer;`;
         closeIconBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
         closeIconBtn.title = t('settings.close', 'Close');
-        closeIconBtn.onmouseover = function() { this.style.background = 'rgba(102,192,244,0.25)'; this.style.transform = 'translateY(-2px) scale(1.05)'; this.style.boxShadow = '0 8px 16px rgba(102,192,244,0.3)'; this.style.borderColor = '#66c0f4'; };
-        closeIconBtn.onmouseout = function() { this.style.background = 'rgba(102,192,244,0.1)'; this.style.transform = 'translateY(0) scale(1)'; this.style.boxShadow = 'none'; this.style.borderColor = 'rgba(102,192,244,0.3)'; };
+        closeIconBtn.onmouseover = function() { const c = getThemeColors(); this.style.background = `rgba(${c.rgbString},0.25)`; this.style.transform = 'translateY(-2px) scale(1.05)'; this.style.boxShadow = `0 8px 16px ${c.shadow}`; this.style.borderColor = c.accent; };
+        closeIconBtn.onmouseout = function() { const c = getThemeColors(); this.style.background = `rgba(${c.rgbString},0.1)`; this.style.transform = 'translateY(0) scale(1)'; this.style.boxShadow = 'none'; this.style.borderColor = c.border; };
         iconButtons.appendChild(closeIconBtn);
 
         const contentWrap = document.createElement('div');
-        contentWrap.style.cssText = 'flex:1 1 auto;overflow-y:auto;overflow-x:hidden;padding:20px;margin:0 24px;border:1px solid rgba(102,192,244,0.3);border-radius:12px;background:rgba(11,20,30,0.6);';
+        contentWrap.id = 'luatools-content-wrap';
+        const contentColors = getThemeColors();
+        contentWrap.style.cssText = `flex:1 1 auto;overflow-y:auto;overflow-x:hidden;padding:20px;margin:0 24px;border:1px solid ${contentColors.border};border-radius:12px;background:${contentColors.bgContainer};`;
 
         // Add mouse mode tip for Big Picture
         if (window.__LUATOOLS_IS_BIG_PICTURE__) {
@@ -2188,7 +2508,8 @@
             contentWrap.innerHTML = '';
             if (!state.config || !Array.isArray(state.config.schema) || state.config.schema.length === 0) {
                 const emptyState = document.createElement('div');
-                emptyState.style.cssText = 'padding:14px;background:#102039;border:1px solid #2a475e;border-radius:4px;color:#c7d5e0;';
+                const emptyColors = getThemeColors();
+                emptyState.style.cssText = `padding:14px;background:${emptyColors.bgTertiary};border:1px solid ${emptyColors.border};border-radius:4px;color:${emptyColors.textSecondary};`;
                 emptyState.textContent = t('settings.empty', 'No settings available yet.');
                 contentWrap.appendChild(emptyState);
                 updateSaveState();
@@ -2205,15 +2526,18 @@
                 const groupTitle = document.createElement('div');
                 groupTitle.textContent = t('settings.' + group.key, group.label || group.key);
                 if (group.key === 'general') {
-                    groupTitle.style.cssText = 'font-size:22px;color:#fff;margin-bottom:16px;margin-top:-25px;font-weight:600;text-align:center;'; // dw abt this margin-top -25px 🇧🇷 don't even look at it
+                    const generalTitleColors = getThemeColors();
+                    groupTitle.style.cssText = `font-size:22px;color:${generalTitleColors.text};margin-bottom:16px;margin-top:-25px;font-weight:600;text-align:center;`; // dw abt this margin-top -25px 🇧🇷 don't even look at it
                 } else {
-                    groupTitle.style.cssText = 'font-size:15px;font-weight:600;color:#66c0f4;text-align:center;';
+                    const otherTitleColors = getThemeColors();
+                    groupTitle.style.cssText = `font-size:15px;font-weight:600;color:${otherTitleColors.accent};text-align:center;`;
                 }
                 groupEl.appendChild(groupTitle);
 
                 if (group.description && group.key !== 'general') {
                     const groupDesc = document.createElement('div');
-                    groupDesc.style.cssText = 'margin-top:4px;font-size:13px;color:#c7d5e0;';
+                    const descColors = getThemeColors();
+                    groupDesc.style.cssText = `margin-top:4px;font-size:13px;color:${descColors.textSecondary};`;
                     groupDesc.textContent = t('settings.' + group.key + 'Description', group.description);
                     groupEl.appendChild(groupDesc);
                 }
@@ -2231,21 +2555,24 @@
                     }
 
                     const optionEl = document.createElement('div');
+                    const optionColors = getThemeColors();
                     if (j === 0) {
                         optionEl.style.cssText = 'margin-top:12px;padding-top:0;';
                     } else {
-                        optionEl.style.cssText = 'margin-top:12px;padding-top:12px;border-top:1px solid rgba(102,192,244,0.1);';
+                        optionEl.style.cssText = `margin-top:12px;padding-top:12px;border-top:1px solid ${optionColors.border.replace('0.3', '0.1')};`;
                     }
 
                     const optionLabel = document.createElement('div');
-                    optionLabel.style.cssText = 'font-size:14px;font-weight:500;';
+                    const optLabelColors = getThemeColors();
+                    optionLabel.style.cssText = `font-size:14px;font-weight:500;color:${optLabelColors.text};`;
                     const labelKey = optionLabelKey(group.key, option.key);
                     optionLabel.textContent = t(labelKey || ('settings.' + group.key + '.' + option.key + '.label'), option.label || option.key);
                     optionEl.appendChild(optionLabel);
 
                     if (option.description) {
                         const optionDesc = document.createElement('div');
-                        optionDesc.style.cssText = 'margin-top:2px;font-size:12px;color:#a9b2c3;';
+                        const optDescColors = getThemeColors();
+                        optionDesc.style.cssText = `margin-top:2px;font-size:12px;color:${optDescColors.textSecondary};`;
                         const descKey = optionDescriptionKey(group.key, option.key);
                         optionDesc.textContent = t(descKey || ('settings.' + group.key + '.' + option.key + '.description'), option.description);
                         optionEl.appendChild(optionDesc);
@@ -2256,7 +2583,8 @@
 
                     if (option.type === 'select') {
                         const selectEl = document.createElement('select');
-                        selectEl.style.cssText = 'width:100%;padding:6px 8px;background:#16202d;color:#dfe6f0;border:1px solid #2a475e;border-radius:3px;';
+                        const selectColors = getThemeColors();
+                        selectEl.style.cssText = `width:100% !important;padding:6px 8px !important;background:${selectColors.bgTertiary} !important;color:${selectColors.text} !important;border:1px solid ${selectColors.border} !important;border-radius:3px !important;font-size:14px !important;`;
 
                         const choices = Array.isArray(option.choices) ? option.choices : [];
                         for (let c = 0; c < choices.length; c++) {
@@ -2275,7 +2603,65 @@
 
                         selectEl.addEventListener('change', function(){
                             state.draft[group.key][option.key] = selectEl.value;
-                            try { backendLog('LuaTools: language select changed to ' + selectEl.value); } catch(_) {}
+                            try { backendLog('LuaTools: ' + option.key + ' select changed to ' + selectEl.value); } catch(_) {}
+                            try { console.log('LuaTools DEBUG: Select changed:', group.key + '.' + option.key, '=', selectEl.value, 'state.draft:', state.draft); } catch(_) {}
+                            
+                            // If theme changed, apply it immediately
+                            if (group.key === 'general' && option.key === 'theme') {
+                                // Update the settings cache so getCurrentTheme() returns the new value
+                                if (window.__LuaToolsSettings && window.__LuaToolsSettings.values) {
+                                    if (!window.__LuaToolsSettings.values.general) {
+                                        window.__LuaToolsSettings.values.general = {};
+                                    }
+                                    window.__LuaToolsSettings.values.general.theme = selectEl.value;
+                                }
+                                // Reload styles immediately
+                                ensureLuaToolsStyles();
+                                
+                                // Update all modal elements with new theme colors
+                                setTimeout(function() {
+                                    const colors = getThemeColors();
+                                    
+                                    // Update modal background and border
+                                    const modalEl = overlay && overlay.querySelector('[style*="background:linear-gradient"]');
+                                    if (modalEl) {
+                                        modalEl.style.background = colors.modalBg;
+                                        modalEl.style.borderColor = colors.border;
+                                    }
+                                    
+                                    // Update header border
+                                    const headerEl = overlay && overlay.querySelector('[style*="border-bottom"]');
+                                    if (headerEl) {
+                                        headerEl.style.borderBottomColor = colors.border.replace('0.3', '0.2');
+                                    }
+                                    
+                                    // Update all title and text colors
+                                    const titles = overlay && overlay.querySelectorAll('[style*="text-shadow"]');
+                                    if (titles) {
+                                        titles.forEach(function(title) {
+                                            title.style.backgroundImage = colors.gradientLight;
+                                        });
+                                    }
+                                    
+                                    // Update content wrapper border
+                                    const contentWrapEl = overlay && overlay.querySelector('#luatools-content-wrap');
+                                    if (contentWrapEl) {
+                                        contentWrapEl.style.borderColor = colors.border;
+                                        contentWrapEl.style.background = colors.bgContainer;
+                                    }
+                                    
+                                    // Re-render the settings content
+                                    renderSettings();
+                                }, 50);
+                                
+                                // Auto-save theme changes after a brief delay
+                                setTimeout(function() {
+                                    if (saveBtn && saveBtn.dataset.disabled !== '1' && saveBtn.dataset.busy !== '1') {
+                                        saveBtn.click();
+                                    }
+                                }, 150);
+                            }
+                            
                             updateSaveState();
                             setStatus(t('settings.unsaved', 'Unsaved changes'), '#c7d5e0');
                         });
@@ -2306,18 +2692,19 @@
                         const noSpan = noBtn.querySelector('span');
 
                         function refreshToggleButtons() {
+                            const toggleColors = getThemeColors();
                             const currentValue = state.draft[group.key][option.key] === true;
                             if (currentValue) {
-                                yesBtn.style.background = '#66c0f4';
-                                yesBtn.style.color = '#0b141e';
-                                if (yesSpan) yesSpan.style.color = '#0b141e';
+                                yesBtn.style.background = toggleColors.accent;
+                                yesBtn.style.color = toggleColors.bgPrimary;
+                                if (yesSpan) yesSpan.style.color = toggleColors.bgPrimary;
                                 noBtn.style.background = '';
                                 noBtn.style.color = '';
                                 if (noSpan) noSpan.style.color = '';
                             } else {
-                                noBtn.style.background = '#66c0f4';
-                                noBtn.style.color = '#0b141e';
-                                if (noSpan) noSpan.style.color = '#0b141e';
+                                noBtn.style.background = toggleColors.accent;
+                                noBtn.style.color = toggleColors.bgPrimary;
+                                if (noSpan) noSpan.style.color = toggleColors.bgPrimary;
                                 yesBtn.style.background = '';
                                 yesBtn.style.color = '';
                                 if (yesSpan) yesSpan.style.color = '';
@@ -2370,14 +2757,16 @@
         function renderInstalledFixesSection() {
             const sectionEl = document.createElement('div');
             sectionEl.id = 'luatools-installed-fixes-section';
-            sectionEl.style.cssText = 'margin-top:36px;padding:24px;background:linear-gradient(135deg, rgba(102,192,244,0.05) 0%, rgba(74,158,206,0.08) 100%);border:2px solid rgba(74,158,206,0.3);border-radius:14px;box-shadow:0 4px 15px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);position:relative;overflow:hidden;';
+            const sectionColors = getThemeColors();
+            sectionEl.style.cssText = `margin-top:36px;padding:24px;background:linear-gradient(135deg, rgba(${sectionColors.rgbString},0.05) 0%, rgba(${sectionColors.rgbString},0.08) 100%);border:2px solid ${sectionColors.border};border-radius:14px;box-shadow:0 4px 15px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);position:relative;overflow:hidden;`;
 
             const sectionGlow = document.createElement('div');
-            sectionGlow.style.cssText = 'position:absolute;top:-100%;left:-100%;width:300%;height:300%;background:radial-gradient(circle, rgba(102,192,244,0.08) 0%, transparent 70%);pointer-events:none;';
+            sectionGlow.style.cssText = `position:absolute;top:-100%;left:-100%;width:300%;height:300%;background:radial-gradient(circle, rgba(${sectionColors.rgbString},0.08) 0%, transparent 70%);pointer-events:none;`;
             sectionEl.appendChild(sectionGlow);
 
             const sectionTitle = document.createElement('div');
-            sectionTitle.style.cssText = 'font-size:22px;color:#66c0f4;margin-bottom:20px;font-weight:700;text-align:center;text-shadow:0 2px 10px rgba(102,192,244,0.5);background:linear-gradient(135deg, #66c0f4 0%, #a4d7f5 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;position:relative;z-index:1;letter-spacing:0.5px;';
+            const titleColors = getThemeColors();
+            sectionTitle.style.cssText = `font-size:22px;color:${titleColors.accent};margin-bottom:20px;font-weight:700;text-align:center;text-shadow:0 2px 10px ${titleColors.shadow};background:${titleColors.gradientLight};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;position:relative;z-index:1;letter-spacing:0.5px;`;
             sectionTitle.innerHTML = '<i class="fa-solid fa-wrench" style="margin-right:10px;"></i>' + t('settings.installedFixes.title', 'Installed Fixes');
             sectionEl.appendChild(sectionTitle);
 
@@ -2392,19 +2781,22 @@
         }
 
         function loadInstalledFixes(container) {
-            container.innerHTML = '<div style="padding:14px;text-align:center;color:#c7d5e0;">' + t('settings.installedFixes.loading', 'Scanning for installed fixes...') + '</div>';
+            const loadingColors = getThemeColors();
+            container.innerHTML = `<div style="padding:14px;text-align:center;color:${loadingColors.textSecondary};">${t('settings.installedFixes.loading', 'Scanning for installed fixes...')}</div>`;
 
             Millennium.callServerMethod('luatools', 'GetInstalledFixes', { contentScriptQuery: '' })
                 .then(function(res) {
                     const response = typeof res === 'string' ? JSON.parse(res) : res;
                     if (!response || !response.success) {
-                        container.innerHTML = '<div style="padding:14px;background:#102039;border:1px solid #ff5c5c;border-radius:4px;color:#ff5c5c;">' + t('settings.installedFixes.error', 'Failed to load installed fixes.') + '</div>';
+                        const errColors = getThemeColors();
+                        container.innerHTML = `<div style="padding:14px;background:${errColors.bgTertiary};border:1px solid #ff5c5c;border-radius:4px;color:#ff5c5c;">${t('settings.installedFixes.error', 'Failed to load installed fixes.')}</div>`;
                         return;
                     }
 
                     const fixes = Array.isArray(response.fixes) ? response.fixes : [];
                     if (fixes.length === 0) {
-                        container.innerHTML = '<div style="padding:14px;background:#102039;border:1px solid #2a475e;border-radius:4px;color:#c7d5e0;text-align:center;">' + t('settings.installedFixes.empty', 'No fixes installed yet.') + '</div>';
+                        const emptyColors = getThemeColors();
+                        container.innerHTML = `<div style="padding:14px;background:${emptyColors.bgTertiary};border:1px solid ${emptyColors.border};border-radius:4px;color:${emptyColors.textSecondary};text-align:center;">${t('settings.installedFixes.empty', 'No fixes installed yet.')}</div>`;
                         return;
                     }
 
@@ -2416,42 +2808,49 @@
                     }
                 })
                 .catch(function(err) {
-                    container.innerHTML = '<div style="padding:14px;background:#102039;border:1px solid #ff5c5c;border-radius:4px;color:#ff5c5c;">' + t('settings.installedFixes.error', 'Failed to load installed fixes.') + '</div>';
+                    const catchColors = getThemeColors();
+                    container.innerHTML = `<div style="padding:14px;background:${catchColors.bgTertiary};border:1px solid #ff5c5c;border-radius:4px;color:#ff5c5c;">${t('settings.installedFixes.error', 'Failed to load installed fixes.')}</div>`;
                 });
         }
 
         function createFixListItem(fix, container) {
             const itemEl = document.createElement('div');
-            itemEl.style.cssText = 'margin-bottom:12px;padding:14px;background:rgba(11,20,30,0.8);border:1px solid rgba(102,192,244,0.3);border-radius:6px;display:flex;justify-content:space-between;align-items:center;transition:all 0.2s ease;';
-            itemEl.onmouseover = function() { this.style.borderColor = '#66c0f4'; this.style.background = 'rgba(11,20,30,0.95)'; };
-            itemEl.onmouseout = function() { this.style.borderColor = 'rgba(102,192,244,0.3)'; this.style.background = 'rgba(11,20,30,0.8)'; };
+            const itemColors = getThemeColors();
+            itemEl.style.cssText = `margin-bottom:12px;padding:14px;background:${itemColors.bgTertiary};border:1px solid ${itemColors.border};border-radius:6px;display:flex;justify-content:space-between;align-items:center;transition:all 0.2s ease;`;
+            itemEl.onmouseover = function() { const c = getThemeColors(); this.style.borderColor = c.accent; this.style.background = c.bgHover; };
+            itemEl.onmouseout = function() { const c = getThemeColors(); this.style.borderColor = c.border; this.style.background = c.bgTertiary; };
 
             const infoDiv = document.createElement('div');
             infoDiv.style.cssText = 'flex:1;';
 
             const gameName = document.createElement('div');
-            gameName.style.cssText = 'font-size:15px;font-weight:600;color:#fff;margin-bottom:6px;';
+            const nameColors = getThemeColors();
+            gameName.style.cssText = `font-size:15px;font-weight:600;color:${nameColors.text};margin-bottom:6px;`;
             gameName.textContent = fix.gameName || 'Unknown Game (' + fix.appid + ')';
             infoDiv.appendChild(gameName);
 
             const detailsDiv = document.createElement('div');
-            detailsDiv.style.cssText = 'font-size:12px;color:#a9b2c3;line-height:1.6;';
+            const detailsColors = getThemeColors();
+            detailsDiv.style.cssText = `font-size:12px;color:${detailsColors.textSecondary};line-height:1.6;`;
 
             if (fix.fixType) {
                 const typeSpan = document.createElement('div');
-                typeSpan.innerHTML = '<strong style="color:#66c0f4;">' + t('settings.installedFixes.type', 'Type:') + '</strong> ' + fix.fixType;
+                const typeColors = getThemeColors();
+                typeSpan.innerHTML = `<strong style="color:${typeColors.accent};">${t('settings.installedFixes.type', 'Type:')}</strong> ${fix.fixType}`;
                 detailsDiv.appendChild(typeSpan);
             }
 
             if (fix.date) {
                 const dateSpan = document.createElement('div');
-                dateSpan.innerHTML = '<strong style="color:#66c0f4;">' + t('settings.installedFixes.date', 'Installed:') + '</strong> ' + fix.date;
+                const dateColors = getThemeColors();
+                dateSpan.innerHTML = `<strong style="color:${dateColors.accent};">${t('settings.installedFixes.date', 'Installed:')}</strong> ${fix.date}`;
                 detailsDiv.appendChild(dateSpan);
             }
 
             if (fix.filesCount > 0) {
                 const filesSpan = document.createElement('div');
-                filesSpan.innerHTML = '<strong style="color:#66c0f4;">' + t('settings.installedFixes.files', '{count} files').replace('{count}', fix.filesCount) + '</strong>';
+                const filesColors = getThemeColors();
+                filesSpan.innerHTML = `<strong style="color:${filesColors.accent};">${t('settings.installedFixes.files', '{count} files').replace('{count}', fix.filesCount)}</strong>`;
                 detailsDiv.appendChild(filesSpan);
             }
 
@@ -2562,7 +2961,8 @@
                                 itemEl.remove();
                                 // Check if list is now empty
                                 if (container.children.length === 0) {
-                                    container.innerHTML = '<div style="padding:14px;background:#102039;border:1px solid #2a475e;border-radius:4px;color:#c7d5e0;text-align:center;">' + t('settings.installedFixes.empty', 'No fixes installed yet.') + '</div>';
+                                    const emptyFixesColors = getThemeColors();
+                                    container.innerHTML = `<div style="padding:14px;background:${emptyFixesColors.bgTertiary};border:1px solid ${emptyFixesColors.border};border-radius:4px;color:${emptyFixesColors.textSecondary};text-align:center;">${t('settings.installedFixes.empty', 'No fixes installed yet.')}</div>`;
                                 }
                             }, 300);
                             
@@ -2598,14 +2998,16 @@
         function renderInstalledLuaSection() {
             const sectionEl = document.createElement('div');
             sectionEl.id = 'luatools-installed-lua-section';
-            sectionEl.style.cssText = 'margin-top:24px;padding:24px;background:linear-gradient(135deg, rgba(138,102,244,0.05) 0%, rgba(102,138,244,0.08) 100%);border:2px solid rgba(138,102,244,0.3);border-radius:14px;box-shadow:0 4px 15px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);position:relative;overflow:hidden;';
+            const sectionLuaColors = getThemeColors();
+            sectionEl.style.cssText = `margin-top:36px;padding:24px;background:linear-gradient(135deg, rgba(${sectionLuaColors.rgbString},0.05) 0%, rgba(${sectionLuaColors.rgbString},0.08) 100%);border:2px solid ${sectionLuaColors.border};border-radius:14px;box-shadow:0 4px 15px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);position:relative;overflow:hidden;`;
 
             const sectionGlow = document.createElement('div');
-            sectionGlow.style.cssText = 'position:absolute;top:-100%;left:-100%;width:300%;height:300%;background:radial-gradient(circle, rgba(138,102,244,0.08) 0%, transparent 70%);pointer-events:none;';
+            sectionGlow.style.cssText = `position:absolute;top:-100%;left:-100%;width:300%;height:300%;background:radial-gradient(circle, rgba(${sectionLuaColors.rgbString},0.08) 0%, transparent 70%);pointer-events:none;`;
             sectionEl.appendChild(sectionGlow);
 
             const sectionTitle = document.createElement('div');
-            sectionTitle.style.cssText = 'font-size:22px;color:#a68aff;margin-bottom:20px;font-weight:700;text-align:center;text-shadow:0 2px 10px rgba(138,102,244,0.5);background:linear-gradient(135deg, #a68aff 0%, #c7b5ff 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;position:relative;z-index:1;letter-spacing:0.5px;';
+            const luaTitleColors = getThemeColors();
+            sectionTitle.style.cssText = `font-size:22px;color:${luaTitleColors.accent};margin-bottom:20px;font-weight:700;text-align:center;text-shadow:0 2px 10px ${luaTitleColors.shadow};background:${luaTitleColors.gradientLight};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;position:relative;z-index:1;letter-spacing:0.5px;`;
             sectionTitle.innerHTML = '<i class="fa-solid fa-code" style="margin-right:10px;"></i>' + t('settings.installedLua.title', 'Installed Lua Scripts');
             sectionEl.appendChild(sectionTitle);
 
@@ -2626,13 +3028,15 @@
                 .then(function(res) {
                     const response = typeof res === 'string' ? JSON.parse(res) : res;
                     if (!response || !response.success) {
-                        container.innerHTML = '<div style="padding:14px;background:#102039;border:1px solid #ff5c5c;border-radius:4px;color:#ff5c5c;">' + t('settings.installedLua.error', 'Failed to load installed Lua scripts.') + '</div>';
+                        const errLuaColors = getThemeColors();
+                        container.innerHTML = `<div style="padding:14px;background:${errLuaColors.bgTertiary};border:1px solid #ff5c5c;border-radius:4px;color:#ff5c5c;">${t('settings.installedLua.error', 'Failed to load installed Lua scripts.')}</div>`;
                         return;
                     }
 
                     const scripts = Array.isArray(response.scripts) ? response.scripts : [];
                     if (scripts.length === 0) {
-                        container.innerHTML = '<div style="padding:14px;background:#102039;border:1px solid #2a475e;border-radius:4px;color:#c7d5e0;text-align:center;">' + t('settings.installedLua.empty', 'No Lua scripts installed yet.') + '</div>';
+                        const emptyLuaColors = getThemeColors();
+                        container.innerHTML = `<div style="padding:14px;background:${emptyLuaColors.bgTertiary};border:1px solid ${emptyLuaColors.border};border-radius:4px;color:${emptyLuaColors.textSecondary};text-align:center;">${t('settings.installedLua.empty', 'No Lua scripts installed yet.')}</div>`;
                         return;
                     }
 
@@ -2658,21 +3062,24 @@
                     }
                 })
                 .catch(function(err) {
-                    container.innerHTML = '<div style="padding:14px;background:#102039;border:1px solid #ff5c5c;border-radius:4px;color:#ff5c5c;">' + t('settings.installedLua.error', 'Failed to load installed Lua scripts.') + '</div>';
+                    const catchLuaColors = getThemeColors();
+                    container.innerHTML = `<div style="padding:14px;background:${catchLuaColors.bgTertiary};border:1px solid #ff5c5c;border-radius:4px;color:#ff5c5c;">${t('settings.installedLua.error', 'Failed to load installed Lua scripts.')}</div>`;
                 });
         }
 
         function createLuaListItem(script, container) {
             const itemEl = document.createElement('div');
-            itemEl.style.cssText = 'margin-bottom:12px;padding:14px;background:rgba(11,20,30,0.8);border:1px solid rgba(102,192,244,0.3);border-radius:6px;display:flex;justify-content:space-between;align-items:center;transition:all 0.2s ease;';
-            itemEl.onmouseover = function() { this.style.borderColor = '#66c0f4'; this.style.background = 'rgba(11,20,30,0.95)'; };
-            itemEl.onmouseout = function() { this.style.borderColor = 'rgba(102,192,244,0.3)'; this.style.background = 'rgba(11,20,30,0.8)'; };
+            const itemLuaColors = getThemeColors();
+            itemEl.style.cssText = `margin-bottom:12px;padding:14px;background:${itemLuaColors.bgTertiary};border:1px solid ${itemLuaColors.border};border-radius:6px;display:flex;justify-content:space-between;align-items:center;transition:all 0.2s ease;`;
+            itemEl.onmouseover = function() { const c = getThemeColors(); this.style.borderColor = c.accent; this.style.background = c.bgHover; };
+            itemEl.onmouseout = function() { const c = getThemeColors(); this.style.borderColor = c.border; this.style.background = c.bgTertiary; };
 
             const infoDiv = document.createElement('div');
             infoDiv.style.cssText = 'flex:1;';
 
             const gameName = document.createElement('div');
-            gameName.style.cssText = 'font-size:15px;font-weight:600;color:#fff;margin-bottom:6px;';
+            const gameNameLuaColors = getThemeColors();
+            gameName.style.cssText = `font-size:15px;font-weight:600;color:${gameNameLuaColors.text};margin-bottom:6px;`;
             gameName.textContent = script.gameName || 'Unknown Game (' + script.appid + ')';
 
             if (script.isDisabled) {
@@ -2685,11 +3092,13 @@
             infoDiv.appendChild(gameName);
 
             const detailsDiv = document.createElement('div');
-            detailsDiv.style.cssText = 'font-size:12px;color:#a9b2c3;line-height:1.6;';
+            const detailsLuaColors = getThemeColors();
+            detailsDiv.style.cssText = `font-size:12px;color:${detailsLuaColors.textSecondary};line-height:1.6;`;
 
             if (script.modifiedDate) {
                 const dateSpan = document.createElement('div');
-                dateSpan.innerHTML = '<strong style="color:#66c0f4;">' + t('settings.installedLua.modified', 'Modified:') + '</strong> ' + script.modifiedDate;
+                const dateLuaColors = getThemeColors();
+                dateSpan.innerHTML = `<strong style="color:${dateLuaColors.accent};">${t('settings.installedLua.modified', 'Modified:')}</strong> ${script.modifiedDate}`;
                 detailsDiv.appendChild(dateSpan);
             }
 
@@ -2751,7 +3160,8 @@
                                 itemEl.remove();
                                 // Check if list is now empty
                                 if (container.children.length === 0) {
-                                    container.innerHTML = '<div style="padding:14px;background:#102039;border:1px solid #2a475e;border-radius:4px;color:#c7d5e0;text-align:center;">' + t('settings.installedLua.empty', 'No Lua scripts installed yet.') + '</div>';
+                                    const emptyLuaColors = getThemeColors();
+                                    container.innerHTML = `<div style="padding:14px;background:${emptyLuaColors.bgTertiary};border:1px solid ${emptyLuaColors.border};border-radius:4px;color:${emptyLuaColors.textSecondary};text-align:center;">${t('settings.installedLua.empty', 'No Lua scripts installed yet.')}</div>`;
                                 }
                             }, 300);
                         })
@@ -2884,6 +3294,14 @@
                         }
                     }
                 } catch(_) {}
+                
+                // Invalidate the settings cache to force a fresh fetch on next settings load
+                // This ensures any changes persist across page navigations
+                try {
+                    if (window.__LuaToolsSettings) {
+                        window.__LuaToolsSettings.schema = null;
+                    }
+                } catch(_) {}
 
                 if (response && response.translations && typeof response.translations === 'object') {
                     applyTranslationBundle({
@@ -2897,6 +3315,13 @@
 
                 renderSettings();
                 setStatus(t('settings.saveSuccess', 'Settings saved successfully.'), '#8bc34a');
+                
+                // Reload theme if it changed
+                const oldTheme = state.config.values?.general?.theme;
+                const newTheme = state.draft?.general?.theme;
+                if (oldTheme !== newTheme) {
+                    ensureLuaToolsStyles();
+                }
             }).catch(function(err){
                 const message = err && err.message ? err.message : t('settings.saveError', 'Failed to save settings.');
                 setStatus(message, '#ff5c5c');
@@ -2957,14 +3382,17 @@
         overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(10px);z-index:100001;display:flex;align-items:center;justify-content:center;';
 
         const modal = document.createElement('div');
-        modal.style.cssText = 'background:linear-gradient(135deg, #1b2838 0%, #2a475e 100%);color:#fff;border:2px solid #66c0f4;border-radius:8px;min-width:400px;max-width:520px;padding:32px 36px;box-shadow:0 20px 60px rgba(0,0,0,.9), 0 0 0 1px rgba(102,192,244,0.4);animation:slideUp 0.1s ease-out;';
+        const alertModalColors = getThemeColors();
+        modal.style.cssText = `background:${alertModalColors.modalBg};color:${alertModalColors.text};border:2px solid ${alertModalColors.border};border-radius:8px;min-width:400px;max-width:520px;padding:32px 36px;box-shadow:0 20px 60px rgba(0,0,0,.9), 0 0 0 1px ${alertModalColors.shadowRgba};animation:slideUp 0.1s ease-out;`;
 
         const titleEl = document.createElement('div');
-        titleEl.style.cssText = 'font-size:22px;color:#fff;margin-bottom:20px;font-weight:700;text-align:left;text-shadow:0 2px 8px rgba(102,192,244,0.4);background:linear-gradient(135deg, #66c0f4 0%, #a4d7f5 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;';
+        const alertTitleColors = getThemeColors();
+        titleEl.style.cssText = `font-size:22px;color:${alertTitleColors.text};margin-bottom:20px;font-weight:700;text-align:left;text-shadow:0 2px 8px ${alertTitleColors.shadow};background:${alertTitleColors.gradientLight};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;`;
         titleEl.textContent = String(title || 'LuaTools');
 
         const messageEl = document.createElement('div');
-        messageEl.style.cssText = 'font-size:15px;line-height:1.6;margin-bottom:28px;color:#c7d5e0;text-align:left;padding:0 8px;';
+        const alertMsgColors = getThemeColors();
+        messageEl.style.cssText = `font-size:15px;line-height:1.6;margin-bottom:28px;color:${alertMsgColors.textSecondary};text-align:left;padding:0 8px;`;
         messageEl.textContent = String(message || '');
 
         const btnRow = document.createElement('div');
@@ -3031,14 +3459,17 @@
         overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(10px);z-index:100001;display:flex;align-items:center;justify-content:center;';
 
         const modal = document.createElement('div');
-        modal.style.cssText = 'background:linear-gradient(135deg, #1b2838 0%, #2a475e 100%);color:#fff;border:2px solid #66c0f4;border-radius:8px;min-width:420px;max-width:540px;padding:32px 36px;box-shadow:0 20px 60px rgba(0,0,0,.9), 0 0 0 1px rgba(102,192,244,0.4);animation:slideUp 0.1s ease-out;';
+        const confirmColors = getThemeColors();
+        modal.style.cssText = `background:${confirmColors.modalBg};color:${confirmColors.text};border:2px solid ${confirmColors.border};border-radius:8px;min-width:420px;max-width:540px;padding:32px 36px;box-shadow:0 20px 60px rgba(0,0,0,.9), 0 0 0 1px ${confirmColors.shadowRgba};animation:slideUp 0.1s ease-out;`;
 
         const titleEl = document.createElement('div');
-        titleEl.style.cssText = 'font-size:22px;color:#fff;margin-bottom:20px;font-weight:700;text-align:center;text-shadow:0 2px 8px rgba(102,192,244,0.4);background:linear-gradient(135deg, #66c0f4 0%, #a4d7f5 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;';
+        const titleConfirmColors = getThemeColors();
+        titleEl.style.cssText = `font-size:22px;color:${titleConfirmColors.text};margin-bottom:20px;font-weight:700;text-align:center;text-shadow:0 2px 8px ${titleConfirmColors.shadow};background:${titleConfirmColors.gradientLight};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;`;
         titleEl.textContent = String(title || 'LuaTools');
 
         const messageEl = document.createElement('div');
-        messageEl.style.cssText = 'font-size:15px;line-height:1.6;margin-bottom:28px;color:#c7d5e0;text-align:center;';
+        const msgColors = getThemeColors();
+        messageEl.style.cssText = `font-size:15px;line-height:1.6;margin-bottom:28px;color:${msgColors.textSecondary};text-align:center;`;
         messageEl.textContent = String(message || lt('Are you sure?'));
 
         const btnRow = document.createElement('div');
@@ -3095,7 +3526,42 @@
         if (!document.getElementById('luatools-spacing-styles')) {
             const style = document.createElement('style');
             style.id = 'luatools-spacing-styles';
-            style.textContent = '.luatools-restart-button, .luatools-button, .luatools-icon-button{ margin-left:6px !important; }';
+            style.textContent = `
+                .luatools-restart-button, .luatools-button { margin-left: 6px !important; }
+                .luatools-icon-button { margin-left: auto !important; }
+                .luatools-button { position: relative !important; }
+                .luatools-pills-container {
+                    position: absolute !important;
+                    top: -21px !important;
+                    left: 50% !important;
+                    transform: translateX(-50%) !important;
+                    display: inline-flex;
+                    gap: 4px;
+                    align-items: center;
+                    pointer-events: none;
+                    z-index: 10;
+                    white-space: nowrap;
+                }
+                .luatools-pill {
+                    padding: 2px 6px;
+                    border-radius: 4px;
+                    font-size: 9px;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    display: inline-flex;
+                    align-items: center;
+                    height: 16px;
+                    line-height: 1;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                    cursor: default;
+                }
+                .luatools-pill.red { background: rgba(255, 80, 80, 0.15); color: #ff5050; border: 1px solid rgba(255, 80, 80, 0.3); }
+                .luatools-pill.green { background: rgba(92, 184, 92, 0.15); color: #5cb85c; border: 1px solid rgba(92, 184, 92, 0.3); }
+                .luatools-pill.yellow { background: rgba(255, 193, 7, 0.15); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.3); }
+                .luatools-pill.orange { background: rgba(255, 136, 0, 0.15); color: #ff8800; border: 1px solid rgba(255, 136, 0, 0.3); }
+                .luatools-pill.gray { background: rgba(150, 150, 150, 0.15); color: #a0a0a0; border: 1px solid rgba(150, 150, 150, 0.3); }
+            `;
             document.head.appendChild(style); // This is now separate from the main style block
         }
     }
@@ -3178,21 +3644,7 @@
 
         if (targetContainer) {
             const steamdbContainer = targetContainer;
-            // Always update translations for existing buttons (even if not a page change)
-            const existingBtn = document.querySelector('.luatools-button');
-            if (existingBtn) {
-                ensureTranslationsLoaded(false).then(function() {
-                    updateButtonTranslations();
-                });
-            }
             
-            // Check if button already exists to avoid duplicates
-            if (existingBtn || window.__LuaToolsButtonInserted) {
-                if (!logState.existsOnce) { backendLog('LuaTools button already exists, skipping'); logState.existsOnce = true; }
-                // Even if LuaTools exists, ensure Restart button is present and translations are updated
-                return;
-            }
-
             // Insert a Restart Steam button between Community Hub and our LuaTools button
             try {
                 if (!document.querySelector('.luatools-restart-button') && !window.__LuaToolsRestartInserted) {
@@ -3300,7 +3752,7 @@
                             iconBtn.appendChild(ispan);
                             iconBtn.addEventListener('click', function(e){ e.preventDefault(); showSettingsPopup(); });
 
-                            restartBtn.after(iconBtn);
+                            steamdbContainer.appendChild(iconBtn);
 
                             window.__LuaToolsIconInserted = true;
                             backendLog('Inserted Icon button');
@@ -3311,10 +3763,17 @@
                 }
             } catch(_) {}
 
-            // If LuaTools button already existed, stop here
-            if (document.querySelector('.luatools-button') || window.__LuaToolsButtonInserted) {
-                return;
+            // Status Pills Logic
+            // Always update translations for existing buttons (even if not a page change)
+            const existingBtn = document.querySelector('.luatools-button');
+            if (existingBtn) {
+                ensureTranslationsLoaded(false).then(function() {
+                    updateButtonTranslations();
+                });
             }
+            
+            // Check if button already exists to avoid duplicates
+            if (!existingBtn && !window.__LuaToolsButtonInserted) {
 
             // Create the LuaTools button modeled after existing SteamDB/PCGW buttons
             // In Big Picture mode, use queue button as reference; otherwise use first link in container
@@ -3406,8 +3865,8 @@
                         // Insert after icon button (order: Restart → Icon → Add)
                         const iconExisting = steamdbContainer.querySelector('.luatools-icon-button');
                         const restartExisting = steamdbContainer.querySelector('.luatools-restart-button');
-                        if (iconExisting && iconExisting.after) {
-                            iconExisting.after(luatoolsButton);
+                        if (iconExisting && iconExisting.before) {
+                            iconExisting.before(luatoolsButton);
                         } else if (restartExisting && restartExisting.after) {
                             restartExisting.after(luatoolsButton);
                         } else if (referenceBtn && referenceBtn.after) {
@@ -3433,6 +3892,99 @@
                     backendLog('LuaTools button inserted');
                 }
             }
+            }
+
+            // status pills!! fire emoji
+            try {
+                const match = window.location.href.match(/https:\/\/store\.steampowered\.com\/app\/(\d+)/) || window.location.href.match(/https:\/\/steamcommunity\.com\/app\/(\d+)/);
+                const appid = match ? parseInt(match[1], 10) : (window.__LuaToolsCurrentAppId || NaN);
+
+                if (!isNaN(appid)) {
+                    fetchGamesDatabase().then(function(db) {
+                        const btn = steamdbContainer.querySelector('.luatools-button');
+                        if (!btn) return;
+
+                        let pillsContainer = btn.querySelector('.luatools-pills-container');
+                        
+                        if (!pillsContainer) {
+                            pillsContainer = document.createElement('div');
+                            pillsContainer.className = 'luatools-pills-container';
+                            btn.appendChild(pillsContainer);
+                        }
+                        
+                        const key = String(appid);
+                        if (!db || !db[key]) {
+                            const newContent = 'untested';
+                            if (pillsContainer.dataset.content === newContent) return;
+                            pillsContainer.dataset.content = newContent;
+                            pillsContainer.innerHTML = '';
+                            
+                            const pill = document.createElement('span');
+                            pill.className = 'luatools-pill gray';
+                            pill.textContent = 'Untested';
+                            pillsContainer.appendChild(pill);
+                            return;
+                        }
+                        
+                        const gameData = db[key];
+                        const newContent = JSON.stringify(gameData);
+                        if (pillsContainer.dataset.content === newContent) return;
+                        pillsContainer.dataset.content = newContent;
+                        
+                        pillsContainer.innerHTML = '';
+
+                        if (typeof gameData.playable !== 'undefined') {
+                            const pill = document.createElement('span');
+                            pill.className = 'luatools-pill';
+                            
+                            // reset button state first
+                            const btn = steamdbContainer.querySelector('.luatools-button');
+                            if (btn) {
+                                btn.style.opacity = '';
+                                btn.style.pointerEvents = '';
+                                btn.style.cursor = '';
+                                const span = btn.querySelector('span');
+                                if (span && span.textContent === 'Unplayable') {
+                                    span.textContent = lt('Add via LuaTools');
+                                }
+                            }
+
+                            if (gameData.playable === 0) {
+                                pill.classList.add('red');
+                                pill.textContent = 'Unplayable';
+                                if (btn) {
+                                    btn.style.opacity = '0.5';
+                                    btn.style.pointerEvents = 'none';
+                                    btn.style.cursor = 'not-allowed';
+                                    const span = btn.querySelector('span');
+                                    if (span) span.textContent = 'Unplayable';
+                                }
+                            } else if (gameData.playable === 1) {
+                                pill.classList.add('green');
+                                pill.textContent = 'Playable';
+                            } else if (gameData.playable === 2) {
+                                pill.classList.add('yellow');
+                                pill.textContent = 'Needs fixes';
+                            }
+                            pillsContainer.appendChild(pill);
+                        }
+
+                        if (gameData.denuvo) {
+                            const pill = document.createElement('span');
+                            pill.className = 'luatools-pill orange';
+                            pill.textContent = 'Denuvo';
+                            pillsContainer.appendChild(pill);
+                        }
+
+                        if (gameData['of-available']) {
+                            const pill = document.createElement('span');
+                            pill.className = 'luatools-pill green';
+                            pill.textContent = 'Online-fix';
+                            pillsContainer.appendChild(pill);
+                        }
+                    });
+                }
+            } catch(e) { /* ignore */ }
         } else {
             if (!logState.missingOnce) { backendLog('LuaTools: steamdbContainer not found on this page'); logState.missingOnce = true; }
         }
@@ -3440,6 +3992,13 @@
 
     // Try to add the button immediately if DOM is ready
     function onFrontendReady() {
+        // Fetch settings on startup to ensure saved theme is applied across pages
+        try {
+            fetchSettingsConfig(true).then(function(cfg){
+                try { ensureLuaToolsStyles(); } catch(_) {}
+            }).catch(function(_){});
+        } catch(_) {}
+
         addLuaToolsButton();
 
         // Show gamepad hint if connected (only in Big Picture mode)
@@ -3601,6 +4160,7 @@
 
                         // Update individual API status in the list
                         if (overlay) {
+                            const colors = getThemeColors();
                             const apiItems = overlay.querySelectorAll('.luatools-api-item');
 
                             // Track successful API when download/processing starts
@@ -3616,19 +4176,19 @@
 
                                     if (apiName === successfulApi) {
                                         foundSuccessful = true;
-                                        item.style.background = 'rgba(102,192,244,0.2)';
-                                        item.style.borderColor = '#66c0f4';
-                                        apiStatus.innerHTML = '<span style="color:#66c0f4;">' + lt('Found') + '</span><i class="fa-solid fa-check" style="color:#66c0f4;"></i>';
+                                        item.style.background = `rgba(${colors.rgbString},0.2)`;
+                                        item.style.borderColor = colors.accent;
+                                        apiStatus.innerHTML = `<span style="color:${colors.accent};">${lt('Found')}</span><i class="fa-solid fa-check" style="color:${colors.accent};"></i>`;
                                     } else if (!foundSuccessful) {
                                         // This API comes before the successful one, mark as not found
-                                        item.style.background = 'rgba(42,71,94,0.2)';
-                                        item.style.borderColor = 'rgba(102,192,244,0.1)';
-                                        apiStatus.innerHTML = '<span style="color:#8f98a0;">' + lt('Not found') + '</span><i class="fa-solid fa-xmark" style="color:#8f98a0;"></i>';
+                                        item.style.background = `rgba(0,0,0,0.2)`;
+                                        item.style.borderColor = colors.borderRgba;
+                                        apiStatus.innerHTML = `<span style="color:${colors.textSecondary};">${lt('Not found')}</span><i class="fa-solid fa-xmark" style="color:${colors.textSecondary};"></i>`;
                                     } else {
                                         // This API comes after the successful one, mark as skipped
-                                        item.style.background = 'rgba(42,71,94,0.15)';
-                                        item.style.borderColor = 'rgba(102,192,244,0.1)';
-                                        apiStatus.innerHTML = '<span style="color:#8f98a0;">' + lt('Skipped') + '</span><i class="fa-solid fa-minus" style="color:#8f98a0;"></i>';                                    }
+                                        item.style.background = `rgba(0,0,0,0.15)`;
+                                        item.style.borderColor = colors.borderRgba;
+                                        apiStatus.innerHTML = `<span style="color:${colors.textSecondary};">${lt('Skipped')}</span><i class="fa-solid fa-minus" style="color:${colors.textSecondary};"></i>`;                                    }
                                 });
                             }
 
@@ -3640,9 +4200,9 @@
                                     if (!apiStatus) return;
 
                                     if (apiName === lastCheckedApi) {
-                                        item.style.background = 'rgba(42,71,94,0.2)';
-                                        item.style.borderColor = 'rgba(102,192,244,0.1)';
-                                        apiStatus.innerHTML = '<span style="color:#8f98a0;">' + lt('Not found') + '</span><i class="fa-solid fa-xmark" style="color:#8f98a0;"></i>';
+                                        item.style.background = `rgba(0,0,0,0.2)`;
+                                        item.style.borderColor = colors.borderRgba;
+                                        apiStatus.innerHTML = `<span style="color:${colors.textSecondary};">${lt('Not found')}</span><i class="fa-solid fa-xmark" style="color:${colors.textSecondary};"></i>`;
                                     }
                                 });
                             }
@@ -3655,9 +4215,9 @@
                                     if (!apiStatus) return;
 
                                     if (apiName === st.currentApi) {
-                                        item.style.background = 'rgba(102,192,244,0.15)';
-                                        item.style.borderColor = 'rgba(102,192,244,0.5)';
-                                        apiStatus.innerHTML = '<span style="color:#66c0f4;">' + lt('Checking…') + '</span><i class="fa-solid fa-spinner" style="color:#66c0f4;animation: spin 1.5s linear infinite;"></i>';
+                                        item.style.background = `rgba(${colors.rgbString},0.15)`;
+                                        item.style.borderColor = colors.accent;
+                                        apiStatus.innerHTML = `<span style="color:${colors.accent};">${lt('Checking…')}</span><i class="fa-solid fa-spinner" style="color:${colors.accent};animation: spin 1.5s linear infinite;"></i>`;
                                     }
                                 });
 
@@ -3744,6 +4304,7 @@
                         if (st.status === 'failed'){
                             // Mark all APIs as not found when failed
                             if (overlay && !successfulApi) {
+                                const colors = getThemeColors();
                                 const apiItems = overlay.querySelectorAll('.luatools-api-item');
                                 apiItems.forEach((item) => {
                                     const apiStatus = item.querySelector('.luatools-api-status');
@@ -3751,9 +4312,9 @@
                                     // Check if this API is still in "Waiting..." or "Checking..." state
                                     const statusText = apiStatus.textContent || '';
                                     if (statusText.includes('Waiting') || statusText.includes('Esperando') || statusText.includes('Checking') || statusText.includes('Verificando')) {
-                                        item.style.background = 'rgba(42,71,94,0.2)';
-                                        item.style.borderColor = 'rgba(102,192,244,0.1)';
-                                        apiStatus.innerHTML = '<span style="color:#8f98a0;">' + lt('Not found') + '</span><i class="fa-solid fa-xmark" style="color:#8f98a0;"></i>';
+                                        item.style.background = `rgba(0,0,0,0.2)`;
+                                        item.style.borderColor = colors.borderRgba;
+                                        apiStatus.innerHTML = `<span style="color:${colors.textSecondary};">${lt('Not found')}</span><i class="fa-solid fa-xmark" style="color:${colors.textSecondary};"></i>`;
                                     }
                                 });
                             }
@@ -3887,21 +4448,25 @@
         overlay.className = 'luatools-loadedapps-overlay';
         overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;';
         const modal = document.createElement('div');
-        modal.style.cssText = 'background:linear-gradient(135deg, #1b2838 0%, #2a475e 100%);color:#fff;border:2px solid #66c0f4;border-radius:8px;min-width:420px;max-width:640px;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px rgba(102,192,244,0.3);animation:slideUp 0.1s ease-out;';
+        const loadedAppsModalColors = getThemeColors();
+        modal.style.cssText = `background:${loadedAppsModalColors.modalBg};color:${loadedAppsModalColors.text};border:2px solid ${loadedAppsModalColors.border};border-radius:8px;min-width:420px;max-width:640px;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px ${loadedAppsModalColors.shadowRgba};animation:slideUp 0.1s ease-out;`;
         const title = document.createElement('div');
-        title.style.cssText = 'font-size:24px;color:#fff;margin-bottom:20px;font-weight:700;text-shadow:0 2px 8px rgba(102,192,244,0.4);background:linear-gradient(135deg, #66c0f4 0%, #a4d7f5 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-align:center;';
+        const loadedAppsTitleColors = getThemeColors();
+        title.style.cssText = `font-size:24px;color:${loadedAppsTitleColors.text};margin-bottom:20px;font-weight:700;text-shadow:0 2px 8px ${loadedAppsTitleColors.shadow};background:${loadedAppsTitleColors.gradientLight};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-align:center;`;
         title.textContent = lt('LuaTools · Added Games');
         const body = document.createElement('div');
-        body.style.cssText = 'font-size:14px;line-height:1.8;margin-bottom:16px;max-height:320px;overflow:auto;padding:16px;border:1px solid rgba(102,192,244,0.3);border-radius:12px;background:rgba(11,20,30,0.6);';
+        const loadedAppsBodyColors = getThemeColors();
+        body.style.cssText = `font-size:14px;line-height:1.8;margin-bottom:16px;max-height:320px;overflow:auto;padding:16px;border:1px solid ${loadedAppsBodyColors.border};border-radius:12px;background:${loadedAppsBodyColors.bgContainer};`;
         if (apps && apps.length) {
             const list = document.createElement('div');
             apps.forEach(function(item){
                 const a = document.createElement('a');
                 a.href = 'steam://install/' + String(item.appid);
                 a.textContent = String(item.name || item.appid);
-                a.style.cssText = 'display:block;color:#c7d5e0;text-decoration:none;padding:10px 16px;margin-bottom:8px;background:rgba(102,192,244,0.08);border:1px solid rgba(102,192,244,0.2);border-radius:4px;transition:all 0.3s ease;';
-                a.onmouseover = function() { this.style.background = 'rgba(102,192,244,0.2)'; this.style.borderColor = '#66c0f4'; this.style.transform = 'translateX(4px)'; this.style.color = '#fff'; };
-                a.onmouseout = function() { this.style.background = 'rgba(102,192,244,0.08)'; this.style.borderColor = 'rgba(102,192,244,0.2)'; this.style.transform = 'translateX(0)'; this.style.color = '#c7d5e0'; };
+                const linkColors = getThemeColors();
+                a.style.cssText = `display:block;color:${linkColors.textSecondary};text-decoration:none;padding:10px 16px;margin-bottom:8px;background:rgba(${linkColors.rgbString},0.08);border:1px solid rgba(${linkColors.rgbString},0.2);border-radius:4px;transition:all 0.3s ease;`;
+                a.onmouseover = function() { const c = getThemeColors(); this.style.background = `rgba(${c.rgbString},0.2)`; this.style.borderColor = c.accent; this.style.transform = 'translateX(4px)'; this.style.color = c.text; };
+                a.onmouseout = function() { const c = getThemeColors(); this.style.background = `rgba(${c.rgbString},0.08)`; this.style.borderColor = `rgba(${c.rgbString},0.2)`; this.style.transform = 'translateX(0)'; this.style.color = c.textSecondary; };
                 a.onclick = function(e){ e.preventDefault(); try { window.location.href = a.href; } catch(_) {} };
                 a.oncontextmenu = function(e){ e.preventDefault(); const url = 'https://steamdb.info/app/' + String(item.appid) + '/';
                     try { Millennium.callServerMethod('luatools', 'OpenExternalUrl', { url, contentScriptQuery: '' }); } catch(_) {}

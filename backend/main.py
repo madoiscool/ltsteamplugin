@@ -31,6 +31,7 @@ from downloads import (
     get_icon_data_url,
     get_installed_lua_scripts,
     has_luatools_for_app,
+    get_games_database,
     init_applist,
     read_loaded_apps,
     start_add_via_luatools,
@@ -108,6 +109,21 @@ def _copy_webkit_files() -> None:
     else:
         logger.warn(f"LuaTools icon not found at {icon_src}")
 
+    # Copy theme CSS files
+    themes_src = os.path.join(plugin_dir, "public", "themes")
+    themes_dst = os.path.join(steam_ui_path, "themes")
+    if os.path.exists(themes_src):
+        try:
+            os.makedirs(themes_dst, exist_ok=True)
+            for filename in os.listdir(themes_src):
+                if filename.endswith(".css"):
+                    theme_src = os.path.join(themes_src, filename)
+                    theme_dst = os.path.join(themes_dst, filename)
+                    shutil.copy(theme_src, theme_dst)
+                    logger.log(f"Copied theme file {filename} to {theme_dst}")
+        except Exception as exc:
+            logger.warn(f"Failed to copy theme files: {exc}")
+
 
 def _inject_webkit_files() -> None:
     js_path = os.path.join(WEBKIT_DIR_NAME, WEB_UI_JS_FILE)
@@ -161,6 +177,10 @@ def CancelAddViaLuaTools(appid: int, contentScriptQuery: str = "") -> str:
 
 def GetIconDataUrl(contentScriptQuery: str = "") -> str:
     return get_icon_data_url()
+
+
+def GetGamesDatabase(contentScriptQuery: str = "") -> str:
+    return get_games_database()
 
 
 def ReadLoadedApps(contentScriptQuery: str = "") -> str:
@@ -252,6 +272,25 @@ def GetSettingsConfig(contentScriptQuery: str = "") -> str:
         return json.dumps(response)
     except Exception as exc:
         logger.warn(f"LuaTools: GetSettingsConfig failed: {exc}")
+        return json.dumps({"success": False, "error": str(exc)})
+
+
+def GetThemes(contentScriptQuery: str = "") -> str:
+    """Return the full themes palette list for the frontend."""
+    try:
+        themes_path = os.path.join(get_plugin_dir(), 'public', 'themes', 'themes.json')
+        if os.path.exists(themes_path):
+            try:
+                with open(themes_path, 'r', encoding='utf-8') as fh:
+                    data = json.load(fh)
+                    return json.dumps({"success": True, "themes": data})
+            except Exception as exc:
+                logger.warn(f"LuaTools: Failed to read themes.json: {exc}")
+                return json.dumps({"success": False, "error": "Failed to read themes.json"})
+        else:
+            return json.dumps({"success": True, "themes": []})
+    except Exception as exc:
+        logger.warn(f"LuaTools: GetThemes failed: {exc}")
         return json.dumps({"success": False, "error": str(exc)})
 
 
@@ -370,6 +409,26 @@ def GetTranslations(contentScriptQuery: str = "", language: str = "", **kwargs: 
         return json.dumps({"success": False, "error": str(exc)})
 
 
+def GetAvailableThemes(contentScriptQuery: str = "") -> str:
+    """Return list of available theme CSS files."""
+    try:
+        themes_dir = os.path.join(get_plugin_dir(), "public", "themes")
+        themes = []
+        if os.path.exists(themes_dir):
+            for filename in os.listdir(themes_dir):
+                if filename.endswith(".css"):
+                    theme_name = filename[:-4]  # Remove .css extension
+                    # Capitalize first letter for display
+                    display_name = theme_name.capitalize()
+                    themes.append({"value": theme_name, "label": display_name})
+        # Sort themes, but put 'original' first
+        themes.sort(key=lambda x: (x["value"] != "original", x["label"]))
+        return json.dumps({"success": True, "themes": themes})
+    except Exception as exc:
+        logger.warn(f"LuaTools: GetAvailableThemes failed: {exc}")
+        return json.dumps({"success": False, "error": str(exc), "themes": []})
+
+
 class Plugin:
     def _front_end_loaded(self):
         _copy_webkit_files()
@@ -419,4 +478,3 @@ class Plugin:
 
 
 plugin = Plugin()
-

@@ -1,0 +1,50 @@
+:root {
+    --lt-bg-primary: #1e1e2e;
+    --lt-bg-secondary: #313244;
+    --lt-bg-tertiary: rgba(30, 30, 46, 0.95);
+    --lt-bg-hover: rgba(49, 50, 68, 0.95);
+    --lt-bg-container: rgba(30,30,46,0.8);
+    --lt-bg-container-gradient: rgba(30, 30, 46, 0.9), #1e1e2e;
+    --lt-accent: #89b4fa;
+    --lt-accent-light: #cba6f7;
+    --lt-accent-dark: #74c7ec;
+    --lt-border: rgba(137, 180, 250, 0.3);
+    --lt-border-hover: rgba(137, 180, 250, 0.8);
+    --lt-text: #cdd6f4;
+    --lt-text-secondary: #b6bfe8;
+    --lt-gradient: linear-gradient(135deg, #cba6f7 0%, #89b4fa 100%);
+    --lt-gradient-light: linear-gradient(135deg, #f38ba8 0%, #cba6f7 100%);
+    --lt-shadow: rgba(137, 180, 250, 0.4);
+    --lt-shadow-hover: rgba(137, 180, 250, 0.6);
+    --lt-shadow-rgba: rgba(137, 180, 250, 0.3);
+    --lt-rgb: 137,180,250;
+}
+
+/* Select dropdown styling for catppuccin theme */
+select {
+    background-color: rgba(30, 30, 46, 0.95) !important;
+    color: #cdd6f4 !important;
+    border: 1px solid rgba(137, 180, 250, 0.3) !important;
+    border-radius: 3px;
+}
+
+select option {
+    background-color: #1e1e2e;
+    color: #cdd6f4;
+}
+
+select option:checked {
+    background: linear-gradient(#89b4fa, #89b4fa);
+    background-color: #89b4fa !important;
+    color: #1e1e2e !important;
+}
+
+select:hover {
+    border-color: rgba(137, 180, 250, 0.8) !important;
+}
+
+select:focus {
+    outline: none;
+    border-color: #89b4fa !important;
+    box-shadow: 0 0 0 2px rgba(137, 180, 250, 0.3);
+}

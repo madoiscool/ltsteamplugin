@@ -46,6 +46,14 @@ APPLIST_FILE_NAME = "all-appids.json"
 APPLIST_URL = "https://applist.morrenus.xyz/"
 APPLIST_DOWNLOAD_TIMEOUT = 300  # 5 minutes for large file
 
+GAMES_DB_FILE_NAME = "games.json"
+GAMES_DB_URL = "https://toolsdb.piqseu.cc/games.json"
+
+# In-memory games database cache and lock (defined to avoid undefined variable)
+GAMES_DB_DATA: Dict[int, any] = {}
+GAMES_DB_LOADED = False
+GAMES_DB_LOCK = threading.Lock()
+
 
 def _set_download_state(appid: int, update: dict) -> None:
     with DOWNLOAD_LOCK:
@@ -347,6 +355,79 @@ def init_applist() -> None:
         _load_applist_into_memory()
     except Exception as exc:
         logger.warn(f"LuaTools: Applist initialization failed: {exc}")
+
+
+def _games_db_file_path() -> str:
+    """Get the path to the games database JSON file."""
+    temp_dir = ensure_temp_download_dir()
+    return os.path.join(temp_dir, GAMES_DB_FILE_NAME)
+
+
+def _load_games_db_into_memory() -> None:
+    """Load the games database JSON file into memory."""
+    global GAMES_DB_DATA, GAMES_DB_LOADED
+    
+    with GAMES_DB_LOCK:
+        if GAMES_DB_LOADED:
+            return
+        
+        file_path = _games_db_file_path()
+        if not os.path.exists(file_path):
+            logger.log("LuaTools: Games DB file not found, skipping load")
+            GAMES_DB_LOADED = True
+            return
+        
+        try:
+            logger.log("LuaTools: Loading Games DB into memory...")
+            with open(file_path, "r", encoding="utf-8") as handle:
+                GAMES_DB_DATA = json.load(handle)
+            
+            logger.log(f"LuaTools: Loaded Games DB ({len(GAMES_DB_DATA)} entries)")
+            GAMES_DB_LOADED = True
+        except Exception as exc:
+            logger.warn(f"LuaTools: Failed to load Games DB: {exc}")
+            GAMES_DB_LOADED = True
+
+
+def _ensure_games_db_file() -> None:
+    """Download the games database file."""
+    file_path = _games_db_file_path()
+    
+    logger.log("LuaTools: Downloading Games DB...")
+    client = ensure_http_client("LuaTools: DownloadGamesDB")
+    
+    try:
+        resp = client.get(GAMES_DB_URL, follow_redirects=True, timeout=60)
+        resp.raise_for_status()
+        
+        data = resp.json()
+        
+        with open(file_path, "w", encoding="utf-8") as handle:
+            json.dump(data, handle)
+        
+        logger.log(f"LuaTools: Successfully downloaded Games DB")
+    except Exception as exc:
+        logger.warn(f"LuaTools: Failed to download Games DB: {exc}")
+
+
+def init_games_db() -> None:
+    """Initialize the games database: download if needed, then load into memory."""
+    try:
+        _ensure_games_db_file()
+        _load_games_db_into_memory()
+    except Exception as exc:
+        logger.warn(f"LuaTools: Games DB initialization failed: {exc}")
+
+
+def get_games_database() -> str:
+    """Get the games database as JSON string."""
+    global GAMES_DB_DATA, GAMES_DB_LOADED
+    
+    if not GAMES_DB_LOADED:
+        init_games_db()
+    
+    with GAMES_DB_LOCK:
+        return json.dumps(GAMES_DB_DATA)
 
 
 def fetch_app_name(appid: int) -> str:
@@ -804,11 +885,12 @@ __all__ = [
     "dismiss_loaded_apps",
     "fetch_app_name",
     "get_add_status",
+    "get_games_database",
     "get_icon_data_url",
     "get_installed_lua_scripts",
     "has_luatools_for_app",
     "init_applist",
+    "init_games_db",
     "read_loaded_apps",
     "start_add_via_luatools",
 ]
-
