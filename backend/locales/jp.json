@@ -37,6 +37,8 @@
     "Error starting Online Fix": "オンライン修正の開始エラー",
     "Error starting un-fix": "修正解除の開始エラー",
     "Error! Code: {code}": "エラー！コード: {code}",
+    "Error, Code: {code}": "エラー、コード: {code}",
+    "Error, Timed Out": "エラー、タイムアウト",
     "Extracting to game folder...": "ゲームフォルダに展開中...",
     "Failed": "失敗",
     "Failed to cancel fix download": "修正ダウンロードのキャンセルに失敗しました",
@@ -170,6 +172,8 @@
     "settings.search.clear": "検索をクリア",
     "settings.search.noResults": "結果が見つかりません",
     "settings.search.placeholder": "設定、ゲーム、修正を検索...",
+    "settings.theme.description": "LuaToolsインターフェースのカラーテーマを選択してください。",
+    "settings.theme.label": "テーマ",
     "settings.title": "LuaTools · 設定",
     "settings.unsaved": "未保存の変更",
     "{fix} applied successfully!": "{fix}が正常に適用されました！"

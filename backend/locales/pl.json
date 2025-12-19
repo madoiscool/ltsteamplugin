@@ -37,6 +37,8 @@
     "Error starting Online Fix": "Błąd podczas uruchamiania online-fix",
     "Error starting un-fix": "Błąd podczas rozpoczynania cofania poprawek",
     "Error! Code: {code}": "Błąd! Kod: {code}",
+    "Error, Code: {code}": "Błąd, Kod: {code}",
+    "Error, Timed Out": "Błąd, Przekroczono limit czasu",
     "Extracting to game folder...": "Wypakowywanie do folderu gry...",
     "Failed": "Niepowodzenie",
     "Failed to cancel fix download": "Nie udało się anulować pobierania poprawki",
@@ -170,6 +172,8 @@
     "settings.search.clear": "Wyczyść wyszukiwanie",
     "settings.search.noResults": "Nie znaleziono wyników",
     "settings.search.placeholder": "Szukaj ustawień, gier, poprawek...",
+    "settings.theme.description": "Wybierz motyw kolorystyczny interfejsu LuaTools.",
+    "settings.theme.label": "Motyw",
     "settings.title": "LuaTools · Ustawienia",
     "settings.unsaved": "Niezapisane zmiany",
     "{fix} applied successfully!": "{fix} zostało pomyślnie zastosowane!"

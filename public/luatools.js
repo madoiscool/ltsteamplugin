@@ -685,6 +685,7 @@
 
     // Runtime THEMES map - start with fallback, then hydrate from themes.json/backend.
     let THEMES = DEFAULT_THEMES;
+    let themesLoaded = false;
 
     function normalizeThemesPayload(input) {
         try {
@@ -712,7 +713,9 @@
                 map[key] = Object.assign({}, t, { value: key, name: t.name || key });
             });
             if (Object.keys(map).length === 0) return;
-            THEMES = Object.assign({}, DEFAULT_THEMES, map);
+            // Merge into existing THEMES if themes have been loaded, otherwise start from DEFAULT_THEMES
+            THEMES = Object.assign({}, (themesLoaded ? THEMES : DEFAULT_THEMES), map);
+            themesLoaded = true;
             try { ensureLuaToolsStyles(); } catch(_) {}
         } catch (e) {
             console.warn('Failed to apply backend themes', e);
@@ -2665,6 +2668,7 @@
             if (groupKey === 'general') {
                 if (optionKey === 'language') return 'settings.language.label';
                 if (optionKey === 'donateKeys') return 'settings.donateKeys.label';
+                if (optionKey === 'theme') return 'settings.theme.label';
             }
             return null;
         }
@@ -2673,6 +2677,7 @@
             if (groupKey === 'general') {
                 if (optionKey === 'language') return 'settings.language.description';
                 if (optionKey === 'donateKeys') return 'settings.donateKeys.description';
+                if (optionKey === 'theme') return 'settings.theme.description';
             }
             return null;
         }
@@ -4485,10 +4490,23 @@
                                         item.style.borderColor = colors.accent;
                                         apiStatus.innerHTML = `<span style="color:${colors.accent};">${lt('Found')}</span><i class="fa-solid fa-check" style="color:${colors.accent};"></i>`;
                                     } else if (!foundSuccessful) {
-                                        // This API comes before the successful one, mark as not found
-                                        item.style.background = `rgba(0,0,0,0.2)`;
-                                        item.style.borderColor = colors.borderRgba;
-                                        apiStatus.innerHTML = `<span style="color:${colors.textSecondary};">${lt('Not found')}</span><i class="fa-solid fa-xmark" style="color:${colors.textSecondary};"></i>`;
+                                        // This API comes before the successful one, check if it has an error first
+                                        if (st.apiErrors && st.apiErrors[apiName]) {
+                                            const apiError = st.apiErrors[apiName];
+                                            item.style.background = `rgba(255, 0, 0, 0.15)`;
+                                            item.style.borderColor = '#ff5c5c';
+                                            if (apiError.type === 'timeout') {
+                                                apiStatus.innerHTML = `<span style="color:#ff5c5c;">${lt('Error, Timed Out')}</span><i class="fa-solid fa-clock" style="color:#ff5c5c;"></i>`;
+                                            } else if (apiError.type === 'error') {
+                                                const code = apiError.code ? String(apiError.code) : '';
+                                                apiStatus.innerHTML = `<span style="color:#ff5c5c;">${lt('Error, Code: {code}').replace('{code}', code)}</span><i class="fa-solid fa-exclamation-triangle" style="color:#ff5c5c;"></i>`;
+                                            }
+                                        } else {
+                                            // Mark as not found
+                                            item.style.background = `rgba(0,0,0,0.2)`;
+                                            item.style.borderColor = colors.borderRgba;
+                                            apiStatus.innerHTML = `<span style="color:${colors.textSecondary};">${lt('Not found')}</span><i class="fa-solid fa-xmark" style="color:${colors.textSecondary};"></i>`;
+                                        }
                                     } else {
                                         // This API comes after the successful one, mark as skipped
                                         item.style.background = `rgba(0,0,0,0.15)`;
@@ -4527,6 +4545,35 @@
                                 });
 
                                 lastCheckedApi = st.currentApi;
+                            }
+
+                            // Show error statuses for APIs that errored (when not checking them anymore)
+                            if (st.apiErrors && typeof st.apiErrors === 'object') {
+                                apiItems.forEach((item) => {
+                                    const apiName = item.getAttribute('data-api-name');
+                                    const apiStatus = item.querySelector('.luatools-api-status');
+                                    if (!apiStatus || !apiName) return;
+                                    
+                                    const apiError = st.apiErrors[apiName];
+                                    if (!apiError) return;
+                                    
+                                    // Only show error if this API is not currently being checked
+                                    if (st.currentApi === apiName && st.status === 'checking') return;
+                                    
+                                    // Don't overwrite "Found" status
+                                    const statusText = apiStatus.textContent || '';
+                                    if (statusText.includes('Found') || statusText.includes('Encontrado')) return;
+                                    
+                                    item.style.background = `rgba(255, 0, 0, 0.15)`;
+                                    item.style.borderColor = '#ff5c5c';
+                                    
+                                    if (apiError.type === 'timeout') {
+                                        apiStatus.innerHTML = `<span style="color:#ff5c5c;">${lt('Error, Timed Out')}</span><i class="fa-solid fa-clock" style="color:#ff5c5c;"></i>`;
+                                    } else if (apiError.type === 'error') {
+                                        const code = apiError.code ? String(apiError.code) : '';
+                                        apiStatus.innerHTML = `<span style="color:#ff5c5c;">${lt('Error, Code: {code}').replace('{code}', code)}</span><i class="fa-solid fa-exclamation-triangle" style="color:#ff5c5c;"></i>`;
+                                    }
+                                });
                             }
                         }
 
@@ -4607,13 +4654,29 @@
                             }
                         }
                         if (st.status === 'failed'){
-                            // Mark all APIs as not found when failed
+                            // Mark all APIs as not found when failed (unless they have error status)
                             if (overlay && !successfulApi) {
                                 const colors = getThemeColors();
                                 const apiItems = overlay.querySelectorAll('.luatools-api-item');
                                 apiItems.forEach((item) => {
+                                    const apiName = item.getAttribute('data-api-name');
                                     const apiStatus = item.querySelector('.luatools-api-status');
                                     if (!apiStatus) return;
+                                    
+                                    // Skip if this API already has an error status
+                                    if (st.apiErrors && st.apiErrors[apiName]) {
+                                        const apiError = st.apiErrors[apiName];
+                                        item.style.background = `rgba(255, 0, 0, 0.15)`;
+                                        item.style.borderColor = '#ff5c5c';
+                                        if (apiError.type === 'timeout') {
+                                            apiStatus.innerHTML = `<span style="color:#ff5c5c;">${lt('Error, Timed Out')}</span><i class="fa-solid fa-clock" style="color:#ff5c5c;"></i>`;
+                                        } else if (apiError.type === 'error') {
+                                            const code = apiError.code ? String(apiError.code) : '';
+                                            apiStatus.innerHTML = `<span style="color:#ff5c5c;">${lt('Error, Code: {code}').replace('{code}', code)}</span><i class="fa-solid fa-exclamation-triangle" style="color:#ff5c5c;"></i>`;
+                                        }
+                                        return;
+                                    }
+                                    
                                     // Check if this API is still in "Waiting..." or "Checking..." state
                                     const statusText = apiStatus.textContent || '';
                                     if (statusText.includes('Waiting') || statusText.includes('Esperando') || statusText.includes('Checking') || statusText.includes('Verificando')) {

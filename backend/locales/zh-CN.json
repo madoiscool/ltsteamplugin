@@ -37,6 +37,8 @@
     "Error starting Online Fix": "启动在线修复错误",
     "Error starting un-fix": "启动取消修复错误",
     "Error! Code: {code}": "错误！代码：{code}",
+    "Error, Code: {code}": "错误，代码：{code}",
+    "Error, Timed Out": "错误，超时",
     "Extracting to game folder...": "正在解压到游戏文件夹...",
     "Failed": "失败",
     "Failed to cancel fix download": "取消修复下载失败",
@@ -170,6 +172,8 @@
     "settings.search.clear": "清除搜索",
     "settings.search.noResults": "未找到结果",
     "settings.search.placeholder": "搜索设置、游戏、修复...",
+    "settings.theme.description": "选择 LuaTools 界面的颜色主题。",
+    "settings.theme.label": "主题",
     "settings.title": "LuaTools · 设置",
     "settings.unsaved": "未保存的更改",
     "{fix} applied successfully!": "{fix}已成功应用！"

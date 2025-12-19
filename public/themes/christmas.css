@@ -1,0 +1,51 @@
+:root {
+    --lt-bg-primary: #0d2818;
+    --lt-bg-secondary: #1a4d2e;
+    --lt-bg-tertiary: rgba(13, 40, 24, 0.95);
+    --lt-bg-hover: rgba(26, 77, 46, 0.95);
+    --lt-bg-container: rgba(13,40,24,0.8);
+    --lt-bg-container-gradient: rgba(13, 40, 24, 0.9), #0d2818;
+    --lt-accent: #dc2626;
+    --lt-accent-light: #f87171;
+    --lt-accent-dark: #b91c1c;
+    --lt-border: rgba(220, 38, 38, 0.3);
+    --lt-border-hover: rgba(220, 38, 38, 0.8);
+    --lt-text: #fff;
+    --lt-text-secondary: #d4d4d4;
+    --lt-gradient: linear-gradient(135deg, #dc2626 0%, #f87171 100%);
+    --lt-gradient-light: linear-gradient(135deg, #fca5a5 0%, #dc2626 100%);
+    --lt-shadow: rgba(220, 38, 38, 0.4);
+    --lt-shadow-hover: rgba(220, 38, 38, 0.6);
+    --lt-shadow-rgba: rgba(220, 38, 38, 0.3);
+    --lt-rgb: 220,38,38;
+}
+
+/* Select dropdown styling for christmas theme */
+select {
+    background-color: rgba(13, 40, 24, 0.95) !important;
+    color: #fff !important;
+    border: 1px solid rgba(220, 38, 38, 0.3) !important;
+    border-radius: 3px;
+}
+
+select option {
+    background-color: #0d2818;
+    color: #fff;
+}
+
+select option:checked {
+    background: linear-gradient(#dc2626, #dc2626);
+    background-color: #dc2626 !important;
+    color: #0d2818 !important;
+}
+
+select:hover {
+    border-color: rgba(220, 38, 38, 0.8) !important;
+}
+
+select:focus {
+    outline: none;
+    border-color: #dc2626 !important;
+    box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.3);
+}
+

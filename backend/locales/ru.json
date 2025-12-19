@@ -37,6 +37,8 @@
     "Error starting Online Fix": "Ошибка запуска онлайн-исправления",
     "Error starting un-fix": "Ошибка удаления исправления",
     "Error! Code: {code}": "Ошибка! Код: {code}",
+    "Error, Code: {code}": "Ошибка, Код: {code}",
+    "Error, Timed Out": "Ошибка, Превышено время ожидания",
     "Extracting to game folder...": "Извлечение в папку игры...",
     "Failed": "Ошибка",
     "Failed to cancel fix download": "Не удалось отменить установку исправления",
@@ -170,6 +172,8 @@
     "settings.search.clear": "Очистить поиск",
     "settings.search.noResults": "Ничего не найдено",
     "settings.search.placeholder": "Поиск настроек, игр, исправлений...",
+    "settings.theme.description": "Выберите цветовую тему для интерфейса LuaTools.",
+    "settings.theme.label": "Тема",
     "settings.title": "LuaTools · Настройки",
     "settings.unsaved": "Не сохранено!",
     "{fix} applied successfully!": "{fix} успешно применено!"

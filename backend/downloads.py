@@ -23,6 +23,7 @@ from config import (
     WEB_UI_JS_FILE,
 )
 from http_client import ensure_http_client
+import httpx
 from logger import logger
 from paths import backend_path, public_path
 from steam_utils import detect_steam_install_path, has_lua_for_app
@@ -116,7 +117,9 @@ def _fetch_app_name(appid: int) -> str:
     client = ensure_http_client("LuaTools: _fetch_app_name")
     try:
         url = f"https://store.steampowered.com/api/appdetails?appids={appid}"
+        logger.log(f"LuaTools: Fetching app name for {appid} from Steam API")
         resp = client.get(url, follow_redirects=True, timeout=10)
+        logger.log(f"LuaTools: Steam API response for {appid}: status={resp.status_code}")
         resp.raise_for_status()
         data = resp.json()
         entry = data.get(str(appid)) or {}
@@ -329,7 +332,9 @@ def _ensure_applist_file() -> None:
     client = ensure_http_client("LuaTools: DownloadApplist")
     
     try:
+        logger.log(f"LuaTools: Downloading applist from {APPLIST_URL}")
         resp = client.get(APPLIST_URL, follow_redirects=True, timeout=APPLIST_DOWNLOAD_TIMEOUT)
+        logger.log(f"LuaTools: Applist download response: status={resp.status_code}")
         resp.raise_for_status()
         
         # Validate JSON format before saving
@@ -400,7 +405,9 @@ def _ensure_games_db_file() -> None:
     client = ensure_http_client("LuaTools: DownloadGamesDB")
     
     try:
+        logger.log(f"LuaTools: Downloading Games DB from {GAMES_DB_URL}")
         resp = client.get(GAMES_DB_URL, follow_redirects=True, timeout=60)
+        logger.log(f"LuaTools: Games DB download response: status={resp.status_code}")
         resp.raise_for_status()
         
         data = resp.json()
@@ -544,7 +551,7 @@ def _download_zip_for_app(appid: int):
     dest_path = os.path.join(dest_root, f"{appid}.zip")
     _set_download_state(
         appid,
-        {"status": "checking", "currentApi": None, "bytesRead": 0, "totalBytes": 0, "dest": dest_path},
+        {"status": "checking", "currentApi": None, "bytesRead": 0, "totalBytes": 0, "dest": dest_path, "apiErrors": {}},
     )
 
     for api in apis:
@@ -568,6 +575,11 @@ def _download_zip_for_app(appid: int):
                 if code == unavailable_code:
                     continue
                 if code != success_code:
+                    # Track error code for this API
+                    state = _get_download_state(appid)
+                    api_errors = state.get("apiErrors", {})
+                    api_errors[name] = {"type": "error", "code": code}
+                    _set_download_state(appid, {"apiErrors": api_errors})
                     continue
                 total = int(resp.headers.get("Content-Length", "0") or "0")
                 _set_download_state(appid, {"status": "downloading", "bytesRead": 0, "totalBytes": total})
@@ -667,6 +679,21 @@ def _download_zip_for_app(appid: int):
             return
         except Exception as err:
             logger.warn(f"LuaTools: API '{name}' failed with error: {err}")
+            # Track error for this API - check if it's a timeout
+            error_type = "timeout" if isinstance(err, (httpx.TimeoutException, httpx.ReadTimeout, httpx.ConnectTimeout)) else "error"
+            error_code = None
+            if isinstance(err, httpx.HTTPStatusError):
+                error_code = err.response.status_code if err.response else None
+            elif hasattr(err, "response") and err.response:
+                error_code = err.response.status_code
+            
+            state = _get_download_state(appid)
+            api_errors = state.get("apiErrors", {})
+            if error_type == "timeout":
+                api_errors[name] = {"type": "timeout"}
+            else:
+                api_errors[name] = {"type": "error", "code": error_code}
+            _set_download_state(appid, {"apiErrors": api_errors})
             continue
 
     _set_download_state(appid, {"status": "failed", "error": "Not available on any API"})

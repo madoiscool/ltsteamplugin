@@ -37,6 +37,8 @@
     "Error starting Online Fix": "Chyba při spouštění Online opravy",
     "Error starting un-fix": "Chyba při odebírání opravy",
     "Error! Code: {code}": "Chyba! Kód: {code}",
+    "Error, Code: {code}": "Chyba, Kód: {code}",
+    "Error, Timed Out": "Chyba, Vypršel časový limit",
     "Extracting to game folder...": "Extrahuji do složky hry...",
     "Failed": "Nezdařilo se",
     "Failed to cancel fix download": "Nepodařilo se zrušit stahování opravy",
@@ -170,6 +172,8 @@
     "settings.search.clear": "Vymazat hledání",
     "settings.search.noResults": "Nenalezeny žádné výsledky",
     "settings.search.placeholder": "Hledat nastavení, hry, opravy...",
+    "settings.theme.description": "Vyberte barevné téma pro rozhraní LuaTools.",
+    "settings.theme.label": "Téma",
     "settings.title": "LuaTools · Nastavení",
     "settings.unsaved": "Neuložené změny",
     "{fix} applied successfully!": "{fix} úspěšně použita!"

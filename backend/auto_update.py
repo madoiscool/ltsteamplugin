@@ -91,7 +91,9 @@ def _fetch_github_latest(cfg: Dict[str, Any]) -> Dict[str, Any]:
 
     # Primary GitHub API
     try:
+        logger.log(f"AutoUpdate: Fetching GitHub release from {endpoint}")
         resp = client.get(endpoint, headers=headers, follow_redirects=True)
+        logger.log(f"AutoUpdate: GitHub API response: status={resp.status_code}")
         resp.raise_for_status()
         data = resp.json()
         tag_name = str(data.get("tag_name", "")).strip()
@@ -100,7 +102,9 @@ def _fetch_github_latest(cfg: Dict[str, Any]) -> Dict[str, Any]:
         logger.warn(f"AutoUpdate: GitHub API failed ({api_err}), trying proxy...")
         try:
             proxy_url = "https://luatools.vercel.app/api/github-latest"
+            logger.log(f"AutoUpdate: Fetching GitHub release from proxy {proxy_url}")
             resp = client.get(proxy_url, follow_redirects=True, timeout=15)
+            logger.log(f"AutoUpdate: Proxy GitHub API response: status={resp.status_code}")
             resp.raise_for_status()
             data = resp.json()
             tag_name = str(data.get("tag_name", "")).strip()
@@ -145,6 +149,7 @@ def _download_and_extract_update(zip_url: str, pending_zip: str) -> bool:
     try:
         logger.log(f"AutoUpdate: Downloading {zip_url} -> {pending_zip}")
         with client.stream("GET", zip_url, follow_redirects=True) as response:
+            logger.log(f"AutoUpdate: Update download response: status={response.status_code}")
             response.raise_for_status()
             with open(pending_zip, "wb") as output:
                 for chunk in response.iter_bytes():

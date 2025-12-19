@@ -208,5 +208,26 @@
     "gradientLight": "linear-gradient(135deg, #8be9fd 0%, #ff79c6 100%)",
     "shadow": "rgba(255, 121, 198, 0.4)",
     "shadowHover": "rgba(255, 121, 198, 0.6)"
+  },
+  {
+    "value": "christmas",
+    "name": "Christmas",
+    "bgPrimary": "#0d2818",
+    "bgSecondary": "#1a4d2e",
+    "bgTertiary": "rgba(13, 40, 24, 0.95)",
+    "bgHover": "rgba(26, 77, 46, 0.95)",
+    "bgContainer": "rgba(13,40,24,0.8)",
+    "bgContainerGradient": "rgba(13, 40, 24, 0.9), #0d2818",
+    "accent": "#dc2626",
+    "accentLight": "#f87171",
+    "accentDark": "#b91c1c",
+    "border": "rgba(220, 38, 38, 0.3)",
+    "borderHover": "rgba(220, 38, 38, 0.8)",
+    "text": "#fff",
+    "textSecondary": "#d4d4d4",
+    "gradient": "linear-gradient(135deg, #dc2626 0%, #f87171 100%)",
+    "gradientLight": "linear-gradient(135deg, #fca5a5 0%, #dc2626 100%)",
+    "shadow": "rgba(220, 38, 38, 0.4)",
+    "shadowHover": "rgba(220, 38, 38, 0.6)"
   }
 ]

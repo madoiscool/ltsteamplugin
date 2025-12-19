@@ -37,6 +37,8 @@
     "Error starting Online Fix": "Erreur lors du démarrage des correctifs Online-Fix.",
     "Error starting un-fix": "Erreur lors du démarrage de la suppression du correctif.",
     "Error! Code: {code}": "Erreur ! Code : {code}",
+    "Error, Code: {code}": "Erreur, Code : {code}",
+    "Error, Timed Out": "Erreur, Délai d'attente dépassé",
     "Extracting to game folder...": "Extraction vers le dossier du jeu...",
     "Failed": "Échec",
     "Failed to cancel fix download": "Échec de l'annulation du téléchargement du correctif.",
@@ -170,6 +172,8 @@
     "settings.search.clear": "Effacer la recherche",
     "settings.search.noResults": "Aucun résultat trouvé",
     "settings.search.placeholder": "Rechercher paramètres, jeux, correctifs...",
+    "settings.theme.description": "Choisissez le thème de couleur pour l'interface LuaTools.",
+    "settings.theme.label": "Thème",
     "settings.title": "LuaTools · Paramètres",
     "settings.unsaved": "Modifications non enregistrées",
     "{fix} applied successfully!": "{fix} appliqué avec succès !"

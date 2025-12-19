@@ -37,6 +37,8 @@
     "Error starting Online Fix": "Online Fix başlatılırken hata",
     "Error starting un-fix": "Fix kaldırma başlatılırken hata",
     "Error! Code: {code}": "Hata! Kod: {code}",
+    "Error, Code: {code}": "Hata, Kod: {code}",
+    "Error, Timed Out": "Hata, Zaman aşımı",
     "Extracting to game folder...": "Oyun klasörüne çıkarılıyor...",
     "Failed": "Başarısız",
     "Failed to cancel fix download": "Fix indirmesi iptal edilemedi",
@@ -170,6 +172,8 @@
     "settings.search.clear": "Aramayı temizle",
     "settings.search.noResults": "Sonuç bulunamadı",
     "settings.search.placeholder": "Ayarları, oyunları, düzeltmeleri ara...",
+    "settings.theme.description": "LuaTools arayüzü için renk teması seçin.",
+    "settings.theme.label": "Tema",
     "settings.title": "LuaTools · Ayarlar",
     "settings.unsaved": "Kaydedilmemiş değişiklikler",
     "{fix} applied successfully!": "{fix} başarıyla uygulandı!"

@@ -37,6 +37,8 @@
     "Error starting Online Fix": "שגיאה בהפעלת Online Fix",
     "Error starting un-fix": "שגיאה בהתחלת הסרת תיקון",
     "Error! Code: {code}": "שגיאה! קוד: {code}",
+    "Error, Code: {code}": "שגיאה, קוד: {code}",
+    "Error, Timed Out": "שגיאה, פג הזמן",
     "Extracting to game folder...": "מחלץ לתיקיית המשחק...",
     "Failed": "נכשל",
     "Failed to cancel fix download": "נכשל בביטול הורדת התיקון",
@@ -170,6 +172,8 @@
     "settings.search.clear": "נקה חיפוש",
     "settings.search.noResults": "לא נמצאו תוצאות",
     "settings.search.placeholder": "חפש הגדרות, משחקים, תיקונים...",
+    "settings.theme.description": "בחר נושא צבעים לממשק LuaTools.",
+    "settings.theme.label": "נושא",
     "settings.title": "LuaTools · הגדרות",
     "settings.unsaved": "שינויים שלא נשמרו",
     "{fix} applied successfully!": "{fix} הוחל בהצלחה!"

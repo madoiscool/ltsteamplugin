@@ -37,6 +37,8 @@
     "Error starting Online Fix": "Σφάλμα εκκίνησης της Online-Fix",
     "Error starting un-fix": "Σφάλμα εκκίνησης της διαδικασίας αφαίρεσης διόρθωσης",
     "Error! Code: {code}": "Σφάλμα! Κωδικός: {code}",
+    "Error, Code: {code}": "Σφάλμα, Κωδικός: {code}",
+    "Error, Timed Out": "Σφάλμα, Λήξη χρονικού ορίου",
     "Extracting to game folder...": "Εξαγωγή στο φάκελο παιχνιδιού...",
     "Failed": "Απέτυχε",
     "Failed to cancel fix download": "Αποτυχία ακύρωσης λήψης διόρθωσης",
@@ -170,6 +172,8 @@
     "settings.search.clear": "Καθαρισμός αναζήτησης",
     "settings.search.noResults": "Δεν βρέθηκαν αποτελέσματα",
     "settings.search.placeholder": "Αναζήτηση ρυθμίσεων, παιχνιδιών, διορθώσεων...",
+    "settings.theme.description": "Επιλέξτε το θέμα χρωμάτων για τη διεπαφή LuaTools.",
+    "settings.theme.label": "Θέμα",
     "settings.title": "LuaTools · Ρυθμίσεις",
     "settings.unsaved": "Μη αποθηκευμένες αλλαγές",
     "{fix} applied successfully!": "Το {fix} εφαρμόστηκε επιτυχώς!"

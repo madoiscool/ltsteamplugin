@@ -48,6 +48,7 @@ def init_apis(content_script_query: str = "") -> str:
             try:
                 logger.log(f"InitApis: Fetching manifest from {API_MANIFEST_URL}")
                 resp = client.get(API_MANIFEST_URL)
+                logger.log(f"InitApis: Manifest response: status={resp.status_code}")
                 resp.raise_for_status()
                 manifest_text = resp.text
                 logger.log(
@@ -58,6 +59,7 @@ def init_apis(content_script_query: str = "") -> str:
                 try:
                     logger.log(f"InitApis: Fetching manifest from proxy {API_MANIFEST_PROXY_URL}")
                     resp = client.get(API_MANIFEST_PROXY_URL, timeout=HTTP_PROXY_TIMEOUT_SECONDS)
+                    logger.log(f"InitApis: Proxy manifest response: status={resp.status_code}")
                     resp.raise_for_status()
                     manifest_text = resp.text
                     logger.log(
@@ -110,18 +112,22 @@ def fetch_free_apis_now(content_script_query: str = "") -> str:
         manifest_text = ""
 
         try:
+            logger.log(f"LuaTools: Fetching manifest from {API_MANIFEST_URL}")
             resp = client.get(API_MANIFEST_URL, follow_redirects=True)
+            logger.log(f"LuaTools: Manifest response: status={resp.status_code}")
             resp.raise_for_status()
             manifest_text = resp.text
             logger.log("LuaTools: Fetched manifest from primary URL")
         except Exception as primary_err:
             logger.warn(f"LuaTools: Primary manifest URL failed ({primary_err}), trying proxy...")
             try:
+                logger.log(f"LuaTools: Fetching manifest from proxy {API_MANIFEST_PROXY_URL}")
                 resp = client.get(
                     API_MANIFEST_PROXY_URL,
                     follow_redirects=True,
                     timeout=HTTP_PROXY_TIMEOUT_SECONDS,
                 )
+                logger.log(f"LuaTools: Proxy manifest response: status={resp.status_code}")
                 resp.raise_for_status()
                 manifest_text = resp.text
                 logger.log("LuaTools: Fetched manifest from proxy URL")

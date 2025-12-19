@@ -108,6 +108,7 @@ def _available_theme_files() -> List[Dict[str, Any]]:
             {"value": "rosepine", "label": "Rosepine"},
             {"value": "catppuccin", "label": "Catppuccin"},
             {"value": "dracula", "label": "Dracula"},
+            {"value": "christmas", "label": "Christmas"},
         ]
         logger.warn(f"LuaTools: Using hardcoded theme list as fallback")
 

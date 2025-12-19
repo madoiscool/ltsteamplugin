@@ -37,6 +37,8 @@
     "Error starting Online Fix": "Error memulai Online Fix",
     "Error starting un-fix": "Error memulai pembatalan perbaikan",
     "Error! Code: {code}": "Error! Kode: {code}",
+    "Error, Code: {code}": "Error, Kode: {code}",
+    "Error, Timed Out": "Error, Waktu habis",
     "Extracting to game folder...": "Mengekstrak ke folder game...",
     "Failed": "Gagal",
     "Failed to cancel fix download": "Gagal membatalkan unduhan perbaikan.",
@@ -170,6 +172,8 @@
     "settings.search.clear": "Hapus pencarian",
     "settings.search.noResults": "Tidak ada hasil ditemukan",
     "settings.search.placeholder": "Cari pengaturan, game, perbaikan...",
+    "settings.theme.description": "Pilih tema warna untuk antarmuka LuaTools.",
+    "settings.theme.label": "Tema",
     "settings.title": "LuaTools · Pengaturan",
     "settings.unsaved": "Batalkan Perubahan",
     "{fix} applied successfully!": "{fix} berhasil diterapkan!"

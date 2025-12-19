@@ -103,6 +103,7 @@ def _download_and_extract_fix(appid: int, download_url: str, install_path: str, 
         logger.log(f"LuaTools: Downloading {fix_type} from {download_url}")
 
         with client.stream("GET", download_url, follow_redirects=True, timeout=30) as resp:
+            logger.log(f"LuaTools: Fix download response for {appid}: status={resp.status_code}")
             resp.raise_for_status()
             total = int(resp.headers.get("Content-Length", "0") or "0")
             _set_fix_download_state(appid, {"totalBytes": total})

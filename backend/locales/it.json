@@ -37,6 +37,8 @@
     "Error starting Online Fix": "Errore nell'avvio di Online Fix",
     "Error starting un-fix": "Errore nell'avvio della rimozione correzione",
     "Error! Code: {code}": "Errore! Codice: {code}",
+    "Error, Code: {code}": "Errore, Codice: {code}",
+    "Error, Timed Out": "Errore, Timeout",
     "Extracting to game folder...": "Estrazione nella cartella del gioco...",
     "Failed": "Fallito",
     "Failed to cancel fix download": "Impossibile annullare il download della correzione",
@@ -170,6 +172,8 @@
     "settings.search.clear": "Cancella ricerca",
     "settings.search.noResults": "Nessun risultato trovato",
     "settings.search.placeholder": "Cerca impostazioni, giochi, correzioni...",
+    "settings.theme.description": "Scegli il tema colore per l'interfaccia LuaTools.",
+    "settings.theme.label": "Tema",
     "settings.title": "LuaTools · Impostazioni",
     "settings.unsaved": "Modifiche non salvate",
     "{fix} applied successfully!": "{fix} applicato con successo!"

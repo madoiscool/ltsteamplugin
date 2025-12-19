@@ -37,6 +37,8 @@
     "Error starting Online Fix": "Eroare la pornirea Online Fix",
     "Error starting un-fix": "Eroare la pornirea eliminării fix",
     "Error! Code: {code}": "Eroare! Cod: {code}",
+    "Error, Code: {code}": "Eroare, Cod: {code}",
+    "Error, Timed Out": "Eroare, Expirare timp",
     "Extracting to game folder...": "Se extrage în folderul jocului...",
     "Failed": "Eșuat",
     "Failed to cancel fix download": "Nu s-a putut anula descărcarea fix.",
@@ -170,6 +172,8 @@
     "settings.search.clear": "Șterge căutarea",
     "settings.search.noResults": "Niciun rezultat găsit",
     "settings.search.placeholder": "Caută setări, jocuri, corecții...",
+    "settings.theme.description": "Alege tema de culoare pentru interfața LuaTools.",
+    "settings.theme.label": "Temă",
     "settings.title": "LuaTools · Setări",
     "settings.unsaved": "Modificări nesalvate",
     "{fix} applied successfully!": "{fix} aplicat cu succes!"

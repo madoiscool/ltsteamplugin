@@ -37,6 +37,8 @@
     "Error starting Online Fix": "خطأ في تشغيل إصلاح الأونلاين",
     "Error starting un-fix": "تعذر في بدء إزالة الإصلاح",
     "Error! Code: {code}": "خطأ! في الرمز: {code}",
+    "Error, Code: {code}": "خطأ، الرمز: {code}",
+    "Error, Timed Out": "خطأ، انتهى الوقت",
     "Extracting to game folder...": "جاري الأستخراج إلى ملف اللعبة...",
     "Failed": "فشل",
     "Failed to cancel fix download": "فشل إلغاء تنزيل الإصلاح",
@@ -170,6 +172,8 @@
     "settings.search.clear": "مسح البحث",
     "settings.search.noResults": "لم يتم العثور على نتائج",
     "settings.search.placeholder": "بحث في الإعدادات، الألعاب، الإصلاحات...",
+    "settings.theme.description": "اختر سمة الألوان لواجهة LuaTools.",
+    "settings.theme.label": "السمة",
     "settings.title": "LuaTools · الإعدادات",
     "settings.unsaved": "لم يتم الحفظ !",
     "{fix} applied successfully!": "تم تطبيق {fix} بنجاح!"
