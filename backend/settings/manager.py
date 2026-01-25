@@ -207,6 +207,12 @@ def _validate_option_value(option: SettingOption, value: Any) -> Tuple[bool, Any
                 return True, False, None
         return False, option.default, "Value must be a boolean"
 
+    if option.option_type == "text":
+        # Accept any string value, convert non-strings to string
+        if value is None:
+            return True, "", None
+        return True, str(value).strip(), None
+
     if option.option_type == "select":
         dynamic = option.metadata.get("dynamicChoices") if isinstance(option.metadata, dict) else None
         if dynamic == "locales":
@@ -338,6 +344,14 @@ def get_current_language() -> str:
         general = values.get("general") or {}
         language = general.get("language") or DEFAULT_LOCALE
         return str(language)
+
+
+def get_morrenus_api_key() -> str:
+    """Get the Morrenus API key from settings."""
+    with _SETTINGS_LOCK:
+        values = _get_values_locked()
+        general = values.get("general") or {}
+        return str(general.get("morrenusApiKey") or "")
 
 
 def get_available_locales() -> List[Dict[str, Any]]:

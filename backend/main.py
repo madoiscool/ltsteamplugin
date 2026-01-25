@@ -295,12 +295,12 @@ def GetThemes(contentScriptQuery: str = "") -> str:
 
 
 def ApplySettingsChanges(
-    contentScriptQuery: str = "", changes: Any = None, **kwargs: Any
-) -> str:  # type: ignore[name-defined]
+    _contentScriptQuery: str = "", changes: Any = None, **kwargs: Any
+) -> str:
     try:
         if "changes" in kwargs and changes is None:
             changes = kwargs["changes"]
-        if changes is None and isinstance(kwargs, dict):
+        if changes is None:
             changes = kwargs
 
         try:
@@ -323,11 +323,8 @@ def ApplySettingsChanges(
             else:
                 # When a full payload dict was sent as JSON, unwrap keys we expect.
                 if isinstance(payload, dict) and "changes" in payload:
-                    kwargs_payload = payload
-                    payload = kwargs_payload.get("changes")
-                    if "contentScriptQuery" in kwargs_payload and not contentScriptQuery:
-                        contentScriptQuery = kwargs_payload.get("contentScriptQuery", "")
-                elif isinstance(payload, dict) and "changesJson" in payload and isinstance(payload["changesJson"], str):
+                    payload = payload.get("changes")
+                elif "changesJson" in payload and isinstance(payload["changesJson"], str):
                     try:
                         payload = json.loads(payload["changesJson"])
                     except Exception:
@@ -356,8 +353,6 @@ def ApplySettingsChanges(
                 except Exception:
                     logger.warn("LuaTools: Failed to parse changesJson payload")
                     return json.dumps({"success": False, "error": "Invalid JSON payload"})
-            elif isinstance(changes_json, dict):
-                payload = changes_json
             else:
                 payload = changes
 

@@ -21,6 +21,7 @@ from utils import (
     read_text,
     write_text,
 )
+from settings.manager import get_morrenus_api_key
 
 _APIS_INIT_DONE = False
 _INIT_APIS_LAST_MESSAGE = ""
@@ -178,10 +179,22 @@ def load_api_manifest() -> List[Dict[str, Any]]:
 
 
 def get_api_list(content_script_query: str = "") -> str:
-    """Return the list of enabled API names for the frontend."""
+    """Return the list of enabled API names for the frontend.
+
+    APIs requiring <moapikey> are hidden if the Morrenus API key is not configured.
+    """
     try:
         apis = load_api_manifest()
-        api_names = [{"name": api.get("name", "Unknown"), "index": i} for i, api in enumerate(apis)]
+        morrenus_api_key = get_morrenus_api_key()
+
+        api_names = []
+        for i, api in enumerate(apis):
+            url = api.get("url", "")
+            # Skip APIs requiring Morrenus API key if key is not set
+            if "<moapikey>" in url and not morrenus_api_key:
+                continue
+            api_names.append({"name": api.get("name", "Unknown"), "index": i})
+
         return json.dumps({"success": True, "apis": api_names})
     except Exception as exc:
         logger.error(f"LuaTools: Failed to get API list: {exc}")

@@ -14,6 +14,7 @@ from typing import Any, Dict
 import Millennium  # type: ignore
 
 from api_manifest import load_api_manifest
+from settings.manager import get_morrenus_api_key
 from config import (
     APPID_LOG_FILE,
     LOADED_APPS_FILE,
@@ -103,16 +104,15 @@ def _fetch_app_name(appid: int) -> str:
         return applist_name
 
     # Steam API as final resort (web request)
-    # Rate limiting: wait if needed (outside lock to avoid blocking other threads)
+    # Rate limiting: calculate wait time and update timestamp atomically
     with APP_NAME_CACHE_LOCK:
         time_since_last_call = time.time() - LAST_API_CALL_TIME
         sleep_time = API_CALL_MIN_INTERVAL - time_since_last_call if time_since_last_call < API_CALL_MIN_INTERVAL else 0
-    
+        # Update timestamp now to reserve this slot (prevents race condition)
+        LAST_API_CALL_TIME = time.time() + sleep_time
+
     if sleep_time > 0:
         time.sleep(sleep_time)
-    
-    with APP_NAME_CACHE_LOCK:
-        LAST_API_CALL_TIME = time.time()
 
     client = ensure_http_client("LuaTools: _fetch_app_name")
     try:
@@ -554,11 +554,24 @@ def _download_zip_for_app(appid: int):
         {"status": "checking", "currentApi": None, "bytesRead": 0, "totalBytes": 0, "dest": dest_path, "apiErrors": {}},
     )
 
+    # Get Morrenus API key for URL replacement
+    morrenus_api_key = get_morrenus_api_key()
+
     for api in apis:
         name = api.get("name", "Unknown")
         template = api.get("url", "")
         success_code = int(api.get("success_code", 200))
         unavailable_code = int(api.get("unavailable_code", 404))
+
+        # Check if URL requires Morrenus API key
+        if "<moapikey>" in template:
+            if not morrenus_api_key:
+                # Skip this API silently if key is not set
+                logger.log(f"LuaTools: Skipping API '{name}' - Morrenus API key not configured")
+                continue
+            # Replace the placeholder with the actual key
+            template = template.replace("<moapikey>", morrenus_api_key)
+
         url = template.replace("<appid>", str(appid))
         _set_download_state(
             appid, {"status": "checking", "currentApi": name, "bytesRead": 0, "totalBytes": 0}

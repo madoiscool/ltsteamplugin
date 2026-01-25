@@ -2917,6 +2917,35 @@
                         toggleWrap.appendChild(noBtn);
                         controlWrap.appendChild(toggleWrap);
                         refreshToggleButtons();
+                    } else if (option.type === 'text') {
+                        const textInput = document.createElement('input');
+                        textInput.type = 'text';
+                        const textColors = getThemeColors();
+                        const placeholder = option.metadata && option.metadata.placeholder ? String(option.metadata.placeholder) : '';
+                        textInput.placeholder = placeholder;
+                        textInput.style.cssText = `width:100% !important;padding:8px 12px !important;background:${textColors.bgTertiary} !important;color:${textColors.text} !important;border:1px solid ${textColors.border} !important;border-radius:4px !important;font-size:14px !important;box-sizing:border-box !important;`;
+
+                        const currentValue = state.draft[group.key][option.key];
+                        if (typeof currentValue !== 'undefined' && currentValue !== null) {
+                            textInput.value = String(currentValue);
+                        }
+
+                        textInput.addEventListener('input', function(){
+                            state.draft[group.key][option.key] = textInput.value;
+                            updateSaveState();
+                            setStatus(t('settings.unsaved', 'Unsaved changes'), '#c7d5e0');
+                        });
+
+                        textInput.addEventListener('focus', function(){
+                            textInput.style.borderColor = textColors.accent + ' !important';
+                            textInput.style.outline = 'none';
+                        });
+
+                        textInput.addEventListener('blur', function(){
+                            textInput.style.borderColor = textColors.border + ' !important';
+                        });
+
+                        controlWrap.appendChild(textInput);
                     } else {
                         const unsupported = document.createElement('div');
                         unsupported.style.cssText = 'font-size:12px;color:#ffb347;';

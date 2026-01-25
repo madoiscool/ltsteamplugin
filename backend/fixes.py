@@ -7,7 +7,7 @@ import os
 import threading
 import zipfile
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from downloads import fetch_app_name
 from http_client import ensure_http_client
@@ -15,10 +15,17 @@ from logger import logger
 from utils import ensure_temp_download_dir
 from steam_utils import get_game_install_path_response
 
-FIX_DOWNLOAD_STATE: Dict[int, Dict[str, any]] = {}
+FIX_DOWNLOAD_STATE: Dict[int, Dict[str, Any]] = {}
 FIX_DOWNLOAD_LOCK = threading.Lock()
-UNFIX_STATE: Dict[int, Dict[str, any]] = {}
+UNFIX_STATE: Dict[int, Dict[str, Any]] = {}
 UNFIX_LOCK = threading.Lock()
+
+
+def _is_safe_path(base_path: str, target_path: str) -> bool:
+    """Check if target_path stays within base_path (prevents path traversal attacks)."""
+    abs_base = os.path.abspath(base_path)
+    abs_target = os.path.abspath(os.path.join(base_path, target_path))
+    return abs_target.startswith(abs_base + os.sep) or abs_target == abs_base
 
 
 def _set_fix_download_state(appid: int, update: dict) -> None:
@@ -87,8 +94,6 @@ def check_for_fixes(appid: int) -> str:
             result["onlineFix"]["url"] = online_url
     except Exception as exc:
         logger.warn(f"LuaTools: Online-fix check failed for {appid}: {exc}")
-        if result["onlineFix"]["status"] == 0:
-            result["onlineFix"]["status"] = 0
 
     return json.dumps(result)
 
@@ -147,6 +152,10 @@ def _download_and_extract_fix(appid: int, download_url: str, install_path: str, 
                         target_path = member[len(appid_folder):]
                         if not target_path:
                             continue
+                        # Validate path doesn't escape install directory (prevent path traversal)
+                        if not _is_safe_path(install_path, target_path):
+                            logger.warn(f"LuaTools: Skipping potentially unsafe path in zip: {member}")
+                            continue
                         source = archive.open(member)
                         target = os.path.join(install_path, target_path)
                         os.makedirs(os.path.dirname(target), exist_ok=True)
@@ -162,6 +171,10 @@ def _download_and_extract_fix(appid: int, download_url: str, install_path: str, 
                 logger.log(f"LuaTools: Extracting all zip contents to {install_path}")
                 for member in archive.namelist():
                     if member.endswith("/"):
+                        continue
+                    # Validate path doesn't escape install directory (prevent path traversal)
+                    if not _is_safe_path(install_path, member):
+                        logger.warn(f"LuaTools: Skipping potentially unsafe path in zip: {member}")
                         continue
                     archive.extract(member, install_path)
                     extracted_files.append(member.replace("\\", "/"))

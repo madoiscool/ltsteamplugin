@@ -31,12 +31,20 @@ def read_json(path: str) -> Dict[str, Any]:
         return {}
 
 
-def write_json(path: str, data: Dict[str, Any]) -> None:
+def write_json(path: str, data: Dict[str, Any]) -> bool:
+    """Write JSON data to file. Returns True on success, False on failure."""
     try:
         with open(path, "w", encoding="utf-8") as handle:
             json.dump(data, handle, indent=2)
-    except Exception:
-        pass
+        return True
+    except Exception as exc:
+        # Import logger here to avoid circular import
+        try:
+            from logger import logger
+            logger.warn(f"write_json failed for {path}: {exc}")
+        except Exception:
+            pass
+        return False
 
 
 def count_apis(text: str) -> int:
