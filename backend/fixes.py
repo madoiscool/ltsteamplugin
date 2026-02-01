@@ -75,12 +75,13 @@ def check_for_fixes(appid: int) -> str:
 
     try:
         generic_url = f"https://files.luatools.work/GameBypasses/{appid}.zip"
+        logger.log(f"LuaTools: Generic fix check ({generic_url}) for {appid}...")
         resp = client.head(generic_url, follow_redirects=True, timeout=10)
+        logger.log(f"LuaTools: Generic fix check ({generic_url}) for {appid} -> {resp.status_code}")
         result["genericFix"]["status"] = resp.status_code
         result["genericFix"]["available"] = resp.status_code == 200
         if resp.status_code == 200:
             result["genericFix"]["url"] = generic_url
-        logger.log(f"LuaTools: Generic fix check for {appid} -> {resp.status_code}")
     except Exception as exc:
         logger.warn(f"LuaTools: Generic fix check failed for {appid}: {exc}")
 

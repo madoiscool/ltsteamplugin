@@ -397,11 +397,32 @@ def _load_games_db_into_memory() -> None:
             GAMES_DB_LOADED = True
 
 
-def _ensure_games_db_file() -> None:
-    """Download the games database file."""
+GAMES_DB_CACHE_MAX_AGE_SECONDS = 24 * 60 * 60  # 24 hours
+
+
+def _is_games_db_cache_stale() -> bool:
+    """Check if the games database cache file is older than 24 hours."""
     file_path = _games_db_file_path()
-    
-    logger.log("LuaTools: Downloading Games DB...")
+    if not os.path.exists(file_path):
+        return True
+    try:
+        file_mtime = os.path.getmtime(file_path)
+        age_seconds = time.time() - file_mtime
+        return age_seconds > GAMES_DB_CACHE_MAX_AGE_SECONDS
+    except Exception:
+        return True
+
+
+def _ensure_games_db_file() -> None:
+    """Download the games database file if missing or stale (older than 24 hours)."""
+    file_path = _games_db_file_path()
+
+    # Skip download if file exists and is fresh
+    if os.path.exists(file_path) and not _is_games_db_cache_stale():
+        logger.log("LuaTools: Games DB cache is fresh, skipping download")
+        return
+
+    logger.log("LuaTools: Downloading Games DB (cache missing or stale)...")
     client = ensure_http_client("LuaTools: DownloadGamesDB")
     
     try:
