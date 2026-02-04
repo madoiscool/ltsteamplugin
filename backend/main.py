@@ -324,7 +324,7 @@ def ApplySettingsChanges(
                 # When a full payload dict was sent as JSON, unwrap keys we expect.
                 if isinstance(payload, dict) and "changes" in payload:
                     payload = payload.get("changes")
-                elif "changesJson" in payload and isinstance(payload["changesJson"], str):
+                elif isinstance(payload, dict) and "changesJson" in payload and isinstance(payload["changesJson"], str):
                     try:
                         payload = json.loads(payload["changesJson"])
                     except Exception:

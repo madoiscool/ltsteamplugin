@@ -61,7 +61,6 @@ backend/__pycache__/
 backend/*.pyc
 backend/*.pyo
 backend/appidlogs.txt
-backend/api.json
 backend/loadedappids.txt
 
 # Millennium Framework Generated Files
