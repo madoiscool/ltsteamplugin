@@ -1084,6 +1084,7 @@
             const fixesMenuBtn = createMenuButton('lt-settings-fixes-menu', 'menu.fixesMenu', 'Fixes Menu', 'fa-wrench');
 
             createSectionLabel('menu.advancedLabel', 'Advanced');
+            const backupBtn = createMenuButton('lt-settings-backup', 'menu.backup', 'Backup & Restore', 'fa-database');
             const checkBtn = createMenuButton('lt-settings-check', 'menu.checkForUpdates', 'Check For Updates', 'fa-cloud-arrow-down');
             const fetchApisBtn = createMenuButton('lt-settings-fetch-apis', 'menu.fetchFreeApis', 'Fetch Free APIs', 'fa-server');
 
@@ -1162,6 +1163,14 @@
                     e.preventDefault();
                     try { overlay.remove(); } catch(_) {}
                     showSettingsManagerPopup(false, showSettingsPopup);
+                });
+            }
+
+            if (backupBtn) {
+                backupBtn.addEventListener('click', function(e){
+                    e.preventDefault();
+                    try { overlay.remove(); } catch(_) {}
+                    showBackupManagerUI();
                 });
             }
 
@@ -4733,7 +4742,289 @@
             } catch(_){ clearInterval(timer); }
         }, 300);
     }
+
+        function showBackupManagerUI() {
+        if (document.querySelector('.luatools-backup-overlay')) return;
+        
+        ensureLuaToolsStyles();
+        ensureFontAwesome();
+        
+        const overlay = document.createElement('div');
+        overlay.className = 'luatools-backup-overlay';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease-out;overflow:auto;';
+        
+        const modal = document.createElement('div');
+        modal.style.cssText = 'background:linear-gradient(135deg, #1b2838 0%, #2a475e 100%);color:#fff;border:2px solid #66c0f4;border-radius:8px;min-width:500px;max-width:700px;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px rgba(102,192,244,0.3);animation:slideUp 0.1s ease-out;margin:20px auto;';
+        
+        const header = document.createElement('div');
+        header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;padding-bottom:20px;border-bottom:2px solid rgba(102,192,244,0.3);';
+        
+        const title = document.createElement('div');
+        title.style.cssText = 'font-size:24px;color:#fff;font-weight:700;text-shadow:0 2px 8px rgba(102,192,244,0.4);background:linear-gradient(135deg, #66c0f4 0%, #a4d7f5 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;';
+        title.textContent = lt('Backup & Restore');
+        header.appendChild(title);
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.innerHTML = '<i class="fas fa-xmark"></i>';
+        closeBtn.style.cssText = 'background:none;border:none;color:#8f98a0;cursor:pointer;font-size:20px;padding:4px 8px;transition:color 0.2s;';
+        closeBtn.onmouseover = function() { this.style.color = '#fff'; };
+        closeBtn.onmouseout = function() { this.style.color = '#8f98a0'; };
+        closeBtn.onclick = function() { overlay.remove(); };
+        header.appendChild(closeBtn);
+        
+        modal.appendChild(header);
     
+    // Create Backup Section
+        const createSection = document.createElement('div');
+        createSection.style.cssText = 'margin-bottom:24px;padding:16px;background:rgba(102,192,244,0.08);border:1px solid rgba(102,192,244,0.2);border-radius:8px;';
+        
+        const sectionTitle = document.createElement('div');
+        sectionTitle.style.cssText = 'font-weight:600;color:#fff;margin-bottom:12px;font-size:14px;';
+        sectionTitle.textContent = lt('Create New Backup');
+        createSection.appendChild(sectionTitle);
+        
+        const createButtonRow = document.createElement('div');
+        createButtonRow.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;';
+        
+        const createBtn = document.createElement('button');
+        createBtn.innerHTML = '<i class="fas fa-floppy-disk"></i> ' + lt('Create Backup');
+        createBtn.style.cssText = 'flex:1;padding:10px 16px;background:linear-gradient(135deg, #66c0f4 0%, #a4d7f5 100%);color:#0a0e27;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:13px;transition:all 0.3s ease;';
+        createBtn.onmouseover = function() { this.style.transform = 'translateY(-2px)'; this.style.boxShadow = '0 8px 16px rgba(102,192,244,0.4)'; };
+        createBtn.onmouseout = function() { this.style.transform = 'translateY(0)'; this.style.boxShadow = 'none'; };
+        createBtn.onclick = function() {
+            createBtn.disabled = true;
+            createBtn.textContent = lt('Processing...');
+            
+            Millennium.callServerMethod('luatools', 'CreateBackup', { 
+                backup_name: 'steam_config_backup', 
+                destination: '', 
+                contentScriptQuery: '' 
+            }).then(function(res) {
+                try {
+                    const payload = typeof res === 'string' ? JSON.parse(res) : res;
+                    if (payload && payload.success) {
+                        ShowLuaToolsAlert('LuaTools', lt('Backup created successfully!') + ' ' + (payload.path || ''));
+                        refreshBackupList();
+                    } else {
+                        const errorMsg = (payload && payload.error) ? String(payload.error) : lt('Failed to create backup');
+                        ShowLuaToolsAlert('LuaTools', errorMsg);
+                    }
+                } catch(err) {
+                    ShowLuaToolsAlert('LuaTools', lt('Error creating backup') + ': ' + err);
+                }
+                createBtn.disabled = false;
+                createBtn.innerHTML = '<i class="fas fa-floppy-disk"></i> ' + lt('Create Backup');
+            }).catch(function(err) {
+                ShowLuaToolsAlert('LuaTools', lt('Failed to create backup'));
+                createBtn.disabled = false;
+                createBtn.innerHTML = '<i class="fas fa-floppy-disk"></i> ' + lt('Create Backup');
+            });
+        };
+        createButtonRow.appendChild(createBtn);
+        createSection.appendChild(createButtonRow);
+        
+        modal.appendChild(createSection);
+        
+        // Backups List Section
+        const listSection = document.createElement('div');
+        listSection.style.cssText = 'margin-bottom:24px;';
+        
+        const listTitle = document.createElement('div');
+        listTitle.style.cssText = 'font-weight:600;color:#fff;margin-bottom:12px;font-size:14px;';
+        listTitle.textContent = lt('Your Backups');
+        listSection.appendChild(listTitle);
+        
+        const backupList = document.createElement('div');
+        backupList.id = 'luatools-backup-list';
+        backupList.style.cssText = 'max-height:400px;overflow-y:auto;';
+        listSection.appendChild(backupList);
+        
+        modal.appendChild(listSection);
+        
+        // Instructions
+        const instructions = document.createElement('div');
+        instructions.style.cssText = 'font-size:12px;color:#8f98a0;padding:12px;background:rgba(42,71,94,0.5);border-radius:4px;border-left:3px solid #66c0f4;';
+        instructions.innerHTML = '<strong>Info:</strong> Backups are stored in your Downloads folder. Backups include depotcache and stplug-in folders.';
+        modal.appendChild(instructions);
+        
+        overlay.appendChild(modal);
+        overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+        document.body.appendChild(overlay);
+        
+        function refreshBackupList() {
+            backupList.innerHTML = '<div style="text-align:center;padding:20px;color:#8f98a0;"><i class="fas fa-spinner fa-spin"></i> ' + lt('Loading backups...') + '</div>';
+            
+            Millennium.callServerMethod('luatools', 'GetBackupsList', { 
+                backup_location: '', 
+                contentScriptQuery: '' 
+            }).then(function(res) {
+                try {
+                    const payload = typeof res === 'string' ? JSON.parse(res) : res;
+                    
+                    if (!payload || !payload.success) {
+                        backupList.innerHTML = '<div style="text-align:center;padding:20px;color:#8f98a0;">' + lt('No backups found') + '</div>';
+                        return;
+                    }
+                    
+                    const backups = payload.backups || [];
+                    
+                    if (!backups || backups.length === 0) {
+                        backupList.innerHTML = '<div style="text-align:center;padding:20px;color:#8f98a0;">' + lt('No backups found') + '</div>';
+                        return;
+                    }
+                    
+                    backupList.innerHTML = '';
+                    
+                    backups.forEach(function(backup) {
+                        const backupItem = document.createElement('div');
+                        backupItem.style.cssText = 'padding:12px;margin-bottom:8px;background:rgba(102,192,244,0.08);border:1px solid rgba(102,192,244,0.2);border-radius:8px;display:flex;justify-content:space-between;align-items:center;';
+                        
+                        const info = document.createElement('div');
+                        info.style.cssText = 'flex:1;';
+                        
+                        const backupName = document.createElement('div');
+                        backupName.style.cssText = 'font-weight:600;color:#fff;margin-bottom:4px;';
+                        backupName.textContent = backup.name || 'Backup';
+                        info.appendChild(backupName);
+                        
+                        const backupMeta = document.createElement('div');
+                        backupMeta.style.cssText = 'font-size:12px;color:#8f98a0;';
+                        const sizeMB = ((backup.size || 0) / (1024 * 1024)).toFixed(1);
+                        backupMeta.textContent = sizeMB + ' MB · ' + (backup.date || 'Unknown date');
+                        info.appendChild(backupMeta);
+                        
+                        backupItem.appendChild(info);
+                        
+                        const actions = document.createElement('div');
+                        actions.style.cssText = 'display:flex;gap:8px;';
+                        
+                        const restoreBtn = document.createElement('button');
+                        restoreBtn.innerHTML = '<i class="fas fa-rotate-right"></i>';
+                        restoreBtn.title = lt('Restore this backup');
+                        restoreBtn.style.cssText = 'padding:6px 10px;background:rgba(102,192,244,0.3);color:#66c0f4;border:1px solid rgba(102,192,244,0.5);border-radius:4px;cursor:pointer;font-size:12px;transition:all 0.2s;';
+                        restoreBtn.onmouseover = function() { this.style.background = 'rgba(102,192,244,0.5)'; this.style.color = '#fff'; };
+                        restoreBtn.onmouseout = function() { this.style.background = 'rgba(102,192,244,0.3)'; this.style.color = '#66c0f4'; };
+                        restoreBtn.onclick = function() {
+                            const confirmMsg = lt('Restore this backup? Current config folders will be overwritten.');
+                            showLuaToolsConfirm('LuaTools', confirmMsg, function() {
+                                restoreBtn.disabled = true;
+                                restoreBtn.textContent = lt('Restoring...');
+                                
+                                Millennium.callServerMethod('luatools', 'RestoreBackup', { 
+                                    backup_path: backup.path, 
+                                    restore_location: '', 
+                                    contentScriptQuery: '' 
+                                }).then(function(res) {
+                                    try {
+                                        const payload = typeof res === 'string' ? JSON.parse(res) : res;
+                                        if (payload && payload.success) {
+                                            ShowLuaToolsAlert('LuaTools', lt('Backup restored successfully!'));
+                                        } else {
+                                            const errorMsg = (payload && payload.error) ? String(payload.error) : lt('Failed to restore backup');
+                                            ShowLuaToolsAlert('LuaTools', errorMsg);
+                                        }
+                                    } catch(err) {
+                                        ShowLuaToolsAlert('LuaTools', lt('Error restoring backup') + ': ' + err);
+                                    }
+                                    restoreBtn.disabled = false;
+                                    restoreBtn.innerHTML = '<i class="fas fa-rotate-right"></i>';
+                                }).catch(function(err) {
+                                    ShowLuaToolsAlert('LuaTools', lt('Failed to restore backup'));
+                                    restoreBtn.disabled = false;
+                                    restoreBtn.innerHTML = '<i class="fas fa-rotate-right"></i>';
+                                });
+                            });
+                        };
+                        actions.appendChild(restoreBtn);
+                        
+                        const folderBtn = document.createElement('button');
+                        folderBtn.innerHTML = '<i class="fas fa-folder"></i>';
+                        folderBtn.title = lt('Show in folder');
+                        folderBtn.style.cssText = 'padding:6px 10px;background:rgba(255,184,82,0.3);color:#ffd700;border:1px solid rgba(255,184,82,0.5);border-radius:4px;cursor:pointer;font-size:12px;transition:all 0.2s;';
+                        folderBtn.onmouseover = function() { this.style.background = 'rgba(255,184,82,0.5)'; this.style.color = '#fff'; };
+                        folderBtn.onmouseout = function() { this.style.background = 'rgba(255,184,82,0.3)'; this.style.color = '#ffd700'; };
+                        folderBtn.onclick = function() {
+                            folderBtn.disabled = true;
+                            
+                            Millennium.callServerMethod('luatools', 'OpenBackupLocation', { 
+                                backup_path: backup.path, 
+                                contentScriptQuery: '' 
+                            }).then(function(res) {
+                                try {
+                                    const payload = typeof res === 'string' ? JSON.parse(res) : res;
+                                    if (payload && payload.success) {
+                                        backendLog('LuaTools: Backup location opened');
+                                    } else {
+                                        const errorMsg = (payload && payload.error) ? String(payload.error) : lt('Failed to open location');
+                                        backendLog('LuaTools: Open location error: ' + errorMsg);
+                                    }
+                                } catch(err) {
+                                    backendLog('LuaTools: Error opening backup location: ' + err);
+                                }
+                                folderBtn.disabled = false;
+                            }).catch(function(err) {
+                                backendLog('LuaTools: Failed to open backup location');
+                                folderBtn.disabled = false;
+                            });
+                        };
+                        actions.appendChild(folderBtn);
+                        
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.innerHTML = '<i class="fas fa-trash-can"></i>';
+                        deleteBtn.title = lt('Delete this backup');
+                        deleteBtn.style.cssText = 'padding:6px 10px;background:rgba(199,39,78,0.3);color:#c7274e;border:1px solid rgba(199,39,78,0.5);border-radius:4px;cursor:pointer;font-size:12px;transition:all 0.2s;';
+                        deleteBtn.onmouseover = function() { this.style.background = 'rgba(199,39,78,0.5)'; this.style.color = '#fff'; };
+                        deleteBtn.onmouseout = function() { this.style.background = 'rgba(199,39,78,0.3)'; this.style.color = '#c7274e'; };
+                        deleteBtn.onclick = function() {
+                            const confirmMsg = lt('Delete this backup permanently?');
+                            showLuaToolsConfirm('LuaTools', confirmMsg, function() {
+                                deleteBtn.disabled = true;
+                                deleteBtn.textContent = lt('Deleting...');
+                                
+                                Millennium.callServerMethod('luatools', 'DeleteBackup', { 
+                                    backup_path: backup.path, 
+                                    contentScriptQuery: '' 
+                                }).then(function(res) {
+                                    try {
+                                        const payload = typeof res === 'string' ? JSON.parse(res) : res;
+                                        if (payload && payload.success) {
+                                            ShowLuaToolsAlert('LuaTools', lt('Backup deleted successfully!'));
+                                            refreshBackupList();
+                                        } else {
+                                            const errorMsg = (payload && payload.error) ? String(payload.error) : lt('Failed to delete backup');
+                                            ShowLuaToolsAlert('LuaTools', errorMsg);
+                                        }
+                                    } catch(err) {
+                                        ShowLuaToolsAlert('LuaTools', lt('Error deleting backup') + ': ' + err);
+                                    }
+                                    deleteBtn.disabled = false;
+                                    deleteBtn.innerHTML = '<i class="fas fa-trash-can"></i>';
+                                }).catch(function(err) {
+                                    ShowLuaToolsAlert('LuaTools', lt('Failed to delete backup'));
+                                    deleteBtn.disabled = false;
+                                    deleteBtn.innerHTML = '<i class="fas fa-trash-can"></i>';
+                                });
+                            });
+                        };
+                        actions.appendChild(deleteBtn);
+                        
+                        backupItem.appendChild(actions);
+                        backupList.appendChild(backupItem);
+                    });
+                } catch(err) {
+                    backendLog('LuaTools: Backup list parse error: ' + err);
+                    backupList.innerHTML = '<div style="color:#c7254e;">Error loading backups</div>';
+                }
+            }).catch(function(err) {
+                backendLog('LuaTools: Backup list fetch error: ' + err);
+                backupList.innerHTML = '<div style="color:#c7254e;">Error loading backups</div>';
+            });
+        }
+
+        // Load backups on open
+        refreshBackupList();
+    }
+
     // Also try after a delay to catch dynamically loaded content
     setTimeout(addLuaToolsButton, 1000);
     setTimeout(addLuaToolsButton, 3000);

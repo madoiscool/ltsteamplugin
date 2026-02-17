@@ -36,6 +36,15 @@ from downloads import (
     read_loaded_apps,
     start_add_via_luatools,
 )
+
+from backup_manager import (
+    create_backup,
+    delete_backup,
+    get_backups_list,
+    open_backup_location,
+    restore_backup,
+)
+
 from fixes import (
     apply_game_fix,
     cancel_apply_fix,
@@ -402,6 +411,103 @@ def GetTranslations(contentScriptQuery: str = "", language: str = "", **kwargs: 
     except Exception as exc:
         logger.warn(f"LuaTools: GetTranslations failed: {exc}")
         return json.dumps({"success": False, "error": str(exc)})
+
+def CreateBackup(backup_name: str = "", destination: str = "", contentScriptQuery: str = "") -> str:
+    """Create a backup of Steam config folders."""
+    try:
+        result = create_backup(backup_name, destination)
+        return json.dumps(result)
+    except Exception as exc:
+        logger.warn(f"LuaTools: CreateBackup failed: {exc}")
+        return json.dumps({"success": False, "error": str(exc)})
+
+
+def RestoreBackup(backup_path: str, restore_location: str = "", contentScriptQuery: str = "") -> str:
+    """Restore a backup of Steam config folders."""
+    try:
+        result = restore_backup(backup_path, restore_location)
+        return json.dumps(result)
+    except Exception as exc:
+        logger.warn(f"LuaTools: RestoreBackup failed: {exc}")
+        return json.dumps({"success": False, "error": str(exc)})
+
+
+def GetBackupsList(backup_location: str = "", contentScriptQuery: str = "") -> str:
+    """Get list of available backups."""
+    try:
+        result = get_backups_list(backup_location)
+        return json.dumps(result)
+    except Exception as exc:
+        logger.warn(f"LuaTools: GetBackupsList failed: {exc}")
+        return json.dumps({"success": False, "error": str(exc)})
+
+
+def DeleteBackup(backup_path: str, contentScriptQuery: str = "") -> str:
+    """Delete a backup file."""
+    try:
+        result = delete_backup(backup_path)
+        return json.dumps(result)
+    except Exception as exc:
+        logger.warn(f"LuaTools: DeleteBackup failed: {exc}")
+        return json.dumps({"success": False, "error": str(exc)})
+
+
+def OpenBackupLocation(backup_path: str, contentScriptQuery: str = "") -> str:
+    """Open a backup file location in file manager."""
+    try:
+        result = open_backup_location(backup_path)
+        return json.dumps(result)
+    except Exception as exc:
+        logger.warn(f"LuaTools: OpenBackupLocation failed: {exc}")
+        return json.dumps({"success": False, "error": str(exc)})
+
+
+class Plugin:
+    def _front_end_loaded(self):
+        _copy_webkit_files()
+
+    def _load(self):
+        logger.log(f"bootstrapping LuaTools plugin, millennium {Millennium.version()}")
+
+        try:
+            detect_steam_install_path()
+        except Exception as exc:
+            logger.warn(f"LuaTools: steam path detection failed: {exc}")
+
+        ensure_http_client("InitApis")
+        ensure_temp_download_dir()
+
+        try:
+            message = apply_pending_update_if_any()
+            if message:
+                store_last_message(message)
+        except Exception as exc:
+            logger.warn(f"AutoUpdate: apply pending failed: {exc}")
+
+        try:
+            init_applist()
+        except Exception as exc:
+            logger.warn(f"LuaTools: Applist initialization failed: {exc}")
+
+        _copy_webkit_files()
+        _inject_webkit_files()
+
+        try:
+            result = InitApis("boot")
+            logger.log(f"InitApis (boot) return: {result}")
+        except Exception as exc:
+            logger.error(f"InitApis (boot) failed: {exc}")
+
+        try:
+            start_auto_update_background_check()
+        except Exception as exc:
+            logger.warn(f"AutoUpdate: start background check failed: {exc}")
+
+        Millennium.ready()
+
+    def _unload(self):
+        logger.log("unloading")
+        close_http_client("InitApis")
 
 
 def GetAvailableThemes(contentScriptQuery: str = "") -> str:
