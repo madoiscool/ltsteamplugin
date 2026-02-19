@@ -176,6 +176,16 @@
     "gameStatus.denuvo": "Denuvo",
     "settings.search.placeholder": "Search settings, games, fixes...",
     "settings.search.clear": "Clear search",
-    "settings.search.noResults": "No matches found"
+    "settings.search.noResults": "No matches found",
+    "disclaimer.title": "Important Notice",
+    "disclaimer.line1": "LuaTools is not affiliated in any way with Millennium",
+    "disclaimer.line2": "Millennium will NOT offer you support for this plugin on their discord server",
+    "disclaimer.line3": "You will be BANNED from both LuaTools and Millennium servers if you go to their discord asking for help",
+    "disclaimer.inputLabel": "type \"I Understand\" in the box bellow to continue",
+    "disclaimer.inputPlaceholder": "I Understand",
+    "DLC Detected": "DLC Detected",
+    "DLCs are added together with the base game. To add fixes for this DLC, please go to the base game page: <br><br><b>{gameName}</b>": "DLCs are added together with the base game. To add fixes for this DLC, please go to the base game page: <br><br><b>{gameName}</b>",
+    "Go to Base Game": "Go to Base Game",
+    "Base Game": "Base Game"
   }
 }

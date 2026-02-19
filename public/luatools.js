@@ -100,19 +100,33 @@
     const OVERLAY_SELECTOR_STRING = OVERLAY_SELECTORS.join(', ');
 
     const CONFIG = {
-        deadzone: 0.4,          // Increased from 0.3 to prevent unwanted drift
+        deadzone: 0.4, // Increased from 0.3 to prevent unwanted drift
         debounceTime: 200,
         pollRate: 16,
-        stickThreshold: 0.7,    // Increased threshold for stick navigation
+        stickThreshold: 0.7, // Increased threshold for stick navigation
         buttonMap: {
-            A: 0, B: 1, X: 2, Y: 3,
-            LB: 4, RB: 5, LT: 6, RT: 7,
-            SELECT: 8, START: 9, L3: 10, R3: 11,
-            DPAD_UP: 12, DPAD_DOWN: 13, DPAD_LEFT: 14, DPAD_RIGHT: 15
+            A: 0,
+            B: 1,
+            X: 2,
+            Y: 3,
+            LB: 4,
+            RB: 5,
+            LT: 6,
+            RT: 7,
+            SELECT: 8,
+            START: 9,
+            L3: 10,
+            R3: 11,
+            DPAD_UP: 12,
+            DPAD_DOWN: 13,
+            DPAD_LEFT: 14,
+            DPAD_RIGHT: 15
         },
         axesMap: {
-            LEFT_STICK_X: 0, LEFT_STICK_Y: 1,
-            RIGHT_STICK_X: 2, RIGHT_STICK_Y: 3
+            LEFT_STICK_X: 0,
+            LEFT_STICK_Y: 1,
+            RIGHT_STICK_X: 2,
+            RIGHT_STICK_Y: 3
         }
     };
 
@@ -122,7 +136,10 @@
         focusableElements: [],
         currentFocusIndex: 0,
         lastNavigationTime: 0,
-        lastAxisValues: { x: 0, y: 0 },
+        lastAxisValues: {
+            x: 0,
+            y: 0
+        },
         buttonStates: {},
         animationFrameId: null
     };
@@ -204,9 +221,9 @@
             const rect = el.getBoundingClientRect();
             const style = window.getComputedStyle(el);
             return rect.width > 0 && rect.height > 0 &&
-                   style.display !== 'none' &&
-                   style.visibility !== 'hidden' &&
-                   style.opacity !== '0';
+                style.display !== 'none' &&
+                style.visibility !== 'hidden' &&
+                style.opacity !== '0';
         });
 
         console.log('[Gamepad] Scanned ' + state.focusableElements.length + ' focusable elements inside overlay');
@@ -255,7 +272,7 @@
 
         let newIndex = state.currentFocusIndex;
 
-        switch(direction) {
+        switch (direction) {
             case 'up':
                 newIndex--;
                 break;
@@ -311,7 +328,7 @@
     function handleButtonPress(buttonIndex) {
         const element = state.focusableElements[state.currentFocusIndex];
 
-        switch(buttonIndex) {
+        switch (buttonIndex) {
             case CONFIG.buttonMap.A:
                 if (element) {
                     console.log('[Gamepad] A button: clicking element', element);
@@ -493,7 +510,9 @@
         const gamepads = navigator.getGamepads();
         for (let i = 0; i < gamepads.length; i++) {
             if (gamepads[i]) {
-                onGamepadConnected({ gamepad: gamepads[i] });
+                onGamepadConnected({
+                    gamepad: gamepads[i]
+                });
                 break;
             }
         }
@@ -526,9 +545,15 @@
             }
         },
         focusElement: focusElement,
-        getCurrentIndex: function() { return state.currentFocusIndex; },
-        getElements: function() { return state.focusableElements; },
-        isConnected: function() { return state.gamepadConnected; }
+        getCurrentIndex: function() {
+            return state.currentFocusIndex;
+        },
+        getElements: function() {
+            return state.focusableElements;
+        },
+        isConnected: function() {
+            return state.gamepadConnected;
+        }
     };
 })();
 
@@ -583,7 +608,9 @@
     function backendLog(message) {
         try {
             if (typeof Millennium !== 'undefined' && typeof Millennium.callServerMethod === 'function') {
-                Millennium.callServerMethod('luatools', 'Logger.log', { message: String(message) });
+                Millennium.callServerMethod('luatools', 'Logger.log', {
+                    message: String(message)
+                });
             }
         } catch (err) {
             if (typeof console !== 'undefined' && console.warn) {
@@ -595,20 +622,30 @@
     backendLog('LuaTools script loaded');
     backendLog('Mode Detection: ' + (window.__LUATOOLS_IS_BIG_PICTURE__ ? 'BIG PICTURE MODE' : 'NORMAL MODE'));
     // anti-spam state
-    const logState = { missingOnce: false, existsOnce: false };
+    const logState = {
+        missingOnce: false,
+        existsOnce: false
+    };
     // click/run debounce state
-    const runState = { inProgress: false, appid: null };
-    
+    const runState = {
+        inProgress: false,
+        appid: null
+    };
+
     // Games Database - backend handles caching
     function fetchGamesDatabase() {
         if (typeof Millennium === 'undefined' || typeof Millennium.callServerMethod !== 'function') {
             return Promise.resolve({});
         }
-        return Millennium.callServerMethod('luatools', 'GetGamesDatabase', { contentScriptQuery: '' })
+        return Millennium.callServerMethod('luatools', 'GetGamesDatabase', {
+                contentScriptQuery: ''
+            })
             .then(function(res) {
                 var payload = (res && (res.result || res.value)) || res;
                 if (typeof payload === 'string') {
-                    try { payload = JSON.parse(payload); } catch(e) {}
+                    try {
+                        payload = JSON.parse(payload);
+                    } catch (e) {}
                 }
                 return payload || {};
             })
@@ -623,7 +660,10 @@
         if (typeof Millennium === 'undefined' || typeof Millennium.callServerMethod !== 'function') {
             return Promise.resolve(null);
         }
-        return Millennium.callServerMethod('luatools', 'CheckForFixes', { appid: appid, contentScriptQuery: '' })
+        return Millennium.callServerMethod('luatools', 'CheckForFixes', {
+                appid: appid,
+                contentScriptQuery: ''
+            })
             .then(function(res) {
                 const payload = typeof res === 'string' ? JSON.parse(res) : res;
                 return (payload && payload.success) ? payload : null;
@@ -633,6 +673,37 @@
                 return null;
             });
     }
+
+    // Cache for game names fetched from Steam API
+    const steamGameNameCache = {};
+
+    /**
+     * get game name separately without cached full appid
+     * @param {number|string} appid 
+     * @returns {Promise<string|null>}
+     */
+    function fetchSteamGameName(appid) {
+        if (!appid) return Promise.resolve(null);
+        if (steamGameNameCache[appid]) return Promise.resolve(steamGameNameCache[appid]);
+
+        return fetch('https://store.steampowered.com/api/appdetails?appids=' + appid + '&filters=basic')
+            .then(function(res) {
+                return res.json();
+            })
+            .then(function(data) {
+                if (data && data[appid] && data[appid].success && data[appid].data && data[appid].data.name) {
+                    const name = data[appid].data.name;
+                    steamGameNameCache[appid] = name;
+                    return name;
+                }
+                return null;
+            })
+            .catch(function(err) {
+                backendLog('LuaTools: fetchSteamGameName error for ' + appid + ': ' + err);
+                return null;
+            });
+    }
+
 
     const TRANSLATION_PLACEHOLDER = 'translation missing';
 
@@ -698,7 +769,8 @@
                 if (Array.isArray(payload.value)) return payload.value;
             }
             if (Array.isArray(payload)) return payload;
-        } catch (_) { /* ignore */ }
+        } catch (_) {
+            /* ignore */ }
         return [];
     }
 
@@ -707,16 +779,21 @@
             const themes = normalizeThemesPayload(themesArray);
             if (!Array.isArray(themes) || themes.length === 0) return;
             const map = {};
-            themes.forEach(function (t) {
+            themes.forEach(function(t) {
                 if (!t || (!t.value && !t.key)) return;
                 const key = t.value || t.key;
-                map[key] = Object.assign({}, t, { value: key, name: t.name || key });
+                map[key] = Object.assign({}, t, {
+                    value: key,
+                    name: t.name || key
+                });
             });
             if (Object.keys(map).length === 0) return;
             // Merge into existing THEMES if themes have been loaded, otherwise start from DEFAULT_THEMES
             THEMES = Object.assign({}, (themesLoaded ? THEMES : DEFAULT_THEMES), map);
             themesLoaded = true;
-            try { ensureLuaToolsStyles(); } catch(_) {}
+            try {
+                ensureLuaToolsStyles();
+            } catch (_) {}
         } catch (e) {
             console.warn('Failed to apply backend themes', e);
         }
@@ -724,14 +801,18 @@
 
     function loadThemesFromFile() {
         try {
-            return fetch('themes/themes.json', { cache: 'no-store' }).then(function (res) {
+            return fetch('themes/themes.json', {
+                cache: 'no-store'
+            }).then(function(res) {
                 if (!res || !res.ok) return null;
                 return res.json();
-            }).then(function (json) {
+            }).then(function(json) {
                 if (!json) return null;
                 _applyBackendThemes(json);
                 return json;
-            }).catch(function () { return null; });
+            }).catch(function() {
+                return null;
+            });
         } catch (_) {
             return Promise.resolve(null);
         }
@@ -741,23 +822,28 @@
         if (typeof Millennium === 'undefined' || typeof Millennium.callServerMethod !== 'function') {
             return Promise.resolve(null);
         }
-        return Millennium.callServerMethod('luatools', 'GetThemes', { contentScriptQuery: '' }).then(function (res) {
+        return Millennium.callServerMethod('luatools', 'GetThemes', {
+            contentScriptQuery: ''
+        }).then(function(res) {
             try {
                 const payload = typeof res === 'string' ? JSON.parse(res) : res;
                 if (payload && payload.success && payload.themes) {
                     _applyBackendThemes(payload.themes);
                     return payload.themes;
                 }
-            } catch(_) {}
+            } catch (_) {}
             return null;
-        }).catch(function () { return null; });
+        }).catch(function() {
+            return null;
+        });
     }
 
     function loadThemes() {
         return Promise.all([
             loadThemesFromFile(),
             loadThemesFromBackend()
-        ]).catch(function () { /* ignore */ });
+        ]).catch(function() {
+            /* ignore */ });
     }
 
     // Trigger load (non-blocking). Keeps DEFAULT_THEMES as a safe fallback.
@@ -778,7 +864,9 @@
             const themeName = getCurrentThemeKey();
             const theme = THEMES[themeName] || THEMES.original;
             if (!THEMES[themeName]) {
-                try { backendLog('LuaTools: Theme ' + themeName + ' not found in THEMES, using original. Available: ' + Object.keys(THEMES).join(', ')); } catch(_) {}
+                try {
+                    backendLog('LuaTools: Theme ' + themeName + ' not found in THEMES, using original. Available: ' + Object.keys(THEMES).join(', '));
+                } catch (_) {}
             }
             return theme;
         } catch (e) {
@@ -953,7 +1041,9 @@
             el.href = href;
             el.setAttribute('data-theme', themeKey);
             document.head.appendChild(el);
-        } catch(err) { backendLog('LuaTools: Theme CSS injection failed: ' + err); }
+        } catch (err) {
+            backendLog('LuaTools: Theme CSS injection failed: ' + err);
+        }
     }
 
     function ensureLuaToolsStyles() {
@@ -962,7 +1052,9 @@
         const theme = getCurrentTheme();
         const styles = generateThemeStyles(theme);
 
-        try { ensureThemeStylesheet(themeKey); } catch(_) {}
+        try {
+            ensureThemeStylesheet(themeKey);
+        } catch (_) {}
 
         if (styleEl) {
             styleEl.textContent = styles;
@@ -972,7 +1064,9 @@
                 style.id = 'luatools-styles';
                 style.textContent = styles;
                 document.head.appendChild(style);
-            } catch(err) { backendLog('LuaTools: Styles injection failed: ' + err); }
+            } catch (err) {
+                backendLog('LuaTools: Styles injection failed: ' + err);
+            }
         }
     }
 
@@ -987,17 +1081,24 @@
             link.crossOrigin = 'anonymous';
             link.referrerPolicy = 'no-referrer';
             document.head.appendChild(link);
-        } catch(err) { backendLog('LuaTools: Font Awesome injection failed: ' + err); }
+        } catch (err) {
+            backendLog('LuaTools: Font Awesome injection failed: ' + err);
+        }
     }
 
     function showSettingsPopup() {
         if (document.querySelector('.luatools-settings-overlay') || settingsMenuPending) return;
         settingsMenuPending = true;
-        ensureTranslationsLoaded(false).catch(function(){ return null; }).finally(function(){
+        ensureTranslationsLoaded(false).catch(function() {
+            return null;
+        }).finally(function() {
             settingsMenuPending = false;
             if (document.querySelector('.luatools-settings-overlay')) return;
 
-            try { const d = document.querySelector('.luatools-overlay'); if (d) d.remove(); } catch(_) {}
+            try {
+                const d = document.querySelector('.luatools-overlay');
+                if (d) d.remove();
+            } catch (_) {}
             ensureLuaToolsStyles();
             ensureFontAwesome();
 
@@ -1027,8 +1128,18 @@
                 btn.style.cssText = `display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:rgba(${btnColors.rgbString},0.1);border:1px solid ${btnColors.borderRgba};border-radius:10px;color:${btnColors.accent};font-size:18px;text-decoration:none;transition:all 0.3s ease;cursor:pointer;`;
                 btn.innerHTML = '<i class="fa-solid ' + iconClass + '"></i>';
                 btn.title = t(titleKey, titleFallback);
-                btn.onmouseover = function() { this.style.background = `rgba(${btnColors.rgbString},0.25)`; this.style.transform = 'translateY(-2px) scale(1.05)'; this.style.boxShadow = `0 8px 16px ${btnColors.shadowRgba}`; this.style.borderColor = btnColors.accent; };
-                btn.onmouseout = function() { this.style.background = `rgba(${btnColors.rgbString},0.1)`; this.style.transform = 'translateY(0) scale(1)'; this.style.boxShadow = 'none'; this.style.borderColor = btnColors.borderRgba; };
+                btn.onmouseover = function() {
+                    this.style.background = `rgba(${btnColors.rgbString},0.25)`;
+                    this.style.transform = 'translateY(-2px) scale(1.05)';
+                    this.style.boxShadow = `0 8px 16px ${btnColors.shadowRgba}`;
+                    this.style.borderColor = btnColors.accent;
+                };
+                btn.onmouseout = function() {
+                    this.style.background = `rgba(${btnColors.rgbString},0.1)`;
+                    this.style.transform = 'translateY(0) scale(1)';
+                    this.style.boxShadow = 'none';
+                    this.style.borderColor = btnColors.borderRgba;
+                };
                 iconButtons.appendChild(btn);
                 return btn;
             }
@@ -1066,8 +1177,20 @@
                 const iconHtml = iconClass ? '<i class="fa-solid ' + iconClass + '" style="font-size:16px;"></i>' : '';
                 const textSpan = '<span style="text-align:center;">' + t(key, fallback) + '</span>';
                 btn.innerHTML = iconHtml + textSpan;
-                btn.onmouseover = function() { const c = getThemeColors(); this.style.background = `linear-gradient(135deg, rgba(${c.rgbString},0.3) 0%, rgba(${c.rgbString},0.15) 100%)`; this.style.transform = 'translateY(-2px)'; this.style.boxShadow = `0 8px 20px ${c.shadow.replace('0.4', '0.25')}`; this.style.borderColor = c.accent; };
-                btn.onmouseout = function() { const c = getThemeColors(); this.style.background = `linear-gradient(135deg, rgba(${c.rgbString},0.15) 0%, rgba(${c.rgbString},0.05) 100%)`; this.style.transform = 'translateY(0)'; this.style.boxShadow = 'none'; this.style.borderColor = c.borderRgba; };
+                btn.onmouseover = function() {
+                    const c = getThemeColors();
+                    this.style.background = `linear-gradient(135deg, rgba(${c.rgbString},0.3) 0%, rgba(${c.rgbString},0.15) 100%)`;
+                    this.style.transform = 'translateY(-2px)';
+                    this.style.boxShadow = `0 8px 20px ${c.shadow.replace('0.4', '0.25')}`;
+                    this.style.borderColor = c.accent;
+                };
+                btn.onmouseout = function() {
+                    const c = getThemeColors();
+                    this.style.background = `linear-gradient(135deg, rgba(${c.rgbString},0.15) 0%, rgba(${c.rgbString},0.05) 100%)`;
+                    this.style.transform = 'translateY(0)';
+                    this.style.boxShadow = 'none';
+                    this.style.borderColor = c.borderRgba;
+                };
                 container.appendChild(btn);
                 return btn;
             }
@@ -1104,38 +1227,51 @@
             }, 150);
 
             if (checkBtn) {
-                checkBtn.addEventListener('click', function(e){
+                checkBtn.addEventListener('click', function(e) {
                     e.preventDefault();
-                    try { overlay.remove(); } catch(_) {}
                     try {
-                        Millennium.callServerMethod('luatools', 'CheckForUpdatesNow', { contentScriptQuery: '' }).then(function(res){
+                        overlay.remove();
+                    } catch (_) {}
+                    try {
+                        Millennium.callServerMethod('luatools', 'CheckForUpdatesNow', {
+                            contentScriptQuery: ''
+                        }).then(function(res) {
                             try {
                                 const payload = typeof res === 'string' ? JSON.parse(res) : res;
                                 const msg = (payload && payload.message) ? String(payload.message) : lt('No updates available.');
                                 ShowLuaToolsAlert('LuaTools', msg);
-                            } catch(_) {}
+                            } catch (_) {}
                         });
-                    } catch(_) {}
+                    } catch (_) {}
                 });
             }
 
             if (discordBtn) {
-                discordBtn.addEventListener('click', function(e){
+                discordBtn.addEventListener('click', function(e) {
                     e.preventDefault();
-                    try { overlay.remove(); } catch(_) {}
+                    try {
+                        overlay.remove();
+                    } catch (_) {}
                     const url = 'https://discord.gg/luatools';
                     try {
-                        Millennium.callServerMethod('luatools', 'OpenExternalUrl', { url, contentScriptQuery: '' });
-                    } catch(_) {}
+                        Millennium.callServerMethod('luatools', 'OpenExternalUrl', {
+                            url,
+                            contentScriptQuery: ''
+                        });
+                    } catch (_) {}
                 });
             }
 
             if (fetchApisBtn) {
-                fetchApisBtn.addEventListener('click', function(e){
+                fetchApisBtn.addEventListener('click', function(e) {
                     e.preventDefault();
-                    try { overlay.remove(); } catch(_) {}
                     try {
-                        Millennium.callServerMethod('luatools', 'FetchFreeApisNow', { contentScriptQuery: '' }).then(function(res){
+                        overlay.remove();
+                    } catch (_) {}
+                    try {
+                        Millennium.callServerMethod('luatools', 'FetchFreeApisNow', {
+                            contentScriptQuery: ''
+                        }).then(function(res) {
                             try {
                                 const payload = typeof res === 'string' ? JSON.parse(res) : res;
                                 const ok = payload && payload.success;
@@ -1144,41 +1280,48 @@
                                 const failText = (payload && payload.error) ? String(payload.error) : lt('Failed to load free APIs.');
                                 const text = ok ? successText : failText;
                                 ShowLuaToolsAlert('LuaTools', text);
-                            } catch(_) {}
+                            } catch (_) {}
                         });
-                    } catch(_) {}
+                    } catch (_) {}
                 });
             }
 
             if (closeBtn) {
-                closeBtn.addEventListener('click', function(e){
+                closeBtn.addEventListener('click', function(e) {
                     e.preventDefault();
                     overlay.remove();
                 });
             }
 
             if (settingsManagerBtn) { // This is the icon button now
-                settingsManagerBtn.addEventListener('click', function(e){
+                settingsManagerBtn.addEventListener('click', function(e) {
                     e.preventDefault();
-                    try { overlay.remove(); } catch(_) {}
+                    try {
+                        overlay.remove();
+                    } catch (_) {}
                     showSettingsManagerPopup(false, showSettingsPopup);
                 });
             }
 
             if (fixesMenuBtn) {
-                fixesMenuBtn.addEventListener('click', function(e){
+                fixesMenuBtn.addEventListener('click', function(e) {
                     e.preventDefault();
                     try {
                         const match = window.location.href.match(/https:\/\/store\.steampowered\.com\/app\/(\d+)/) || window.location.href.match(/https:\/\/steamcommunity\.com\/app\/(\d+)/);
                         const appid = match ? parseInt(match[1], 10) : (window.__LuaToolsCurrentAppId || NaN);
                         if (isNaN(appid)) {
-                            try { overlay.remove(); } catch(_) {}
+                            try {
+                                overlay.remove();
+                            } catch (_) {}
                             const errText = t('menu.error.noAppId', 'Could not determine game AppID');
                             ShowLuaToolsAlert('LuaTools', errText);
                             return;
                         }
 
-                        Millennium.callServerMethod('luatools', 'GetGameInstallPath', { appid, contentScriptQuery: '' }).then(function(pathRes){
+                        Millennium.callServerMethod('luatools', 'GetGameInstallPath', {
+                            appid,
+                            contentScriptQuery: ''
+                        }).then(function(pathRes) {
                             try {
                                 let isGameInstalled = false;
                                 const pathPayload = typeof pathRes === 'string' ? JSON.parse(pathRes) : pathRes;
@@ -1187,18 +1330,24 @@
                                     window.__LuaToolsGameInstallPath = pathPayload.installPath;
                                 }
                                 window.__LuaToolsGameIsInstalled = isGameInstalled;
-                                try { overlay.remove(); } catch(_) {}
+                                try {
+                                    overlay.remove();
+                                } catch (_) {}
                                 showFixesLoadingPopupAndCheck(appid);
-                            } catch(err) {
+                            } catch (err) {
                                 backendLog('LuaTools: GetGameInstallPath error: ' + err);
-                                try { overlay.remove(); } catch(_) {}
+                                try {
+                                    overlay.remove();
+                                } catch (_) {}
                             }
                         }).catch(function() {
-                            try { overlay.remove(); } catch(_) {}
+                            try {
+                                overlay.remove();
+                            } catch (_) {}
                             const errorText = t('menu.error.getPath', 'Error getting game path');
                             ShowLuaToolsAlert('LuaTools', errorText);
                         });
-                    } catch(err) {
+                    } catch (err) {
                         backendLog('LuaTools: Fixes Menu button error: ' + err);
                     }
                 });
@@ -1208,14 +1357,20 @@
                 const match = window.location.href.match(/https:\/\/store\.steampowered\.com\/app\/(\d+)/) || window.location.href.match(/https:\/\/steamcommunity\.com\/app\/(\d+)/);
                 const appid = match ? parseInt(match[1], 10) : (window.__LuaToolsCurrentAppId || NaN);
                 if (!isNaN(appid) && typeof Millennium !== 'undefined' && typeof Millennium.callServerMethod === 'function') {
-                    Millennium.callServerMethod('luatools', 'HasLuaToolsForApp', { appid, contentScriptQuery: '' }).then(function(res){
+                    Millennium.callServerMethod('luatools', 'HasLuaToolsForApp', {
+                        appid,
+                        contentScriptQuery: ''
+                    }).then(function(res) {
                         try {
                             const payload = typeof res === 'string' ? JSON.parse(res) : res;
                             const exists = !!(payload && payload.success && payload.exists === true);
                             if (exists) {
                                 const doDelete = function() {
                                     try {
-                                        Millennium.callServerMethod('luatools', 'DeleteLuaToolsForApp', { appid, contentScriptQuery: '' }).then(function(){
+                                        Millennium.callServerMethod('luatools', 'DeleteLuaToolsForApp', {
+                                            appid,
+                                            contentScriptQuery: ''
+                                        }).then(function() {
                                             try {
                                                 window.__LuaToolsButtonInserted = false;
                                                 window.__LuaToolsPresenceCheckInFlight = false;
@@ -1223,37 +1378,41 @@
                                                 addLuaToolsButton();
                                                 const successText = t('menu.remove.success', 'LuaTools removed for this app.');
                                                 ShowLuaToolsAlert('LuaTools', successText);
-                                            } catch(err) {
+                                            } catch (err) {
                                                 backendLog('LuaTools: post-delete cleanup failed: ' + err);
                                             }
-                                        }).catch(function(err){
+                                        }).catch(function(err) {
                                             const failureText = t('menu.remove.failure', 'Failed to remove LuaTools.');
                                             const errMsg = (err && err.message) ? err.message : failureText;
                                             ShowLuaToolsAlert('LuaTools', errMsg);
                                         });
-                                    } catch(err) {
+                                    } catch (err) {
                                         backendLog('LuaTools: doDelete failed: ' + err);
                                     }
                                 };
 
                                 removeBtn.style.display = 'flex';
-                                removeBtn.onclick = function(e){
+                                removeBtn.onclick = function(e) {
                                     e.preventDefault();
-                                    try { overlay.remove(); } catch(_) {}
+                                    try {
+                                        overlay.remove();
+                                    } catch (_) {}
                                     const confirmMessage = t('menu.remove.confirm', 'Remove via LuaTools for this game?');
-                                    showLuaToolsConfirm('LuaTools', confirmMessage, function(){
+                                    showLuaToolsConfirm('LuaTools', confirmMessage, function() {
                                         doDelete();
-                                    }, function(){
-                                        try { showSettingsPopup(); } catch(_) {}
+                                    }, function() {
+                                        try {
+                                            showSettingsPopup();
+                                        } catch (_) {}
                                     });
                                 };
                             } else {
                                 removeBtn.style.display = 'none';
                             }
-                        } catch(_) {}
+                        } catch (_) {}
                     });
                 }
-            } catch(_) {}
+            } catch (_) {}
         });
     }
 
@@ -1263,12 +1422,20 @@
                 return Promise.resolve(window.__LuaToolsI18n);
             }
             if (typeof Millennium === 'undefined' || typeof Millennium.callServerMethod !== 'function') {
-                window.__LuaToolsI18n = window.__LuaToolsI18n || { language: 'en', locales: [], strings: {}, ready: false };
+                window.__LuaToolsI18n = window.__LuaToolsI18n || {
+                    language: 'en',
+                    locales: [],
+                    strings: {},
+                    ready: false
+                };
                 return Promise.resolve(window.__LuaToolsI18n);
             }
             const targetLanguage = (typeof preferredLanguage === 'string' && preferredLanguage) ? preferredLanguage :
                 ((window.__LuaToolsI18n && window.__LuaToolsI18n.language) || '');
-            return Millennium.callServerMethod('luatools', 'GetTranslations', { language: targetLanguage, contentScriptQuery: '' }).then(function(res){
+            return Millennium.callServerMethod('luatools', 'GetTranslations', {
+                language: targetLanguage,
+                contentScriptQuery: ''
+            }).then(function(res) {
                 const payload = typeof res === 'string' ? JSON.parse(res) : res;
                 if (!payload || payload.success !== true || !payload.strings) {
                     throw new Error('Invalid translation payload');
@@ -1277,14 +1444,24 @@
                 // Update button text after translations are loaded
                 updateButtonTranslations();
                 return window.__LuaToolsI18n;
-            }).catch(function(err){
+            }).catch(function(err) {
                 backendLog('LuaTools: translation load failed: ' + err);
-                window.__LuaToolsI18n = window.__LuaToolsI18n || { language: 'en', locales: [], strings: {}, ready: false };
+                window.__LuaToolsI18n = window.__LuaToolsI18n || {
+                    language: 'en',
+                    locales: [],
+                    strings: {},
+                    ready: false
+                };
                 return window.__LuaToolsI18n;
             });
-        } catch(err) {
+        } catch (err) {
             backendLog('LuaTools: ensureTranslationsLoaded error: ' + err);
-            window.__LuaToolsI18n = window.__LuaToolsI18n || { language: 'en', locales: [], strings: {}, ready: false };
+            window.__LuaToolsI18n = window.__LuaToolsI18n || {
+                language: 'en',
+                locales: [],
+                strings: {},
+                ready: false
+            };
             return Promise.resolve(window.__LuaToolsI18n);
         }
     }
@@ -1304,7 +1481,7 @@
                     }
                 }
             }
-        } catch(_) {}
+        } catch (_) {}
         return typeof fallback !== 'undefined' ? fallback : key;
     }
 
@@ -1320,14 +1497,17 @@
     ensureTranslationsLoaded(false);
 
     let settingsMenuPending = false;
-    
+
     // Helper: show a Steam-style popup with a 10s loading bar (custom UI)
     function showTestPopup() {
 
         // Avoid duplicates
         if (document.querySelector('.luatools-overlay')) return;
         // Close settings popup if open so modals don't overlap
-        try { const s = document.querySelector('.luatools-settings-overlay'); if (s) s.remove(); } catch(_) {}
+        try {
+            const s = document.querySelector('.luatools-settings-overlay');
+            if (s) s.remove();
+        } catch (_) {}
 
         ensureLuaToolsStyles();
         ensureFontAwesome();
@@ -1358,7 +1538,9 @@
 
         // Load APIs dynamically from backend
         if (typeof Millennium !== 'undefined' && typeof Millennium.callServerMethod === 'function') {
-            Millennium.callServerMethod('luatools', 'GetApiList', { contentScriptQuery: '' }).then(function(res){
+            Millennium.callServerMethod('luatools', 'GetApiList', {
+                contentScriptQuery: ''
+            }).then(function(res) {
                 try {
                     const payload = typeof res === 'string' ? JSON.parse(res) : res;
                     if (payload && payload.success && payload.apis && Array.isArray(payload.apis)) {
@@ -1387,10 +1569,10 @@
                             apiListContainer.appendChild(apiItem);
                         });
                     }
-                } catch(err) {
+                } catch (err) {
                     backendLog('Failed to parse API list: ' + err);
                 }
-            }).catch(function(err){
+            }).catch(function(err) {
                 backendLog('Failed to load API list: ' + err);
             });
         }
@@ -1431,12 +1613,18 @@
         cancelBtn.innerHTML = `<span>${lt('Cancel')}</span>`;
         cancelBtn.href = '#';
         cancelBtn.style.display = 'none';
-        cancelBtn.onclick = function(e){ e.preventDefault(); cancelOperation(); };
+        cancelBtn.onclick = function(e) {
+            e.preventDefault();
+            cancelOperation();
+        };
         const hideBtn = document.createElement('a');
         hideBtn.className = 'luatools-btn luatools-hide-btn';
         hideBtn.innerHTML = `<span>${lt('Hide')}</span>`;
         hideBtn.href = '#';
-        hideBtn.onclick = function(e){ e.preventDefault(); cleanup(); };
+        hideBtn.onclick = function(e) {
+            e.preventDefault();
+            cleanup();
+        };
         btnRow.appendChild(cancelBtn);
         btnRow.appendChild(hideBtn);
 
@@ -1456,19 +1644,22 @@
             }
         }, 150);
 
-        function cleanup(){
+        function cleanup() {
             overlay.remove();
         }
-        
-        function cancelOperation(){
+
+        function cancelOperation() {
             // Call backend to cancel the operation
             try {
                 const match = window.location.href.match(/https:\/\/store\.steampowered\.com\/app\/(\d+)/) || window.location.href.match(/https:\/\/steamcommunity\.com\/app\/(\d+)/);
                 const appid = match ? parseInt(match[1], 10) : (window.__LuaToolsCurrentAppId || NaN);
                 if (!isNaN(appid) && typeof Millennium !== 'undefined' && typeof Millennium.callServerMethod === 'function') {
-                    Millennium.callServerMethod('luatools', 'CancelAddViaLuaTools', { appid, contentScriptQuery: '' });
+                    Millennium.callServerMethod('luatools', 'CancelAddViaLuaTools', {
+                        appid,
+                        contentScriptQuery: ''
+                    });
                 }
-            } catch(_) {}
+            } catch (_) {}
             // Update UI to show cancelled
             const status = overlay.querySelector('.luatools-status');
             if (status) status.textContent = lt('Cancelled');
@@ -1491,10 +1682,22 @@
     function showFixesResultsPopup(data, isGameInstalled) {
         if (document.querySelector('.luatools-fixes-results-overlay')) return;
         // Close other popups
-        try { const d = document.querySelector('.luatools-overlay'); if (d) d.remove(); } catch(_) {}
-        try { const s = document.querySelector('.luatools-settings-overlay'); if (s) s.remove(); } catch(_) {}
-        try { const f = document.querySelector('.luatools-fixes-results-overlay'); if (f) f.remove(); } catch(_) {}
-        try { const l = document.querySelector('.luatools-loading-fixes-overlay'); if (l) l.remove(); } catch(_) {}
+        try {
+            const d = document.querySelector('.luatools-overlay');
+            if (d) d.remove();
+        } catch (_) {}
+        try {
+            const s = document.querySelector('.luatools-settings-overlay');
+            if (s) s.remove();
+        } catch (_) {}
+        try {
+            const f = document.querySelector('.luatools-fixes-results-overlay');
+            if (f) f.remove();
+        } catch (_) {}
+        try {
+            const l = document.querySelector('.luatools-loading-fixes-overlay');
+            if (l) l.remove();
+        } catch (_) {}
 
         ensureLuaToolsStyles();
         ensureFontAwesome();
@@ -1524,8 +1727,18 @@
             btn.style.cssText = `display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:rgba(${btnColors.rgbString},0.1);border:1px solid ${btnColors.borderRgba};border-radius:10px;color:${btnColors.accent};font-size:18px;text-decoration:none;transition:all 0.3s ease;cursor:pointer;`;
             btn.innerHTML = '<i class="fa-solid ' + iconClass + '"></i>';
             btn.title = t(titleKey, titleFallback);
-            btn.onmouseover = function() { this.style.background = `rgba(${btnColors.rgbString},0.25)`; this.style.transform = 'translateY(-2px) scale(1.05)'; this.style.boxShadow = `0 8px 16px ${btnColors.shadowRgba}`; this.style.borderColor = btnColors.accent; };
-            btn.onmouseout = function() { this.style.background = `rgba(${btnColors.rgbString},0.1)`; this.style.transform = 'translateY(0) scale(1)'; this.style.boxShadow = 'none'; this.style.borderColor = btnColors.borderRgba; };
+            btn.onmouseover = function() {
+                this.style.background = `rgba(${btnColors.rgbString},0.25)`;
+                this.style.transform = 'translateY(-2px) scale(1.05)';
+                this.style.boxShadow = `0 8px 16px ${btnColors.shadowRgba}`;
+                this.style.borderColor = btnColors.accent;
+            };
+            btn.onmouseout = function() {
+                this.style.background = `rgba(${btnColors.rgbString},0.1)`;
+                this.style.transform = 'translateY(0) scale(1)';
+                this.style.boxShadow = 'none';
+                this.style.borderColor = btnColors.borderRgba;
+            };
             iconButtons.appendChild(btn);
             return btn;
         }
@@ -1544,7 +1757,7 @@
                 body.style.background = `linear-gradient(to bottom, rgba(15, 15, 15, 0.85), #0f0f0f 70%), url('${bannerImg.src}') no-repeat top center`;
                 body.style.backgroundSize = 'cover';
             }
-        } catch(_) {}
+        } catch (_) {}
 
         // Add mouse mode tip for Big Picture
         if (window.__LUATOOLS_IS_BIG_PICTURE__) {
@@ -1565,11 +1778,21 @@
                 gameIcon.src = iconImg.src;
                 gameIcon.style.display = 'block';
             }
-        } catch(_) {}
+        } catch (_) {}
 
         const gameName = document.createElement('div');
         gameName.style.cssText = 'font-size:22px;color:#fff;font-weight:600;text-align:center;';
         gameName.textContent = data.gameName || lt('Unknown Game');
+
+        if (!data.gameName || data.gameName === 'Unknown Game' || data.gameName === lt('Unknown Game') || data.gameName.startsWith('Unknown Game')) {
+            fetchSteamGameName(data.appid).then(function(name) {
+                if (name) {
+                    data.gameName = name;
+                    gameName.textContent = name;
+                }
+            });
+        }
+
 
         const contentContainer = document.createElement('div');
         contentContainer.style.position = 'relative';
@@ -1620,15 +1843,37 @@
             if (isSuccess) {
                 btn.style.background = 'linear-gradient(135deg, rgba(92,156,62,0.4) 0%, rgba(92,156,62,0.2) 100%)';
                 btn.style.borderColor = 'rgba(92,156,62,0.6)';
-                btn.onmouseover = function() { this.style.background = 'linear-gradient(135deg, rgba(92,156,62,0.6) 0%, rgba(92,156,62,0.3) 100%)'; this.style.transform = 'translateY(-2px)'; this.style.boxShadow = '0 8px 20px rgba(92,156,62,0.3)'; this.style.borderColor = '#79c754'; };
-                btn.onmouseout = function() { this.style.background = 'linear-gradient(135deg, rgba(92,156,62,0.4) 0%, rgba(92,156,62,0.2) 100%)'; this.style.transform = 'translateY(0)'; this.style.boxShadow = 'none'; this.style.borderColor = 'rgba(92,156,62,0.6)'; };
+                btn.onmouseover = function() {
+                    this.style.background = 'linear-gradient(135deg, rgba(92,156,62,0.6) 0%, rgba(92,156,62,0.3) 100%)';
+                    this.style.transform = 'translateY(-2px)';
+                    this.style.boxShadow = '0 8px 20px rgba(92,156,62,0.3)';
+                    this.style.borderColor = '#79c754';
+                };
+                btn.onmouseout = function() {
+                    this.style.background = 'linear-gradient(135deg, rgba(92,156,62,0.4) 0%, rgba(92,156,62,0.2) 100%)';
+                    this.style.transform = 'translateY(0)';
+                    this.style.boxShadow = 'none';
+                    this.style.borderColor = 'rgba(92,156,62,0.6)';
+                };
             } else if (isSuccess === false) {
                 btn.style.opacity = '0.5';
                 btn.style.cursor = 'not-allowed';
             } else {
                 const mutableColors = getThemeColors();
-                btn.onmouseover = function() { const c = getThemeColors(); this.style.background = `linear-gradient(135deg, rgba(${c.rgbString},0.3) 0%, rgba(${c.rgbString},0.15) 100%)`; this.style.transform = 'translateY(-2px)'; this.style.boxShadow = `0 8px 20px rgba(${c.rgbString},0.25)`; this.style.borderColor = c.accent; };
-                btn.onmouseout = function() { const c = getThemeColors(); this.style.background = `linear-gradient(135deg, rgba(${c.rgbString},0.15) 0%, rgba(${c.rgbString},0.05) 100%)`; this.style.transform = 'translateY(0)'; this.style.boxShadow = 'none'; this.style.borderColor = c.border; };
+                btn.onmouseover = function() {
+                    const c = getThemeColors();
+                    this.style.background = `linear-gradient(135deg, rgba(${c.rgbString},0.3) 0%, rgba(${c.rgbString},0.15) 100%)`;
+                    this.style.transform = 'translateY(-2px)';
+                    this.style.boxShadow = `0 8px 20px rgba(${c.rgbString},0.25)`;
+                    this.style.borderColor = c.accent;
+                };
+                btn.onmouseout = function() {
+                    const c = getThemeColors();
+                    this.style.background = `linear-gradient(135deg, rgba(${c.rgbString},0.15) 0%, rgba(${c.rgbString},0.05) 100%)`;
+                    this.style.transform = 'translateY(0)';
+                    this.style.boxShadow = 'none';
+                    this.style.borderColor = c.border;
+                };
             }
 
             btn.onclick = onClick;
@@ -1709,10 +1954,16 @@
             function(e) {
                 e.preventDefault();
                 if (isGameInstalled) {
-                    try { overlay.remove(); } catch(_) {}
+                    try {
+                        overlay.remove();
+                    } catch (_) {}
                     showLuaToolsConfirm('LuaTools', lt('Are you sure you want to un-fix? This will remove fix files and verify game files.'),
-                        function() { startUnfix(data.appid); },
-                        function() { showFixesResultsPopup(data, isGameInstalled); }
+                        function() {
+                            startUnfix(data.appid);
+                        },
+                        function() {
+                            showFixesResultsPopup(data, isGameInstalled);
+                        }
                     );
                 }
             }
@@ -1729,16 +1980,19 @@
         creditMsg.style.cssText = `margin-top:16px;text-align:center;font-size:13px;color:${creditColors.textSecondary};`;
         const creditTemplate = lt('Only possible thanks to {name} 💜');
         creditMsg.innerHTML = creditTemplate.replace('{name}', `<a href="#" id="lt-shayenvi-link" style="color:${creditColors.accent};text-decoration:none;font-weight:600;">ShayneVi</a>`);
-        
+
         // Wire up ShayneVi link
-        setTimeout(function(){
+        setTimeout(function() {
             const shayenviLink = overlay.querySelector('#lt-shayenvi-link');
             if (shayenviLink) {
-                shayenviLink.addEventListener('click', function(e){
+                shayenviLink.addEventListener('click', function(e) {
                     e.preventDefault();
                     try {
-                        Millennium.callServerMethod('luatools', 'OpenExternalUrl', { url: 'https://github.com/ShayneVi/', contentScriptQuery: '' });
-                    } catch(_) {}
+                        Millennium.callServerMethod('luatools', 'OpenExternalUrl', {
+                            url: 'https://github.com/ShayneVi/',
+                            contentScriptQuery: ''
+                        });
+                    } catch (_) {}
                 });
             }
         }, 0);
@@ -1774,12 +2028,17 @@
         gameFolderBtn.className = 'luatools-btn';
         gameFolderBtn.innerHTML = `<span><i class="fa-solid fa-folder" style="margin-right: 8px;"></i>${lt('Game folder')}</span>`;
         gameFolderBtn.href = '#';
-        gameFolderBtn.onclick = function(e){ 
-            e.preventDefault(); 
+        gameFolderBtn.onclick = function(e) {
+            e.preventDefault();
             if (window.__LuaToolsGameInstallPath) {
                 try {
-                    Millennium.callServerMethod('luatools', 'OpenGameFolder', { path: window.__LuaToolsGameInstallPath, contentScriptQuery: '' });
-                } catch(err) { backendLog('LuaTools: Failed to open game folder: ' + err); }
+                    Millennium.callServerMethod('luatools', 'OpenGameFolder', {
+                        path: window.__LuaToolsGameInstallPath,
+                        contentScriptQuery: ''
+                    });
+                } catch (err) {
+                    backendLog('LuaTools: Failed to open game folder: ' + err);
+                }
             }
         };
         rightButtons.appendChild(gameFolderBtn);
@@ -1788,9 +2047,11 @@
         backBtn.className = 'luatools-btn';
         backBtn.innerHTML = '<span><i class="fa-solid fa-arrow-left"></i></span>';
         backBtn.href = '#';
-        backBtn.onclick = function(e){
+        backBtn.onclick = function(e) {
             e.preventDefault();
-            try { overlay.remove(); } catch(_) {}
+            try {
+                overlay.remove();
+            } catch (_) {}
             showSettingsPopup();
         };
         btnRow.appendChild(backBtn);
@@ -1810,22 +2071,40 @@
             }
         }, 150);
 
-        closeIconBtn.onclick = function(e) { e.preventDefault(); overlay.remove(); };
+        closeIconBtn.onclick = function(e) {
+            e.preventDefault();
+            overlay.remove();
+        };
         discordBtn.onclick = function(e) {
             e.preventDefault();
-            try { overlay.remove(); } catch(_) {}
+            try {
+                overlay.remove();
+            } catch (_) {}
             const url = 'https://discord.gg/luatools';
-            try { Millennium.callServerMethod('luatools', 'OpenExternalUrl', { url, contentScriptQuery: '' }); } catch(_) {}
+            try {
+                Millennium.callServerMethod('luatools', 'OpenExternalUrl', {
+                    url,
+                    contentScriptQuery: ''
+                });
+            } catch (_) {}
         };
         settingsBtn.onclick = function(e) {
             e.preventDefault();
-            try { overlay.remove(); } catch(_) {}
-            showSettingsManagerPopup(false, function() { showFixesResultsPopup(data, isGameInstalled); });
+            try {
+                overlay.remove();
+            } catch (_) {}
+            showSettingsManagerPopup(false, function() {
+                showFixesResultsPopup(data, isGameInstalled);
+            });
         };
 
         function startUnfix(appid) {
             try {
-                Millennium.callServerMethod('luatools', 'UnFixGame', { appid: appid, installPath: window.__LuaToolsGameInstallPath, contentScriptQuery: '' }).then(function(res){
+                Millennium.callServerMethod('luatools', 'UnFixGame', {
+                    appid: appid,
+                    installPath: window.__LuaToolsGameInstallPath,
+                    contentScriptQuery: ''
+                }).then(function(res) {
                     const payload = typeof res === 'string' ? JSON.parse(res) : res;
                     if (payload && payload.success) {
                         showUnfixProgress(appid);
@@ -1834,19 +2113,30 @@
                         const errorMsg = (errorKey && (errorKey.startsWith('menu.error.') || errorKey.startsWith('common.'))) ? t(errorKey) : (errorKey || lt('Failed to start un-fix'));
                         ShowLuaToolsAlert('LuaTools', errorMsg);
                     }
-                }).catch(function(){
+                }).catch(function() {
                     const msg = lt('Error starting un-fix');
                     ShowLuaToolsAlert('LuaTools', msg);
                 });
-            } catch(err) { backendLog('LuaTools: Un-Fix start error: ' + err); }
+            } catch (err) {
+                backendLog('LuaTools: Un-Fix start error: ' + err);
+            }
         }
     }
 
     function showFixesLoadingPopupAndCheck(appid) {
         if (document.querySelector('.luatools-loading-fixes-overlay')) return;
-        try { const d = document.querySelector('.luatools-overlay'); if (d) d.remove(); } catch(_) {}
-        try { const s = document.querySelector('.luatools-settings-overlay'); if (s) s.remove(); } catch(_) {}
-        try { const f = document.querySelector('.luatools-fixes-overlay'); if (f) f.remove(); } catch(_) {}
+        try {
+            const d = document.querySelector('.luatools-overlay');
+            if (d) d.remove();
+        } catch (_) {}
+        try {
+            const s = document.querySelector('.luatools-settings-overlay');
+            if (s) s.remove();
+        } catch (_) {}
+        try {
+            const f = document.querySelector('.luatools-fixes-overlay');
+            if (f) f.remove();
+        } catch (_) {}
 
         ensureLuaToolsStyles();
         ensureFontAwesome();
@@ -1896,7 +2186,7 @@
             }
         }, 200);
 
-        fetchFixes(appid).then(function(payload){
+        fetchFixes(appid).then(function(payload) {
             if (payload && payload.success) {
                 const isGameInstalled = window.__LuaToolsGameIsInstalled === true;
                 showFixesResultsPopup(payload, isGameInstalled);
@@ -1914,7 +2204,7 @@
                 try {
                     const l = document.querySelector('.luatools-loading-fixes-overlay');
                     if (l) l.remove();
-                } catch(_) {}
+                } catch (_) {}
             }, 300);
         });
     }
@@ -1926,25 +2216,25 @@
             if (resultsOverlay) {
                 resultsOverlay.remove();
             }
-            
+
             // Check if we have the game install path
             if (!window.__LuaToolsGameInstallPath) {
                 const msg = lt('Game install path not found');
                 ShowLuaToolsAlert('LuaTools', msg);
                 return;
             }
-            
+
             backendLog('LuaTools: Applying fix ' + fixType + ' for appid ' + appid);
-            
+
             // Start the download and extraction process
-            Millennium.callServerMethod('luatools', 'ApplyGameFix', { 
-                appid: appid, 
-                downloadUrl: downloadUrl, 
+            Millennium.callServerMethod('luatools', 'ApplyGameFix', {
+                appid: appid,
+                downloadUrl: downloadUrl,
                 installPath: window.__LuaToolsGameInstallPath,
                 fixType: fixType,
                 gameName: gameName || '',
-                contentScriptQuery: '' 
-            }).then(function(res){
+                contentScriptQuery: ''
+            }).then(function(res) {
                 try {
                     const payload = typeof res === 'string' ? JSON.parse(res) : res;
                     if (payload && payload.success) {
@@ -1955,17 +2245,17 @@
                         const errorMsg = (errorKey && (errorKey.startsWith('menu.error.') || errorKey.startsWith('common.'))) ? t(errorKey) : (errorKey || lt('Failed to start fix download'));
                         ShowLuaToolsAlert('LuaTools', errorMsg);
                     }
-                } catch(err) {
+                } catch (err) {
                     backendLog('LuaTools: ApplyGameFix response error: ' + err);
                     const msg = lt('Error applying fix');
                     ShowLuaToolsAlert('LuaTools', msg);
                 }
-            }).catch(function(err){
+            }).catch(function(err) {
                 backendLog('LuaTools: ApplyGameFix error: ' + err);
                 const msg = lt('Error applying fix');
                 ShowLuaToolsAlert('LuaTools', msg);
             });
-        } catch(err) {
+        } catch (err) {
             backendLog('LuaTools: applyFix error: ' + err);
         }
     }
@@ -2004,7 +2294,10 @@
         hideBtn.className = 'luatools-btn';
         hideBtn.style.flex = '1';
         hideBtn.innerHTML = `<span>${lt('Hide')}</span>`;
-        hideBtn.onclick = function(e){ e.preventDefault(); overlay.remove(); };
+        hideBtn.onclick = function(e) {
+            e.preventDefault();
+            overlay.remove();
+        };
         btnRow.appendChild(hideBtn);
 
         const cancelBtn = document.createElement('a');
@@ -2012,7 +2305,7 @@
         cancelBtn.className = 'luatools-btn primary';
         cancelBtn.style.flex = '1';
         cancelBtn.innerHTML = `<span>${lt('Cancel')}</span>`;
-        cancelBtn.onclick = function(e){
+        cancelBtn.onclick = function(e) {
             e.preventDefault();
             if (cancelBtn.dataset.pending === '1') return;
             cancelBtn.dataset.pending = '1';
@@ -2020,13 +2313,16 @@
             if (span) span.textContent = lt('Cancelling...');
             const msgEl = document.getElementById('lt-fix-progress-msg');
             if (msgEl) msgEl.textContent = lt('Cancelling...');
-            Millennium.callServerMethod('luatools', 'CancelApplyFix', { appid: appid, contentScriptQuery: '' }).then(function(res){
+            Millennium.callServerMethod('luatools', 'CancelApplyFix', {
+                appid: appid,
+                contentScriptQuery: ''
+            }).then(function(res) {
                 try {
                     const payload = typeof res === 'string' ? JSON.parse(res) : res;
                     if (!payload || payload.success !== true) {
                         throw new Error((payload && payload.error) || lt('Cancellation failed'));
                     }
-                } catch(err) {
+                } catch (err) {
                     cancelBtn.dataset.pending = '0';
                     if (span) span.textContent = lt('Cancel');
                     const msgEl2 = document.getElementById('lt-fix-progress-msg');
@@ -2035,7 +2331,7 @@
                     const msg = lt('Failed to cancel fix download');
                     ShowLuaToolsAlert('LuaTools', msg);
                 }
-            }).catch(function(err){
+            }).catch(function(err) {
                 cancelBtn.dataset.pending = '0';
                 const span2 = cancelBtn.querySelector('span');
                 if (span2) span2.textContent = lt('Cancel');
@@ -2076,7 +2372,10 @@
         closeBtn.className = 'luatools-btn primary';
         closeBtn.style.minWidth = '140px';
         closeBtn.innerHTML = `<span>${lt('Close')}</span>`;
-        closeBtn.onclick = function(e){ e.preventDefault(); overlayEl.remove(); };
+        closeBtn.onclick = function(e) {
+            e.preventDefault();
+            overlayEl.remove();
+        };
         btnRow.appendChild(closeBtn);
     }
 
@@ -2086,20 +2385,29 @@
             try {
                 const overlayEl = document.querySelector('.luatools-overlay');
                 if (!overlayEl) return; // Stop if overlay was closed
-                
-                Millennium.callServerMethod('luatools', 'GetApplyFixStatus', { appid: appid, contentScriptQuery: '' }).then(function(res){
+
+                Millennium.callServerMethod('luatools', 'GetApplyFixStatus', {
+                    appid: appid,
+                    contentScriptQuery: ''
+                }).then(function(res) {
                     try {
                         const payload = typeof res === 'string' ? JSON.parse(res) : res;
                         if (payload && payload.success && payload.state) {
                             const state = payload.state;
                             const msgEl = document.getElementById('lt-fix-progress-msg');
-                            
+
                             if (state.status === 'downloading') {
                                 const pct = state.totalBytes > 0 ? Math.floor((state.bytesRead / state.totalBytes) * 100) : 0;
-                                if (msgEl) { msgEl.textContent = lt('Downloading: {percent}%').replace('{percent}', pct); msgEl.dataset.last = msgEl.textContent; }
+                                if (msgEl) {
+                                    msgEl.textContent = lt('Downloading: {percent}%').replace('{percent}', pct);
+                                    msgEl.dataset.last = msgEl.textContent;
+                                }
                                 setTimeout(poll, 500);
                             } else if (state.status === 'extracting') {
-                                if (msgEl) { msgEl.textContent = lt('Extracting to game folder...'); msgEl.dataset.last = msgEl.textContent; }
+                                if (msgEl) {
+                                    msgEl.textContent = lt('Extracting to game folder...');
+                                    msgEl.dataset.last = msgEl.textContent;
+                                }
                                 setTimeout(poll, 500);
                             } else if (state.status === 'cancelled') {
                                 if (msgEl) msgEl.textContent = lt('Cancelled: {reason}').replace('{reason}', state.error || lt('Cancelled by user'));
@@ -2118,11 +2426,11 @@
                                 setTimeout(poll, 500);
                             }
                         }
-                    } catch(err) {
+                    } catch (err) {
                         backendLog('LuaTools: GetApplyFixStatus error: ' + err);
                     }
                 });
-            } catch(err) {
+            } catch (err) {
                 backendLog('LuaTools: pollFixProgress error: ' + err);
             }
         };
@@ -2132,7 +2440,10 @@
     // Show un-fix progress popup
     function showUnfixProgress(appid) {
         // Remove any existing popup
-        try { const old = document.querySelector('.luatools-unfix-overlay'); if (old) old.remove(); } catch(_) {}
+        try {
+            const old = document.querySelector('.luatools-unfix-overlay');
+            if (old) old.remove();
+        } catch (_) {}
 
         ensureLuaToolsStyles();
         ensureFontAwesome();
@@ -2160,7 +2471,10 @@
         hideBtn.className = 'luatools-btn';
         hideBtn.style.minWidth = '140px';
         hideBtn.innerHTML = `<span>${lt('Hide')}</span>`;
-        hideBtn.onclick = function(e){ e.preventDefault(); overlay.remove(); };
+        hideBtn.onclick = function(e) {
+            e.preventDefault();
+            overlay.remove();
+        };
         btnRow.appendChild(hideBtn);
 
         modal.appendChild(title);
@@ -2186,14 +2500,17 @@
             try {
                 const overlayEl = document.querySelector('.luatools-unfix-overlay');
                 if (!overlayEl) return; // Stop if overlay was closed
-                
-                Millennium.callServerMethod('luatools', 'GetUnfixStatus', { appid: appid, contentScriptQuery: '' }).then(function(res){
+
+                Millennium.callServerMethod('luatools', 'GetUnfixStatus', {
+                    appid: appid,
+                    contentScriptQuery: ''
+                }).then(function(res) {
                     try {
                         const payload = typeof res === 'string' ? JSON.parse(res) : res;
                         if (payload && payload.success && payload.state) {
                             const state = payload.state;
                             const msgEl = document.getElementById('lt-unfix-progress-msg');
-                            
+
                             if (state.status === 'removing') {
                                 if (msgEl) msgEl.textContent = state.progress || lt('Removing fix files...');
                                 // Continue polling
@@ -2211,20 +2528,23 @@
                                         closeBtn.className = 'luatools-btn primary';
                                         closeBtn.style.minWidth = '140px';
                                         closeBtn.innerHTML = `<span>${lt('Close')}</span>`;
-                                        closeBtn.onclick = function(e){ e.preventDefault(); overlayEl.remove(); };
+                                        closeBtn.onclick = function(e) {
+                                            e.preventDefault();
+                                            overlayEl.remove();
+                                        };
                                         btnRow.appendChild(closeBtn);
                                     }
-                                } catch(_) {}
-                                
+                                } catch (_) {}
+
                                 // Trigger Steam verification after a short delay
-                                setTimeout(function(){
+                                setTimeout(function() {
                                     try {
                                         const verifyUrl = 'steam://validate/' + appid;
                                         window.location.href = verifyUrl;
                                         backendLog('LuaTools: Running verify for appid ' + appid);
-                                    } catch(_) {}
+                                    } catch (_) {}
                                 }, 1000);
-                                
+
                                 return; // Stop polling
                             } else if (state.status === 'failed') {
                                 if (msgEl) msgEl.textContent = lt('Failed: {error}').replace('{error}', state.error || lt('Unknown error'));
@@ -2238,21 +2558,24 @@
                                         closeBtn.className = 'luatools-btn primary';
                                         closeBtn.style.minWidth = '140px';
                                         closeBtn.innerHTML = `<span>${lt('Close')}</span>`;
-                                        closeBtn.onclick = function(e){ e.preventDefault(); overlayEl.remove(); };
+                                        closeBtn.onclick = function(e) {
+                                            e.preventDefault();
+                                            overlayEl.remove();
+                                        };
                                         btnRow.appendChild(closeBtn);
                                     }
-                                } catch(_) {}
+                                } catch (_) {}
                                 return; // Stop polling
                             } else {
                                 // Continue polling for unknown states
                                 setTimeout(poll, 500);
                             }
                         }
-                    } catch(err) {
+                    } catch (err) {
                         backendLog('LuaTools: GetUnfixStatus error: ' + err);
                     }
                 });
-            } catch(err) {
+            } catch (err) {
                 backendLog('LuaTools: pollUnfixProgress error: ' + err);
             }
         };
@@ -2264,13 +2587,15 @@
             if (!forceRefresh && window.__LuaToolsSettings && Array.isArray(window.__LuaToolsSettings.schema)) {
                 return Promise.resolve(window.__LuaToolsSettings);
             }
-        } catch(_) {}
+        } catch (_) {}
 
         if (typeof Millennium === 'undefined' || typeof Millennium.callServerMethod !== 'function') {
             return Promise.reject(new Error(lt('LuaTools backend unavailable')));
         }
 
-        return Millennium.callServerMethod('luatools', 'GetSettingsConfig', { contentScriptQuery: '' }).then(function(res){
+        return Millennium.callServerMethod('luatools', 'GetSettingsConfig', {
+            contentScriptQuery: ''
+        }).then(function(res) {
             const payload = typeof res === 'string' ? JSON.parse(res) : res;
             if (!payload || payload.success !== true) {
                 const errorMsg = (payload && payload.error) ? String(payload.error) : t('settings.error', 'Failed to load settings.');
@@ -2321,7 +2646,10 @@
     function showSettingsManagerPopup(forceRefresh, onBack) {
         if (document.querySelector('.luatools-settings-manager-overlay')) return;
 
-        try { const mainOverlay = document.querySelector('.luatools-settings-overlay'); if (mainOverlay) mainOverlay.remove(); } catch(_) {}
+        try {
+            const mainOverlay = document.querySelector('.luatools-settings-overlay');
+            if (mainOverlay) mainOverlay.remove();
+        } catch (_) {}
 
         ensureLuaToolsStyles();
         ensureFontAwesome();
@@ -2352,8 +2680,20 @@
         discordIconBtn.style.cssText = `display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:rgba(${discordBtnColors.rgbString},0.1);border:1px solid ${discordBtnColors.border};border-radius:10px;color:${discordBtnColors.accent};font-size:18px;text-decoration:none;transition:all 0.3s ease;cursor:pointer;`;
         discordIconBtn.innerHTML = '<i class="fa-brands fa-discord"></i>';
         discordIconBtn.title = t('menu.discord', 'Discord');
-        discordIconBtn.onmouseover = function() { const c = getThemeColors(); this.style.background = `rgba(${c.rgbString},0.25)`; this.style.transform = 'translateY(-2px) scale(1.05)'; this.style.boxShadow = `0 8px 16px ${c.shadow}`; this.style.borderColor = c.accent; };
-        discordIconBtn.onmouseout = function() { const c = getThemeColors(); this.style.background = `rgba(${c.rgbString},0.1)`; this.style.transform = 'translateY(0) scale(1)'; this.style.boxShadow = 'none'; this.style.borderColor = c.border; };
+        discordIconBtn.onmouseover = function() {
+            const c = getThemeColors();
+            this.style.background = `rgba(${c.rgbString},0.25)`;
+            this.style.transform = 'translateY(-2px) scale(1.05)';
+            this.style.boxShadow = `0 8px 16px ${c.shadow}`;
+            this.style.borderColor = c.accent;
+        };
+        discordIconBtn.onmouseout = function() {
+            const c = getThemeColors();
+            this.style.background = `rgba(${c.rgbString},0.1)`;
+            this.style.transform = 'translateY(0) scale(1)';
+            this.style.boxShadow = 'none';
+            this.style.borderColor = c.border;
+        };
         iconButtons.appendChild(discordIconBtn);
 
         const closeIconBtn = document.createElement('a');
@@ -2362,39 +2702,61 @@
         closeIconBtn.style.cssText = `display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:rgba(${closeBtnColors.rgbString},0.1);border:1px solid ${closeBtnColors.border};border-radius:10px;color:${closeBtnColors.accent};font-size:18px;text-decoration:none;transition:all 0.3s ease;cursor:pointer;`;
         closeIconBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
         closeIconBtn.title = t('settings.close', 'Close');
-        closeIconBtn.onmouseover = function() { const c = getThemeColors(); this.style.background = `rgba(${c.rgbString},0.25)`; this.style.transform = 'translateY(-2px) scale(1.05)'; this.style.boxShadow = `0 8px 16px ${c.shadow}`; this.style.borderColor = c.accent; };
-        closeIconBtn.onmouseout = function() { const c = getThemeColors(); this.style.background = `rgba(${c.rgbString},0.1)`; this.style.transform = 'translateY(0) scale(1)'; this.style.boxShadow = 'none'; this.style.borderColor = c.border; };
+        closeIconBtn.onmouseover = function() {
+            const c = getThemeColors();
+            this.style.background = `rgba(${c.rgbString},0.25)`;
+            this.style.transform = 'translateY(-2px) scale(1.05)';
+            this.style.boxShadow = `0 8px 16px ${c.shadow}`;
+            this.style.borderColor = c.accent;
+        };
+        closeIconBtn.onmouseout = function() {
+            const c = getThemeColors();
+            this.style.background = `rgba(${c.rgbString},0.1)`;
+            this.style.transform = 'translateY(0) scale(1)';
+            this.style.boxShadow = 'none';
+            this.style.borderColor = c.border;
+        };
         iconButtons.appendChild(closeIconBtn);
 
         // Search bar container
         const searchContainer = document.createElement('div');
         const searchColors = getThemeColors();
         searchContainer.style.cssText = 'padding:0 24px 16px;';
-        
+
         const searchWrap = document.createElement('div');
         searchWrap.style.cssText = `display:flex;align-items:center;gap:10px;padding:10px 14px;background:${searchColors.bgTertiary};border:1px solid ${searchColors.border};border-radius:10px;transition:all 0.2s ease;`;
-        
+
         const searchIcon = document.createElement('i');
         searchIcon.className = 'fa-solid fa-magnifying-glass';
         searchIcon.style.cssText = `color:${searchColors.textSecondary};font-size:14px;`;
-        
+
         const searchInput = document.createElement('input');
         searchInput.type = 'text';
         searchInput.id = 'luatools-settings-search';
         searchInput.placeholder = t('settings.search.placeholder', 'Search settings, games, fixes...');
         searchInput.style.cssText = `flex:1;background:transparent;border:none;outline:none;color:${searchColors.text};font-size:14px;`;
         searchInput.setAttribute('autocomplete', 'off');
-        
+
         const searchClear = document.createElement('a');
         searchClear.href = '#';
         searchClear.style.cssText = `display:none;color:${searchColors.textSecondary};font-size:14px;text-decoration:none;padding:4px;`;
         searchClear.innerHTML = '<i class="fa-solid fa-xmark"></i>';
         searchClear.title = t('settings.search.clear', 'Clear search');
-        
-        searchWrap.onfocus = function() { searchWrap.style.borderColor = searchColors.accent; };
-        searchInput.onfocus = function() { const c = getThemeColors(); searchWrap.style.borderColor = c.accent; searchWrap.style.boxShadow = `0 0 0 3px rgba(${c.rgbString},0.15)`; };
-        searchInput.onblur = function() { const c = getThemeColors(); searchWrap.style.borderColor = c.border; searchWrap.style.boxShadow = 'none'; };
-        
+
+        searchWrap.onfocus = function() {
+            searchWrap.style.borderColor = searchColors.accent;
+        };
+        searchInput.onfocus = function() {
+            const c = getThemeColors();
+            searchWrap.style.borderColor = c.accent;
+            searchWrap.style.boxShadow = `0 0 0 3px rgba(${c.rgbString},0.15)`;
+        };
+        searchInput.onblur = function() {
+            const c = getThemeColors();
+            searchWrap.style.borderColor = c.border;
+            searchWrap.style.boxShadow = 'none';
+        };
+
         searchWrap.appendChild(searchIcon);
         searchWrap.appendChild(searchInput);
         searchWrap.appendChild(searchClear);
@@ -2441,13 +2803,13 @@
             draft: {},
             searchQuery: '',
         };
-        
+
         // Search functionality
         let searchDebounceTimer = null;
         searchInput.addEventListener('input', function() {
             const query = searchInput.value.trim().toLowerCase();
             searchClear.style.display = query ? 'block' : 'none';
-            
+
             // Debounce the search
             if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
             searchDebounceTimer = setTimeout(function() {
@@ -2455,7 +2817,7 @@
                 applySearchFilter();
             }, 150);
         });
-        
+
         searchClear.addEventListener('click', function(e) {
             e.preventDefault();
             searchInput.value = '';
@@ -2464,10 +2826,10 @@
             applySearchFilter();
             searchInput.focus();
         });
-        
+
         function applySearchFilter() {
             const query = state.searchQuery;
-            
+
             // Filter settings options
             const optionEls = contentWrap.querySelectorAll('[data-setting-option]');
             optionEls.forEach(function(el) {
@@ -2478,7 +2840,7 @@
                     el.style.display = 'none';
                 }
             });
-            
+
             // Filter settings groups (hide if all options hidden)
             const groupEls = contentWrap.querySelectorAll('[data-setting-group]');
             groupEls.forEach(function(groupEl) {
@@ -2489,7 +2851,7 @@
                     groupEl.style.display = 'none';
                 }
             });
-            
+
             // Filter installed fixes
             const fixItems = contentWrap.querySelectorAll('[data-fix-item]');
             let visibleFixes = 0;
@@ -2502,7 +2864,7 @@
                     el.style.display = 'none';
                 }
             });
-            
+
             // Show/hide fixes empty state
             const fixesSection = document.getElementById('luatools-installed-fixes-section');
             const fixesEmptySearch = fixesSection ? fixesSection.querySelector('.search-empty-state') : null;
@@ -2519,7 +2881,7 @@
             } else if (fixesEmptySearch) {
                 fixesEmptySearch.remove();
             }
-            
+
             // Filter installed lua scripts
             const luaItems = contentWrap.querySelectorAll('[data-lua-item]');
             let visibleLua = 0;
@@ -2532,7 +2894,7 @@
                     el.style.display = 'none';
                 }
             });
-            
+
             // Show/hide lua empty state
             const luaSection = document.getElementById('luatools-installed-lua-section');
             const luaEmptySearch = luaSection ? luaSection.querySelector('.search-empty-state') : null;
@@ -2593,6 +2955,7 @@
 
         header.appendChild(title);
         header.appendChild(iconButtons);
+
         function applyStaticTranslations() {
             title.textContent = t('settings.title', 'LuaTools · Settings');
             refreshBtn.title = t('settings.refresh', 'Refresh');
@@ -2608,7 +2971,7 @@
             if (!statusLine) {
                 statusLine = document.createElement('div');
                 statusLine.className = 'luatools-settings-status';
-                statusLine.style.cssText = 'font-size:13px;margin-top:10px;transform:translateY(15px);color:#c7d5e0;min-height:18px;text-align:center;';  // may god have mercy upon your soul for witnessing this translateY
+                statusLine.style.cssText = 'font-size:13px;margin-top:10px;transform:translateY(15px);color:#c7d5e0;min-height:18px;text-align:center;'; // may god have mercy upon your soul for witnessing this translateY
                 contentWrap.insertBefore(statusLine, contentWrap.firstChild);
             }
             statusLine.textContent = text || '';
@@ -2748,7 +3111,7 @@
                     const labelKey = optionLabelKey(group.key, option.key);
                     const labelText = t(labelKey || ('settings.' + group.key + '.' + option.key + '.label'), option.label || option.key);
                     optionLabel.textContent = labelText;
-                    
+
                     // Build search text from label, description, and key
                     const descText = option.description || '';
                     optionEl.dataset.searchText = (labelText + ' ' + descText + ' ' + option.key + ' ' + group.key).toLowerCase();
@@ -2786,41 +3149,47 @@
                             selectEl.value = String(currentValue);
                         }
 
-                        selectEl.addEventListener('change', function(){
+                        selectEl.addEventListener('change', function() {
                             state.draft[group.key][option.key] = selectEl.value;
-                            try { backendLog('LuaTools: ' + option.key + ' select changed to ' + selectEl.value); } catch(_) {}
-                            
+                            try {
+                                backendLog('LuaTools: ' + option.key + ' select changed to ' + selectEl.value);
+                            } catch (_) {}
+
                             // If theme changed, apply it immediately
                             if (group.key === 'general' && option.key === 'theme') {
-                                try { backendLog('LuaTools: Theme change detected, new value: ' + selectEl.value); } catch(_) {}
+                                try {
+                                    backendLog('LuaTools: Theme change detected, new value: ' + selectEl.value);
+                                } catch (_) {}
                                 // Update the settings cache so getCurrentTheme() returns the new value
                                 if (window.__LuaToolsSettings && window.__LuaToolsSettings.values) {
                                     if (!window.__LuaToolsSettings.values.general) {
                                         window.__LuaToolsSettings.values.general = {};
                                     }
                                     window.__LuaToolsSettings.values.general.theme = selectEl.value;
-                                    try { backendLog('LuaTools: Updated cache, theme is now: ' + window.__LuaToolsSettings.values.general.theme); } catch(_) {}
+                                    try {
+                                        backendLog('LuaTools: Updated cache, theme is now: ' + window.__LuaToolsSettings.values.general.theme);
+                                    } catch (_) {}
                                 }
                                 // Reload styles immediately
                                 ensureLuaToolsStyles();
-                                
+
                                 // Update all modal elements with new theme colors
                                 setTimeout(function() {
                                     const colors = getThemeColors();
-                                    
+
                                     // Update modal background and border
                                     const modalEl = overlay && overlay.querySelector('[style*="background:linear-gradient"]');
                                     if (modalEl) {
                                         modalEl.style.background = colors.modalBg;
                                         modalEl.style.borderColor = colors.border;
                                     }
-                                    
+
                                     // Update header border
                                     const headerEl = overlay && overlay.querySelector('[style*="border-bottom"]');
                                     if (headerEl) {
                                         headerEl.style.borderBottomColor = colors.border.replace('0.3', '0.2');
                                     }
-                                    
+
                                     // Update all title and text colors
                                     const titles = overlay && overlay.querySelectorAll('[style*="text-shadow"]');
                                     if (titles) {
@@ -2828,18 +3197,18 @@
                                             title.style.backgroundImage = colors.gradientLight;
                                         });
                                     }
-                                    
+
                                     // Update content wrapper border
                                     const contentWrapEl = overlay && overlay.querySelector('#luatools-content-wrap');
                                     if (contentWrapEl) {
                                         contentWrapEl.style.borderColor = colors.border;
                                         contentWrapEl.style.background = colors.bgContainer;
                                     }
-                                    
+
                                     // Re-render the settings content
                                     renderSettings();
                                 }, 50);
-                                
+
                                 // Auto-save theme changes after a brief delay
                                 setTimeout(function() {
                                     if (saveBtn && saveBtn.dataset.disabled !== '1' && saveBtn.dataset.busy !== '1') {
@@ -2847,7 +3216,7 @@
                                     }
                                 }, 150);
                             }
-                            
+
                             updateSaveState();
                             setStatus(t('settings.unsaved', 'Unsaved changes'), '#c7d5e0');
                         });
@@ -2897,7 +3266,7 @@
                             }
                         }
 
-                        yesBtn.addEventListener('click', function(e){
+                        yesBtn.addEventListener('click', function(e) {
                             e.preventDefault();
                             state.draft[group.key][option.key] = true;
                             refreshToggleButtons();
@@ -2905,7 +3274,7 @@
                             setStatus(t('settings.unsaved', 'Unsaved changes'), '#c7d5e0');
                         });
 
-                        noBtn.addEventListener('click', function(e){
+                        noBtn.addEventListener('click', function(e) {
                             e.preventDefault();
                             state.draft[group.key][option.key] = false;
                             refreshToggleButtons();
@@ -2930,18 +3299,18 @@
                             textInput.value = String(currentValue);
                         }
 
-                        textInput.addEventListener('input', function(){
+                        textInput.addEventListener('input', function() {
                             state.draft[group.key][option.key] = textInput.value;
                             updateSaveState();
                             setStatus(t('settings.unsaved', 'Unsaved changes'), '#c7d5e0');
                         });
 
-                        textInput.addEventListener('focus', function(){
+                        textInput.addEventListener('focus', function() {
                             textInput.style.borderColor = textColors.accent + ' !important';
                             textInput.style.outline = 'none';
                         });
 
-                        textInput.addEventListener('blur', function(){
+                        textInput.addEventListener('blur', function() {
                             textInput.style.borderColor = textColors.border + ' !important';
                         });
 
@@ -2999,7 +3368,9 @@
             const loadingColors = getThemeColors();
             container.innerHTML = `<div style="padding:14px;text-align:center;color:${loadingColors.textSecondary};">${t('settings.installedFixes.loading', 'Scanning for installed fixes...')}</div>`;
 
-            Millennium.callServerMethod('luatools', 'GetInstalledFixes', { contentScriptQuery: '' })
+            Millennium.callServerMethod('luatools', 'GetInstalledFixes', {
+                    contentScriptQuery: ''
+                })
                 .then(function(res) {
                     const response = typeof res === 'string' ? JSON.parse(res) : res;
                     if (!response || !response.success) {
@@ -3021,7 +3392,7 @@
                         const fixEl = createFixListItem(fix, container);
                         container.appendChild(fixEl);
                     }
-                    
+
                     // Re-apply search filter after loading
                     if (state.searchQuery) {
                         setTimeout(applySearchFilter, 50);
@@ -3037,9 +3408,17 @@
             const itemEl = document.createElement('div');
             const itemColors = getThemeColors();
             itemEl.style.cssText = `margin-bottom:12px;padding:14px;background:${itemColors.bgTertiary};border:1px solid ${itemColors.border};border-radius:6px;display:flex;justify-content:space-between;align-items:center;transition:all 0.2s ease;`;
-            itemEl.onmouseover = function() { const c = getThemeColors(); this.style.borderColor = c.accent; this.style.background = c.bgHover; };
-            itemEl.onmouseout = function() { const c = getThemeColors(); this.style.borderColor = c.border; this.style.background = c.bgTertiary; };
-            
+            itemEl.onmouseover = function() {
+                const c = getThemeColors();
+                this.style.borderColor = c.accent;
+                this.style.background = c.bgHover;
+            };
+            itemEl.onmouseout = function() {
+                const c = getThemeColors();
+                this.style.borderColor = c.border;
+                this.style.background = c.bgTertiary;
+            };
+
             // Add search data attributes
             itemEl.dataset.fixItem = fix.appid;
             const gameNameText = fix.gameName || 'Unknown Game';
@@ -3053,6 +3432,16 @@
             gameName.style.cssText = `font-size:15px;font-weight:600;color:${nameColors.text};margin-bottom:6px;`;
             gameName.textContent = gameNameText + (fix.gameName ? '' : ' (' + fix.appid + ')');
             infoDiv.appendChild(gameName);
+
+            if (!fix.gameName || fix.gameName.startsWith('Unknown Game')) {
+                fetchSteamGameName(fix.appid).then(function(name) {
+                    if (name) {
+                        fix.gameName = name;
+                        gameName.textContent = name;
+                        itemEl.dataset.searchText = (name + ' ' + fix.appid + ' ' + (fix.fixType || '') + ' fix').toLowerCase();
+                    }
+                });
+            }
 
             const detailsDiv = document.createElement('div');
             const detailsColors = getThemeColors();
@@ -3116,30 +3505,30 @@
                         deleteBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
 
                         Millennium.callServerMethod('luatools', 'UnFixGame', {
-                            appid: fix.appid,
-                            installPath: fix.installPath || '',
-                            fixDate: fix.date || '',
-                            contentScriptQuery: ''
-                        })
-                        .then(function(res) {
-                            const response = typeof res === 'string' ? JSON.parse(res) : res;
-                            if (!response || !response.success) {
-                                alert(t('settings.installedFixes.deleteError', 'Failed to remove fix.'));
+                                appid: fix.appid,
+                                installPath: fix.installPath || '',
+                                fixDate: fix.date || '',
+                                contentScriptQuery: ''
+                            })
+                            .then(function(res) {
+                                const response = typeof res === 'string' ? JSON.parse(res) : res;
+                                if (!response || !response.success) {
+                                    alert(t('settings.installedFixes.deleteError', 'Failed to remove fix.'));
+                                    deleteBtn.dataset.busy = '0';
+                                    deleteBtn.style.opacity = '1';
+                                    deleteBtn.innerHTML = '<span><i class="fa-solid fa-trash"></i> ' + t('settings.installedFixes.delete', 'Delete') + '</span>';
+                                    return;
+                                }
+
+                                // Poll for unfix status
+                                pollUnfixStatus(fix.appid, itemEl, deleteBtn, container);
+                            })
+                            .catch(function(err) {
+                                alert(t('settings.installedFixes.deleteError', 'Failed to remove fix.') + ' ' + (err && err.message ? err.message : ''));
                                 deleteBtn.dataset.busy = '0';
                                 deleteBtn.style.opacity = '1';
                                 deleteBtn.innerHTML = '<span><i class="fa-solid fa-trash"></i> ' + t('settings.installedFixes.delete', 'Delete') + '</span>';
-                                return;
-                            }
-
-                            // Poll for unfix status
-                            pollUnfixStatus(fix.appid, itemEl, deleteBtn, container);
-                        })
-                        .catch(function(err) {
-                            alert(t('settings.installedFixes.deleteError', 'Failed to remove fix.') + ' ' + (err && err.message ? err.message : ''));
-                            deleteBtn.dataset.busy = '0';
-                            deleteBtn.style.opacity = '1';
-                            deleteBtn.innerHTML = '<span><i class="fa-solid fa-trash"></i> ' + t('settings.installedFixes.delete', 'Delete') + '</span>';
-                        });
+                            });
                     },
                     function() {
                         // User cancelled - do nothing
@@ -3166,7 +3555,10 @@
 
                 pollCount++;
 
-                Millennium.callServerMethod('luatools', 'GetUnfixStatus', { appid: appid, contentScriptQuery: '' })
+                Millennium.callServerMethod('luatools', 'GetUnfixStatus', {
+                        appid: appid,
+                        contentScriptQuery: ''
+                    })
                     .then(function(res) {
                         const response = typeof res === 'string' ? JSON.parse(res) : res;
                         if (!response || !response.success) {
@@ -3190,16 +3582,16 @@
                                     container.innerHTML = `<div style="padding:14px;background:${emptyFixesColors.bgTertiary};border:1px solid ${emptyFixesColors.border};border-radius:4px;color:${emptyFixesColors.textSecondary};text-align:center;">${t('settings.installedFixes.empty', 'No fixes installed yet.')}</div>`;
                                 }
                             }, 300);
-                            
+
                             // Trigger Steam verification after a short delay
-                            setTimeout(function(){
+                            setTimeout(function() {
                                 try {
                                     const verifyUrl = 'steam://validate/' + appid;
                                     window.location.href = verifyUrl;
                                     backendLog('LuaTools: Running verify for appid ' + appid);
-                                } catch(_) {}
+                                } catch (_) {}
                             }, 1000);
-                            
+
                             return;
                         } else if (status === 'failed' || (status === 'done' && !state.success)) {
                             alert(t('settings.installedFixes.deleteError', 'Failed to remove fix.') + ' ' + (state.error || ''));
@@ -3249,7 +3641,9 @@
         function loadInstalledLuaScripts(container) {
             container.innerHTML = '<div style="padding:14px;text-align:center;color:#c7d5e0;">' + t('settings.installedLua.loading', 'Scanning for installed Lua scripts...') + '</div>';
 
-            Millennium.callServerMethod('luatools', 'GetInstalledLuaScripts', { contentScriptQuery: '' })
+            Millennium.callServerMethod('luatools', 'GetInstalledLuaScripts', {
+                    contentScriptQuery: ''
+                })
                 .then(function(res) {
                     const response = typeof res === 'string' ? JSON.parse(res) : res;
                     if (!response || !response.success) {
@@ -3285,7 +3679,7 @@
                         const scriptEl = createLuaListItem(script, container);
                         container.appendChild(scriptEl);
                     }
-                    
+
                     // Re-apply search filter after loading
                     if (state.searchQuery) {
                         setTimeout(applySearchFilter, 50);
@@ -3301,9 +3695,17 @@
             const itemEl = document.createElement('div');
             const itemLuaColors = getThemeColors();
             itemEl.style.cssText = `margin-bottom:12px;padding:14px;background:${itemLuaColors.bgTertiary};border:1px solid ${itemLuaColors.border};border-radius:6px;display:flex;justify-content:space-between;align-items:center;transition:all 0.2s ease;`;
-            itemEl.onmouseover = function() { const c = getThemeColors(); this.style.borderColor = c.accent; this.style.background = c.bgHover; };
-            itemEl.onmouseout = function() { const c = getThemeColors(); this.style.borderColor = c.border; this.style.background = c.bgTertiary; };
-            
+            itemEl.onmouseover = function() {
+                const c = getThemeColors();
+                this.style.borderColor = c.accent;
+                this.style.background = c.bgHover;
+            };
+            itemEl.onmouseout = function() {
+                const c = getThemeColors();
+                this.style.borderColor = c.border;
+                this.style.background = c.bgTertiary;
+            };
+
             // Add search data attributes
             itemEl.dataset.luaItem = script.appid;
             const gameNameText = script.gameName || 'Unknown Game';
@@ -3316,6 +3718,16 @@
             const gameNameLuaColors = getThemeColors();
             gameName.style.cssText = `font-size:15px;font-weight:600;color:${gameNameLuaColors.text};margin-bottom:6px;`;
             gameName.textContent = gameNameText + (script.gameName ? '' : ' (' + script.appid + ')');
+
+            if (!script.gameName || script.gameName.startsWith('Unknown Game')) {
+                fetchSteamGameName(script.appid).then(function(name) {
+                    if (name) {
+                        script.gameName = name;
+                        gameName.textContent = name;
+                        itemEl.dataset.searchText = (name + ' ' + script.appid + ' lua script' + (script.isDisabled ? ' disabled' : '')).toLowerCase();
+                    }
+                });
+            }
 
             if (script.isDisabled) {
                 const disabledBadge = document.createElement('span');
@@ -3374,38 +3786,38 @@
                         deleteBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
 
                         Millennium.callServerMethod('luatools', 'DeleteLuaToolsForApp', {
-                            appid: script.appid,
-                            contentScriptQuery: ''
-                        })
-                        .then(function(res) {
-                            const response = typeof res === 'string' ? JSON.parse(res) : res;
-                            if (!response || !response.success) {
-                                alert(t('settings.installedLua.deleteError', 'Failed to remove Lua script.'));
+                                appid: script.appid,
+                                contentScriptQuery: ''
+                            })
+                            .then(function(res) {
+                                const response = typeof res === 'string' ? JSON.parse(res) : res;
+                                if (!response || !response.success) {
+                                    alert(t('settings.installedLua.deleteError', 'Failed to remove Lua script.'));
+                                    deleteBtn.dataset.busy = '0';
+                                    deleteBtn.style.opacity = '1';
+                                    deleteBtn.innerHTML = '<span><i class="fa-solid fa-trash"></i> ' + t('settings.installedLua.delete', 'Delete') + '</span>';
+                                    return;
+                                }
+
+                                // Success - remove item from list with animation
+                                itemEl.style.transition = 'all 0.3s ease';
+                                itemEl.style.opacity = '0';
+                                itemEl.style.transform = 'translateX(-20px)';
+                                setTimeout(function() {
+                                    itemEl.remove();
+                                    // Check if list is now empty
+                                    if (container.children.length === 0) {
+                                        const emptyLuaColors = getThemeColors();
+                                        container.innerHTML = `<div style="padding:14px;background:${emptyLuaColors.bgTertiary};border:1px solid ${emptyLuaColors.border};border-radius:4px;color:${emptyLuaColors.textSecondary};text-align:center;">${t('settings.installedLua.empty', 'No Lua scripts installed yet.')}</div>`;
+                                    }
+                                }, 300);
+                            })
+                            .catch(function(err) {
+                                alert(t('settings.installedLua.deleteError', 'Failed to remove Lua script.') + ' ' + (err && err.message ? err.message : ''));
                                 deleteBtn.dataset.busy = '0';
                                 deleteBtn.style.opacity = '1';
                                 deleteBtn.innerHTML = '<span><i class="fa-solid fa-trash"></i> ' + t('settings.installedLua.delete', 'Delete') + '</span>';
-                                return;
-                            }
-
-                            // Success - remove item from list with animation
-                            itemEl.style.transition = 'all 0.3s ease';
-                            itemEl.style.opacity = '0';
-                            itemEl.style.transform = 'translateX(-20px)';
-                            setTimeout(function() {
-                                itemEl.remove();
-                                // Check if list is now empty
-                                if (container.children.length === 0) {
-                                    const emptyLuaColors = getThemeColors();
-                                    container.innerHTML = `<div style="padding:14px;background:${emptyLuaColors.bgTertiary};border:1px solid ${emptyLuaColors.border};border-radius:4px;color:${emptyLuaColors.textSecondary};text-align:center;">${t('settings.installedLua.empty', 'No Lua scripts installed yet.')}</div>`;
-                                }
-                            }, 300);
-                        })
-                        .catch(function(err) {
-                            alert(t('settings.installedLua.deleteError', 'Failed to remove Lua script.') + ' ' + (err && err.message ? err.message : ''));
-                            deleteBtn.dataset.busy = '0';
-                            deleteBtn.style.opacity = '1';
-                            deleteBtn.innerHTML = '<span><i class="fa-solid fa-trash"></i> ' + t('settings.installedLua.delete', 'Delete') + '</span>';
-                        });
+                            });
                     },
                     function() {
                         // User cancelled - do nothing
@@ -3423,7 +3835,7 @@
             saveBtn.style.opacity = '0.6';
             contentWrap.innerHTML = '<div style="padding:20px;color:#c7d5e0;">' + t('common.status.loading', 'Loading...') + '</div>';
 
-            return fetchSettingsConfig(force).then(function(config){
+            return fetchSettingsConfig(force).then(function(config) {
                 state.config = {
                     schemaVersion: config.schemaVersion,
                     schema: Array.isArray(config.schema) ? config.schema : [],
@@ -3435,7 +3847,7 @@
                 applyStaticTranslations();
                 renderSettings();
                 setStatus('', '#c7d5e0');
-            }).catch(function(err){
+            }).catch(function(err) {
                 const message = err && err.message ? err.message : t('settings.error', 'Failed to load settings.');
                 contentWrap.innerHTML = '<div style="padding:20px;color:#ff5c5c;">' + message + '</div>';
                 setStatus(t('common.status.error', 'Error') + ': ' + message, '#ff5c5c');
@@ -3455,23 +3867,25 @@
         btnRow.appendChild(backBtn);
         btnRow.appendChild(rightButtons);
 
-        refreshBtn.addEventListener('click', function(e){
+        refreshBtn.addEventListener('click', function(e) {
             e.preventDefault();
             if (refreshBtn.dataset.busy === '1') return;
             refreshBtn.dataset.busy = '1';
-            handleLoad(true).finally(function(){
+            handleLoad(true).finally(function() {
                 refreshBtn.dataset.busy = '0';
                 refreshBtn.style.opacity = '1';
                 applyStaticTranslations();
             });
         });
 
-        saveBtn.addEventListener('click', function(e){
+        saveBtn.addEventListener('click', function(e) {
             e.preventDefault();
             if (saveBtn.dataset.disabled === '1' || saveBtn.dataset.busy === '1') return;
 
             const changes = collectChanges();
-            try { backendLog('LuaTools: collectChanges payload ' + JSON.stringify(changes)); } catch(_) {}
+            try {
+                backendLog('LuaTools: collectChanges payload ' + JSON.stringify(changes));
+            } catch (_) {}
             if (!changes || Object.keys(changes).length === 0) {
                 setStatus(t('settings.noChanges', 'No changes to save.'), '#c7d5e0');
                 updateSaveState();
@@ -3484,12 +3898,14 @@
             saveBtn.style.opacity = '0.6';
 
             const payloadToSend = JSON.parse(JSON.stringify(changes));
-            try { backendLog('LuaTools: sending settings payload ' + JSON.stringify(payloadToSend)); } catch(_) {}
+            try {
+                backendLog('LuaTools: sending settings payload ' + JSON.stringify(payloadToSend));
+            } catch (_) {}
             // Pass flattened keys so Millennium handles the RPC arguments as expected.
             Millennium.callServerMethod('luatools', 'ApplySettingsChanges', {
                 contentScriptQuery: '',
                 changesJson: JSON.stringify(payloadToSend)
-            }).then(function(res){
+            }).then(function(res) {
                 const response = typeof res === 'string' ? JSON.parse(res) : res;
                 if (!response || response.success !== true) {
                     if (response && response.errors) {
@@ -3513,8 +3929,14 @@
                 }
 
                 const newValues = (response && response.values && typeof response.values === 'object') ? response.values : state.draft;
-                state.config.values = initialiseSettingsDraft({ schema: state.config.schema, values: newValues });
-                state.draft = initialiseSettingsDraft({ schema: state.config.schema, values: newValues });
+                state.config.values = initialiseSettingsDraft({
+                    schema: state.config.schema,
+                    values: newValues
+                });
+                state.draft = initialiseSettingsDraft({
+                    schema: state.config.schema,
+                    values: newValues
+                });
 
                 try {
                     if (window.__LuaToolsSettings) {
@@ -3528,15 +3950,15 @@
                             window.__LuaToolsSettings.language = response.language;
                         }
                     }
-                } catch(_) {}
-                
+                } catch (_) {}
+
                 // Invalidate the settings cache to force a fresh fetch on next settings load
                 // This ensures any changes persist across page navigations
                 try {
                     if (window.__LuaToolsSettings) {
                         window.__LuaToolsSettings.schema = null;
                     }
-                } catch(_) {}
+                } catch (_) {}
 
                 if (response && response.translations && typeof response.translations === 'object') {
                     applyTranslationBundle({
@@ -3550,24 +3972,24 @@
 
                 renderSettings();
                 setStatus(t('settings.saveSuccess', 'Settings saved successfully.'), '#8bc34a');
-                
+
                 // Reload theme if it changed
                 const oldTheme = state.config.values?.general?.theme;
                 const newTheme = state.draft?.general?.theme;
                 if (oldTheme !== newTheme) {
                     ensureLuaToolsStyles();
                 }
-            }).catch(function(err){
+            }).catch(function(err) {
                 const message = err && err.message ? err.message : t('settings.saveError', 'Failed to save settings.');
                 setStatus(message, '#ff5c5c');
-            }).finally(function(){
+            }).finally(function() {
                 saveBtn.dataset.busy = '0';
                 applyStaticTranslations();
                 updateSaveState();
             });
         });
 
-        closeIconBtn.addEventListener('click', function(e){
+        closeIconBtn.addEventListener('click', function(e) {
             e.preventDefault();
             overlay.remove();
         });
@@ -3576,14 +3998,17 @@
             e.preventDefault();
             const url = 'https://discord.gg/luatools';
             try {
-                Millennium.callServerMethod('luatools', 'OpenExternalUrl', { url, contentScriptQuery: '' });
-            } catch(_) {}
+                Millennium.callServerMethod('luatools', 'OpenExternalUrl', {
+                    url,
+                    contentScriptQuery: ''
+                });
+            } catch (_) {}
         });
 
-        overlay.addEventListener('click', function(e){
+        overlay.addEventListener('click', function(e) {
             if (e.target === overlay) {
-            overlay.remove();
-        }
+                overlay.remove();
+            }
         });
 
         handleLoad(!!forceRefresh);
@@ -3595,14 +4020,22 @@
             // Remove all settings overlays (robust against older NodeList forEach support)
             var list = document.getElementsByClassName('luatools-settings-overlay');
             while (list && list.length > 0) {
-                try { list[0].remove(); } catch(_) { break; }
+                try {
+                    list[0].remove();
+                } catch (_) {
+                    break;
+                }
             }
             // Also remove any download/progress overlays if present
             var list2 = document.getElementsByClassName('luatools-overlay');
             while (list2 && list2.length > 0) {
-                try { list2[0].remove(); } catch(_) { break; }
+                try {
+                    list2[0].remove();
+                } catch (_) {
+                    break;
+                }
             }
-        } catch(_) {}
+        } catch (_) {}
     }
 
     // Custom modern alert dialog
@@ -3640,7 +4073,9 @@
         okBtn.onclick = function(e) {
             e.preventDefault();
             overlay.remove();
-            try { onClose && onClose(); } catch(_) {}
+            try {
+                onClose && onClose();
+            } catch (_) {}
         };
 
         btnRow.appendChild(okBtn);
@@ -3653,7 +4088,9 @@
         overlay.addEventListener('click', function(e) {
             if (e.target === overlay) {
                 overlay.remove();
-                try { onClose && onClose(); } catch(_) {}
+                try {
+                    onClose && onClose();
+                } catch (_) {}
             }
         });
 
@@ -3671,9 +4108,11 @@
     function ShowLuaToolsAlert(title, message) {
         try {
             showLuaToolsAlert(title, message);
-        } catch(err) {
+        } catch (err) {
             backendLog('LuaTools: Alert error, falling back: ' + err);
-            try { alert(String(title) + '\n\n' + String(message)); } catch(_) {}
+            try {
+                alert(String(title) + '\n\n' + String(message));
+            } catch (_) {}
         }
     }
 
@@ -3716,7 +4155,9 @@
         cancelBtn.onclick = function(e) {
             e.preventDefault();
             overlay.remove();
-            try { onCancel && onCancel(); } catch(_) {}
+            try {
+                onCancel && onCancel();
+            } catch (_) {}
         };
         const confirmBtn = document.createElement('a');
         confirmBtn.href = '#';
@@ -3726,7 +4167,9 @@
         confirmBtn.onclick = function(e) {
             e.preventDefault();
             overlay.remove();
-            try { onConfirm && onConfirm(); } catch(_) {}
+            try {
+                onConfirm && onConfirm();
+            } catch (_) {}
         };
 
         btnRow.appendChild(cancelBtn);
@@ -3740,7 +4183,9 @@
         overlay.addEventListener('click', function(e) {
             if (e.target === overlay) {
                 overlay.remove();
-                try { onCancel && onCancel(); } catch(_) {}
+                try {
+                    onCancel && onCancel();
+                } catch (_) {}
             }
         });
 
@@ -3754,7 +4199,82 @@
         }, 150);
     }
 
-    // Special red warning modal for "playable === 2" cases
+    // DLC warning modal
+    function showDlcWarning(appid, fullgameAppid, fullgameName) {
+        // Close settings so modal is visible
+        closeSettingsOverlay();
+        if (document.querySelector('.luatools-dlc-warning-overlay')) return;
+
+        ensureLuaToolsStyles();
+        ensureFontAwesome();
+
+        const overlay = document.createElement('div');
+        overlay.className = 'luatools-dlc-warning-overlay luatools-overlay';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(10px);z-index:100001;display:flex;align-items:center;justify-content:center;';
+
+        const modal = document.createElement('div');
+        const colors = getThemeColors();
+        modal.style.cssText = `background:${colors.modalBg};color:${colors.text};border:2px solid ${colors.border};border-radius:12px;width:520px;padding:36px;box-shadow:0 25px 70px rgba(0,0,0,.9);animation:slideUp 0.15s ease-out;`;
+
+        const header = document.createElement('div');
+        header.style.cssText = 'text-align:center;margin-bottom:24px;';
+        const icon = document.createElement('i');
+        icon.className = 'fa-solid fa-circle-info';
+        icon.style.cssText = `color:${colors.accent};font-size:48px;filter:drop-shadow(0 0 10px ${colors.shadow});`;
+        header.appendChild(icon);
+
+        const titleEl = document.createElement('div');
+        titleEl.style.cssText = `font-size:24px;font-weight:800;text-align:center;margin-bottom:16px;background:${colors.gradientLight};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;`;
+        titleEl.textContent = lt('DLC Detected');
+
+        const messageEl = document.createElement('div');
+        messageEl.style.cssText = `font-size:16px;line-height:1.6;margin-bottom:32px;color:${colors.textSecondary};text-align:center;`;
+        messageEl.innerHTML = lt('DLCs are added together with the base game. To add fixes for this DLC, please go to the base game page: <br><br><b>{gameName}</b>').replace('{gameName}', fullgameName || lt('Base Game'));
+
+        const btnRow = document.createElement('div');
+        btnRow.style.cssText = 'display:flex;gap:16px;justify-content:center;';
+
+        const cancelBtn = document.createElement('a');
+        cancelBtn.href = '#';
+        cancelBtn.className = 'luatools-btn';
+        cancelBtn.style.flex = '1';
+        cancelBtn.innerHTML = `<span>${lt('Cancel')}</span>`;
+        cancelBtn.onclick = function(e) {
+            e.preventDefault();
+            overlay.remove();
+        };
+
+        const goBtn = document.createElement('a');
+        goBtn.href = 'https://store.steampowered.com/app/' + fullgameAppid;
+        goBtn.className = 'luatools-btn primary';
+        goBtn.style.flex = '1.5';
+        goBtn.innerHTML = `<span>${lt('Go to Base Game')}</span>`;
+        goBtn.onclick = function(e) {
+            // Let the default link behavior happen (navigation)
+            // But we can also remove the overlay
+            setTimeout(() => overlay.remove(), 100);
+        };
+
+        btnRow.appendChild(cancelBtn);
+        btnRow.appendChild(goBtn);
+
+        modal.appendChild(header);
+        modal.appendChild(titleEl);
+        modal.appendChild(messageEl);
+        modal.appendChild(btnRow);
+        overlay.appendChild(modal);
+
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) overlay.remove();
+        });
+
+        document.body.appendChild(overlay);
+
+        setTimeout(function() {
+            if (window.GamepadNav) window.GamepadNav.scanElements();
+        }, 150);
+    }
+
     function showLuaToolsPlayableWarning(message, onProceed, onCancel) {
         // Close settings so modal is visible
         closeSettingsOverlay();
@@ -3796,7 +4316,9 @@
         cancelBtn.onclick = function(e) {
             e.preventDefault();
             overlay.remove();
-            try { onCancel && onCancel(); } catch(_) {}
+            try {
+                onCancel && onCancel();
+            } catch (_) {}
         };
 
         const proceedBtn = document.createElement('a');
@@ -3807,7 +4329,9 @@
         proceedBtn.onclick = function(e) {
             e.preventDefault();
             overlay.remove();
-            try { onProceed && onProceed(); } catch(_) {}
+            try {
+                onProceed && onProceed();
+            } catch (_) {}
         };
 
         btnRow.appendChild(cancelBtn);
@@ -3821,11 +4345,132 @@
         overlay.addEventListener('click', function(e) {
             if (e.target === overlay) {
                 overlay.remove();
-                try { onCancel && onCancel(); } catch(_) {}
+                try {
+                    onCancel && onCancel();
+                } catch (_) {}
             }
         });
 
         document.body.appendChild(overlay);
+
+        setTimeout(function() {
+            if (window.GamepadNav) {
+                window.GamepadNav.scanElements();
+            }
+        }, 150);
+    }
+
+    // Millennium disclaimer modal
+    function showMillenniumDisclaimerModal() {
+        if (document.querySelector('.luatools-disclaimer-overlay')) return;
+
+        ensureLuaToolsStyles();
+        ensureFontAwesome();
+
+        const overlay = document.createElement('div');
+        overlay.className = 'luatools-disclaimer-overlay luatools-overlay';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(10px);z-index:100005;display:flex;align-items:center;justify-content:center;';
+
+        const modal = document.createElement('div');
+        modal.style.cssText = 'background:linear-gradient(180deg,#3a0f0f,#2a0b0b);color:#fff;border:2px solid rgba(255,80,80,0.9);border-radius:12px;width:580px;padding:36px;box-shadow:0 25px 70px rgba(0,0,0,.9);animation:slideUp 0.2s ease-out;';
+
+        const iconContainer = document.createElement('div');
+        iconContainer.style.cssText = 'text-align:center;margin-bottom:20px;';
+        const icon = document.createElement('i');
+        icon.className = 'fa-solid fa-triangle-exclamation';
+        icon.style.cssText = 'color:#ff5c5c;font-size:48px;filter:drop-shadow(0 0 10px rgba(255,92,92,0.5));';
+        iconContainer.appendChild(icon);
+
+        const titleEl = document.createElement('div');
+        titleEl.style.cssText = 'font-size:24px;font-weight:800;text-align:center;margin-bottom:24px;color:#ff5c5c;letter-spacing:0.5px;';
+        titleEl.textContent = t('disclaimer.title', 'Security & Support Notice');
+
+        const messageEl = document.createElement('div');
+        messageEl.style.cssText = 'font-size:15px;line-height:1.6;margin-bottom:28px;color:#ffecec;text-align:center;';
+
+        const line1 = document.createElement('div');
+        line1.style.cssText = 'margin-bottom:12px;font-weight:600;';
+        line1.textContent = t('disclaimer.line1', 'LuaTools is not affiliated in any way with Millennium');
+
+        const line2 = document.createElement('div');
+        line2.style.cssText = 'margin-bottom:12px;';
+        line2.textContent = t('disclaimer.line2', 'Millennium will NOT offer you support for this plugin on their discord server');
+
+        const line3 = document.createElement('div');
+        line3.style.cssText = 'font-weight:700;color:#ff8e8e;';
+        line3.textContent = t('disclaimer.line3', 'You will be BANNED from both LuaTools and Millennium servers if you go to their discord asking for help');
+
+        messageEl.appendChild(line1);
+        messageEl.appendChild(line2);
+        messageEl.appendChild(line3);
+
+        const inputGroup = document.createElement('div');
+        inputGroup.style.cssText = 'margin-bottom:24px;';
+
+        const inputLabel = document.createElement('div');
+        inputLabel.style.cssText = 'font-size:12px;color:#8f98a0;margin-bottom:10px;text-align:center;text-transform:uppercase;letter-spacing:1px;';
+        inputLabel.textContent = t('disclaimer.inputLabel', 'type "I Understand" in the box bellow to continue');
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.placeholder = t('disclaimer.inputPlaceholder', 'I Understand');
+        input.style.cssText = 'width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:12px;color:#fff;font-size:14px;outline:none;text-align:center;transition:all 0.3s ease;';
+        input.onfocus = function() {
+            this.style.borderColor = 'rgba(255,255,255,0.3)';
+            this.style.background = 'rgba(0,0,0,0.4)';
+        };
+        input.onblur = function() {
+            this.style.borderColor = 'rgba(255,255,255,0.1)';
+            this.style.background = 'rgba(0,0,0,0.3)';
+        };
+
+        inputGroup.appendChild(inputLabel);
+        inputGroup.appendChild(input);
+
+        const btnRow = document.createElement('div');
+        btnRow.style.cssText = 'display:flex;justify-content:center;';
+
+        const confirmBtn = document.createElement('a');
+        confirmBtn.href = '#';
+        confirmBtn.className = 'luatools-btn primary';
+        confirmBtn.style.minWidth = '200px';
+        confirmBtn.innerHTML = `<span>${lt('Confirm')}</span>`;
+        confirmBtn.style.opacity = '0.5';
+        confirmBtn.style.pointerEvents = 'none';
+
+        input.oninput = function() {
+            if (this.value.trim().toLowerCase() === 'i understand') {
+                confirmBtn.style.opacity = '1';
+                confirmBtn.style.pointerEvents = 'auto';
+                confirmBtn.style.boxShadow = '0 0 15px rgba(102,192,244,0.4)';
+            } else {
+                confirmBtn.style.opacity = '0.5';
+                confirmBtn.style.pointerEvents = 'none';
+                confirmBtn.style.boxShadow = 'none';
+            }
+        };
+
+        confirmBtn.onclick = function(e) {
+            e.preventDefault();
+            if (input.value.trim().toLowerCase() === 'i understand') {
+                localStorage.setItem('luatools millennium disclaimer accepted', '1');
+                overlay.remove();
+            }
+        };
+
+        btnRow.appendChild(confirmBtn);
+
+        modal.appendChild(iconContainer);
+        modal.appendChild(titleEl);
+        modal.appendChild(messageEl);
+        modal.appendChild(inputGroup);
+        modal.appendChild(btnRow);
+        overlay.appendChild(modal);
+
+        document.body.appendChild(overlay);
+
+        // Focus input after a short delay
+        setTimeout(() => input.focus(), 300);
 
         setTimeout(function() {
             if (window.GamepadNav) {
@@ -3904,7 +4549,7 @@
                     span.textContent = addViaText;
                 }
             }
-        } catch(err) {
+        } catch (err) {
             backendLog('LuaTools: updateButtonTranslations error: ' + err);
         }
     }
@@ -3930,12 +4575,70 @@
             window.__LuaToolsButtonInserted = false;
             window.__LuaToolsRestartInserted = false;
             window.__LuaToolsIconInserted = false;
+            window.__LuaToolsHeaderInserted = false;
             window.__LuaToolsPresenceCheckInFlight = false;
             window.__LuaToolsPresenceCheckAppId = undefined;
             // Ensure translations are loaded and update existing buttons
             ensureTranslationsLoaded(false).then(function() {
                 updateButtonTranslations();
             });
+        }
+
+        // Store Header Button Logic (when not on app page)
+        const isAppPath = window.location.pathname.includes('/app/');
+        if (!isAppPath) {
+            const headerContainer = document.querySelector('._1wn1lBlAzl3HMRqS1llwie');
+            if (headerContainer && !document.querySelector('.luatools-header-button') && !window.__LuaToolsHeaderInserted) {
+                ensureLuaToolsStyles();
+                const headerBtn = document.createElement('a');
+                headerBtn.href = '#';
+                // Use luatools-btn primary class for that premium modal look
+                headerBtn.className = 'luatools-btn primary luatools-header-button Focusable';
+                headerBtn.style.cssText = 'margin-left:12px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; width:36px; height:36px; padding:0; border-radius:8px; border-width:1px; box-shadow: 0 4px 12px rgba(0,0,0,0.4);';
+                headerBtn.title = 'LuaTools Settings';
+
+                headerBtn.setAttribute('data-tooltip-text', 'LuaTools Settings');
+
+                const img = document.createElement('img');
+                img.style.height = '18px';
+                img.style.width = '18px';
+                img.style.verticalAlign = 'middle';
+
+                try {
+                    Millennium.callServerMethod('luatools', 'GetIconDataUrl', {
+                        contentScriptQuery: ''
+                    }).then(function(res) {
+                        try {
+                            const payload = typeof res === 'string' ? JSON.parse(res) : res;
+                            if (payload && payload.success && payload.dataUrl) {
+                                img.src = payload.dataUrl;
+                            } else {
+                                img.src = 'LuaTools/luatools-icon.png';
+                            }
+                        } catch (_) {
+                            img.src = 'LuaTools/luatools-icon.png';
+                        }
+                    });
+                } catch (_) {
+                    img.src = 'LuaTools/luatools-icon.png';
+                }
+
+                img.onerror = function() {
+                    // cogwhell fallback
+                    headerBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="LuaTools"><path fill="currentColor" d="M12 8a4 4 0 100 8 4 4 0 000-8zm9.94 3.06l-2.12-.35a7.962 7.962 0 00-1.02-2.46l1.29-1.72a.75.75 0 00-.09-.97l-1.41-1.41a.75.75 0 00-.97-.09l-1.72 1.29c-.77-.44-1.6-.78-2.46-1.02L13.06 2.06A.75.75 0 0012.31 2h-1.62a.75.75 0 00-.75.65l-.35 2.12a7.962 7.962 0 00-2.46 1.02L5 4.6a.75.75 0 00-.97.09L2.62 6.1a.75.75 0 00-.09.97l1.29 1.72c-.44.77-.78 1.6-1.02 2.46l-2.12.35a.75.75 0 00-.65.75v1.62c0 .37.27.69.63.75l2.14.36c.24.86.58 1.69 1.02 2.46L2.53 18a.75.75 0 00.09.97l1.41 1.41c.26.26.67.29.97.09l1.72-1.29c.77.44 1.6.78 2.46 1.02l.35 2.12c.06.36.38.63.75.63h1.62c.37 0 .69-.27.75-.63l.36-2.14c.86-.24 1.69-.58 2.46-1.02l1.72 1.29c.3.2.71.17.97-.09l1.41-1.41c.26-.26.29-.67.09-.97l-1.29-1.72c.44-.77.78-1.6 1.02-2.46l2.12-.35c.36-.06.63-.38.63-.75v-1.62a.75.75 0 00-.65-.75z"/></svg>';
+                };
+
+                headerBtn.appendChild(img);
+
+                headerBtn.onclick = function(e) {
+                    e.preventDefault();
+                    showSettingsPopup();
+                };
+
+                headerContainer.appendChild(headerBtn);
+                window.__LuaToolsHeaderInserted = true;
+                backendLog('Inserted store header button (non-app page)');
+            }
         }
 
         // Check if we're in Big Picture mode
@@ -3950,21 +4653,21 @@
         } else {
             // In normal mode, use the SteamDB buttons container
             targetContainer = document.querySelector('.steamdb-buttons') ||
-                            document.querySelector('[data-steamdb-buttons]') ||
-                            document.querySelector('.apphub_OtherSiteInfo');
+                document.querySelector('[data-steamdb-buttons]') ||
+                document.querySelector('.apphub_OtherSiteInfo');
         }
 
         if (targetContainer) {
             const steamdbContainer = targetContainer;
-            
+
             // Insert a Restart Steam button between Community Hub and our LuaTools button
             try {
                 if (!document.querySelector('.luatools-restart-button') && !window.__LuaToolsRestartInserted) {
                     ensureStyles();
                     // In Big Picture mode, use queue button as reference; otherwise use first link in container
-                    const referenceBtn = isBigPicture
-                        ? document.querySelector('#queueBtnFollow')
-                        : steamdbContainer.querySelector('a');
+                    const referenceBtn = isBigPicture ?
+                        document.querySelector('#queueBtnFollow') :
+                        steamdbContainer.querySelector('a');
 
                     // Use same custom button for both modes
                     const restartBtn = document.createElement('a');
@@ -3988,21 +4691,35 @@
                             restartBtn.style.marginLeft = cs.marginLeft;
                             restartBtn.style.marginRight = cs.marginRight;
                         }
-                    } catch(_) {}
+                    } catch (_) {}
 
-                    restartBtn.addEventListener('click', function(e){
+                    restartBtn.addEventListener('click', function(e) {
                         e.preventDefault();
                         try {
                             // Ensure any settings overlays are closed before confirm
                             closeSettingsOverlay();
                             showLuaToolsConfirm('LuaTools', lt('Restart Steam now?'),
-                                function() { try { Millennium.callServerMethod('luatools', 'RestartSteam', { contentScriptQuery: '' }); } catch(_) {} },
-                                function() { /* Cancel - do nothing */ }
+                                function() {
+                                    try {
+                                        Millennium.callServerMethod('luatools', 'RestartSteam', {
+                                            contentScriptQuery: ''
+                                        });
+                                    } catch (_) {}
+                                },
+                                function() {
+                                    /* Cancel - do nothing */ }
                             );
-                        } catch(_) {
+                        } catch (_) {
                             showLuaToolsConfirm('LuaTools', lt('Restart Steam now?'),
-                                function() { try { Millennium.callServerMethod('luatools', 'RestartSteam', { contentScriptQuery: '' }); } catch(_) {} },
-                                function() { /* Cancel - do nothing */ }
+                                function() {
+                                    try {
+                                        Millennium.callServerMethod('luatools', 'RestartSteam', {
+                                            contentScriptQuery: ''
+                                        });
+                                    } catch (_) {}
+                                },
+                                function() {
+                                    /* Cancel - do nothing */ }
                             );
                         }
                     });
@@ -4033,7 +4750,7 @@
                                     iconBtn.style.marginLeft = cs.marginLeft;
                                     iconBtn.style.marginRight = cs.marginRight;
                                 }
-                            } catch(_) {}
+                            } catch (_) {}
 
                             const ispan = document.createElement('span');
                             const img = document.createElement('img');
@@ -4043,7 +4760,9 @@
                             img.style.verticalAlign = 'middle';
                             // Try to fetch data URL for the icon from backend to avoid path issues
                             try {
-                                Millennium.callServerMethod('luatools', 'GetIconDataUrl', { contentScriptQuery: '' }).then(function(res){
+                                Millennium.callServerMethod('luatools', 'GetIconDataUrl', {
+                                    contentScriptQuery: ''
+                                }).then(function(res) {
                                     try {
                                         const payload = typeof res === 'string' ? JSON.parse(res) : res;
                                         if (payload && payload.success && payload.dataUrl) {
@@ -4051,29 +4770,34 @@
                                         } else {
                                             img.src = 'LuaTools/luatools-icon.png';
                                         }
-                                    } catch(_) { img.src = 'LuaTools/luatools-icon.png'; }
+                                    } catch (_) {
+                                        img.src = 'LuaTools/luatools-icon.png';
+                                    }
                                 });
-                            } catch(_) {
+                            } catch (_) {
                                 img.src = 'LuaTools/luatools-icon.png';
                             }
                             // If image fails, fallback to inline SVG gear
-                            img.onerror = function(){
+                            img.onerror = function() {
                                 ispan.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 8a4 4 0 100 8 4 4 0 000-8zm9.94 3.06l-2.12-.35a7.962 7.962 0 00-1.02-2.46l1.29-1.72a.75.75 0 00-.09-.97l-1.41-1.41a.75.75 0 00-.97-.09l-1.72 1.29c-.77-.44-1.6-.78-2.46-1.02L13.06 2.06A.75.75 0 0012.31 2h-1.62a.75.75 0 00-.75.65l-.35 2.12a7.962 7.962 0 00-2.46 1.02L5 4.6a.75.75 0 00-.97.09L2.62 6.1a.75.75 0 00-.09.97l1.29 1.72c-.44.77-.78 1.6-1.02 2.46l-2.12.35a.75.75 0 00-.65.75v1.62c0 .37.27.69.63.75l2.14.36c.24.86.58 1.69 1.02 2.46L2.53 18a.75.75 0 00.09.97l1.41 1.41c.26.26.67.29.97.09l1.72-1.29c.77.44 1.6.78 2.46 1.02l.35 2.12c.06.36.38.63.75.63h1.62c.37 0 .69-.27.75-.63l.36-2.14c.86-.24 1.69-.58 2.46-1.02l1.72 1.29c.3.2.71.17.97-.09l1.41-1.41c.26-.26.29-.67.09-.97l-1.29-1.72c.44-.77.78-1.6 1.02-2.46l2.12-.35c.36-.06.63-.38.63-.75v-1.62a.75.75 0 00-.65-.75z"/></svg>';
                             };
                             ispan.appendChild(img);
                             iconBtn.appendChild(ispan);
-                            iconBtn.addEventListener('click', function(e){ e.preventDefault(); showSettingsPopup(); });
+                            iconBtn.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                showSettingsPopup();
+                            });
 
                             steamdbContainer.appendChild(iconBtn);
 
                             window.__LuaToolsIconInserted = true;
                             backendLog('Inserted Icon button');
                         }
-                    } catch(_) {}
+                    } catch (_) {}
                     window.__LuaToolsRestartInserted = true;
                     backendLog('Inserted Restart Steam button');
                 }
-            } catch(_) {}
+            } catch (_) {}
 
             // Status Pills Logic
             // Always update translations for existing buttons (even if not a page change)
@@ -4083,103 +4807,120 @@
                     updateButtonTranslations();
                 });
             }
-            
+
             // Check if button already exists to avoid duplicates
             if (!existingBtn && !window.__LuaToolsButtonInserted) {
 
-            // Create the LuaTools button modeled after existing SteamDB/PCGW buttons
-            // In Big Picture mode, use queue button as reference; otherwise use first link in container
-            let referenceBtn = isBigPicture
-                ? document.querySelector('#queueBtnFollow')
-                : steamdbContainer.querySelector('a');
+                // Create the LuaTools button modeled after existing SteamDB/PCGW buttons
+                // In Big Picture mode, use queue button as reference; otherwise use first link in container
+                let referenceBtn = isBigPicture ?
+                    document.querySelector('#queueBtnFollow') :
+                    steamdbContainer.querySelector('a');
 
-            // Use same custom button for both modes
-            const luatoolsButton = document.createElement('a');
-            luatoolsButton.href = '#';
-            // Copy classes from an existing button to match look-and-feel, but set our own label
-            if (referenceBtn && referenceBtn.className) {
-                luatoolsButton.className = referenceBtn.className + ' luatools-button';
-            } else {
-                luatoolsButton.className = 'btnv6_blue_hoverfade btn_medium luatools-button';
-            }
-            const span = document.createElement('span');
-            const addViaText = lt('Add via LuaTools');
-            span.textContent = addViaText;
-            luatoolsButton.appendChild(span);
-            // Tooltip/title
-            luatoolsButton.title = addViaText;
-            luatoolsButton.setAttribute('data-tooltip-text', addViaText);
-
-            // Normalize margins to match native buttons
-            try {
-                if (referenceBtn) {
-                    const cs = window.getComputedStyle(referenceBtn);
-                    luatoolsButton.style.marginLeft = cs.marginLeft;
-                    luatoolsButton.style.marginRight = cs.marginRight;
-                }
-            } catch(_) {}
-            
-            // Local click handler suppressed; delegated handler manages actions
-            luatoolsButton.addEventListener('click', function(e) {
-                e.preventDefault();
-                backendLog('LuaTools button clicked (delegated handler will process)');
-            });
-            
-            // Before inserting, ask backend if LuaTools already exists for this appid
-            try {
-                const match = window.location.href.match(/https:\/\/store\.steampowered\.com\/app\/(\d+)/) || window.location.href.match(/https:\/\/steamcommunity\.com\/app\/(\d+)/);
-                const appid = match ? parseInt(match[1], 10) : NaN;
-                if (!isNaN(appid) && typeof Millennium !== 'undefined' && typeof Millennium.callServerMethod === 'function') {
-                    // prevent multiple concurrent checks
-                    if (window.__LuaToolsPresenceCheckInFlight && window.__LuaToolsPresenceCheckAppId === appid) {
-                        return;
-                    }
-                    window.__LuaToolsPresenceCheckInFlight = true;
-                    window.__LuaToolsPresenceCheckAppId = appid;
-                    window.__LuaToolsCurrentAppId = appid;
-                    Millennium.callServerMethod('luatools', 'HasLuaToolsForApp', { appid, contentScriptQuery: '' }).then(function(res){
-                        try {
-                            const payload = typeof res === 'string' ? JSON.parse(res) : res;
-                            if (payload && payload.success && payload.exists === true) {
-                                backendLog('LuaTools already present for this app; not inserting button');
-                                window.__LuaToolsPresenceCheckInFlight = false;
-                                return; // do not insert
-                            }
-                            // Re-check in case another caller inserted during async
-                            if (!document.querySelector('.luatools-button') && !window.__LuaToolsButtonInserted) {
-                                // Insert after icon button (order: Restart → Icon → Add)
-                                const iconExisting = steamdbContainer.querySelector('.luatools-icon-button');
-                                const restartExisting = steamdbContainer.querySelector('.luatools-restart-button');
-                                if (iconExisting && iconExisting.before) {
-                                    iconExisting.before(luatoolsButton);
-                                } else if (restartExisting && restartExisting.after) {
-                                    restartExisting.after(luatoolsButton);
-                                } else if (referenceBtn && referenceBtn.after) {
-                                    referenceBtn.after(luatoolsButton);
-                                } else {
-                                    steamdbContainer.appendChild(luatoolsButton);
-                                }
-                                window.__LuaToolsButtonInserted = true;
-                                backendLog('LuaTools button inserted');
-                            }
-                            window.__LuaToolsPresenceCheckInFlight = false;
-                        } catch(_) {
-                            if (!document.querySelector('.luatools-button') && !window.__LuaToolsButtonInserted) {
-                                steamdbContainer.appendChild(luatoolsButton);
-                                window.__LuaToolsButtonInserted = true;
-                                backendLog('LuaTools button inserted');
-                            }
-                            window.__LuaToolsPresenceCheckInFlight = false;
-                        }
-                    });
+                // Use same custom button for both modes
+                const luatoolsButton = document.createElement('a');
+                luatoolsButton.href = '#';
+                // Copy classes from an existing button to match look-and-feel, but set our own label
+                if (referenceBtn && referenceBtn.className) {
+                    luatoolsButton.className = referenceBtn.className + ' luatools-button';
                 } else {
+                    luatoolsButton.className = 'btnv6_blue_hoverfade btn_medium luatools-button';
+                }
+                const span = document.createElement('span');
+                const addViaText = lt('Add via LuaTools');
+                span.textContent = addViaText;
+                luatoolsButton.appendChild(span);
+                // Tooltip/title
+                luatoolsButton.title = addViaText;
+                luatoolsButton.setAttribute('data-tooltip-text', addViaText);
+
+                // Normalize margins to match native buttons
+                try {
+                    if (referenceBtn) {
+                        const cs = window.getComputedStyle(referenceBtn);
+                        luatoolsButton.style.marginLeft = cs.marginLeft;
+                        luatoolsButton.style.marginRight = cs.marginRight;
+                    }
+                } catch (_) {}
+
+                // Local click handler suppressed; delegated handler manages actions
+                luatoolsButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    backendLog('LuaTools button clicked (delegated handler will process)');
+                });
+
+                // Before inserting, ask backend if LuaTools already exists for this appid
+                try {
+                    const match = window.location.href.match(/https:\/\/store\.steampowered\.com\/app\/(\d+)/) || window.location.href.match(/https:\/\/steamcommunity\.com\/app\/(\d+)/);
+                    const appid = match ? parseInt(match[1], 10) : NaN;
+                    if (!isNaN(appid) && typeof Millennium !== 'undefined' && typeof Millennium.callServerMethod === 'function') {
+                        // prevent multiple concurrent checks
+                        if (window.__LuaToolsPresenceCheckInFlight && window.__LuaToolsPresenceCheckAppId === appid) {
+                            return;
+                        }
+                        window.__LuaToolsPresenceCheckInFlight = true;
+                        window.__LuaToolsPresenceCheckAppId = appid;
+                        window.__LuaToolsCurrentAppId = appid;
+                        Millennium.callServerMethod('luatools', 'HasLuaToolsForApp', {
+                            appid,
+                            contentScriptQuery: ''
+                        }).then(function(res) {
+                            try {
+                                const payload = typeof res === 'string' ? JSON.parse(res) : res;
+                                if (payload && payload.success && payload.exists === true) {
+                                    backendLog('LuaTools already present for this app; not inserting button');
+                                    window.__LuaToolsPresenceCheckInFlight = false;
+                                    return; // do not insert
+                                }
+                                // Re-check in case another caller inserted during async
+                                if (!document.querySelector('.luatools-button') && !window.__LuaToolsButtonInserted) {
+                                    // Insert after icon button (order: Restart → Icon → Add)
+                                    const iconExisting = steamdbContainer.querySelector('.luatools-icon-button');
+                                    const restartExisting = steamdbContainer.querySelector('.luatools-restart-button');
+                                    if (iconExisting && iconExisting.before) {
+                                        iconExisting.before(luatoolsButton);
+                                    } else if (restartExisting && restartExisting.after) {
+                                        restartExisting.after(luatoolsButton);
+                                    } else if (referenceBtn && referenceBtn.after) {
+                                        referenceBtn.after(luatoolsButton);
+                                    } else {
+                                        steamdbContainer.appendChild(luatoolsButton);
+                                    }
+                                    window.__LuaToolsButtonInserted = true;
+                                    backendLog('LuaTools button inserted');
+                                }
+                                window.__LuaToolsPresenceCheckInFlight = false;
+                            } catch (_) {
+                                if (!document.querySelector('.luatools-button') && !window.__LuaToolsButtonInserted) {
+                                    steamdbContainer.appendChild(luatoolsButton);
+                                    window.__LuaToolsButtonInserted = true;
+                                    backendLog('LuaTools button inserted');
+                                }
+                                window.__LuaToolsPresenceCheckInFlight = false;
+                            }
+                        });
+                    } else {
+                        if (!document.querySelector('.luatools-button') && !window.__LuaToolsButtonInserted) {
+                            // Insert after icon button (order: Restart → Icon → Add)
+                            const iconExisting = steamdbContainer.querySelector('.luatools-icon-button');
+                            const restartExisting = steamdbContainer.querySelector('.luatools-restart-button');
+                            if (iconExisting && iconExisting.before) {
+                                iconExisting.before(luatoolsButton);
+                            } else if (restartExisting && restartExisting.after) {
+                                restartExisting.after(luatoolsButton);
+                            } else if (referenceBtn && referenceBtn.after) {
+                                referenceBtn.after(luatoolsButton);
+                            } else {
+                                steamdbContainer.appendChild(luatoolsButton);
+                            }
+                            window.__LuaToolsButtonInserted = true;
+                            backendLog('LuaTools button inserted');
+                        }
+                    }
+                } catch (_) {
                     if (!document.querySelector('.luatools-button') && !window.__LuaToolsButtonInserted) {
-                        // Insert after icon button (order: Restart → Icon → Add)
-                        const iconExisting = steamdbContainer.querySelector('.luatools-icon-button');
                         const restartExisting = steamdbContainer.querySelector('.luatools-restart-button');
-                        if (iconExisting && iconExisting.before) {
-                            iconExisting.before(luatoolsButton);
-                        } else if (restartExisting && restartExisting.after) {
+                        if (restartExisting && restartExisting.after) {
                             restartExisting.after(luatoolsButton);
                         } else if (referenceBtn && referenceBtn.after) {
                             referenceBtn.after(luatoolsButton);
@@ -4190,20 +4931,6 @@
                         backendLog('LuaTools button inserted');
                     }
                 }
-            } catch(_) {
-                if (!document.querySelector('.luatools-button') && !window.__LuaToolsButtonInserted) {
-                    const restartExisting = steamdbContainer.querySelector('.luatools-restart-button');
-                    if (restartExisting && restartExisting.after) {
-                        restartExisting.after(luatoolsButton);
-                    } else if (referenceBtn && referenceBtn.after) {
-                        referenceBtn.after(luatoolsButton);
-                    } else {
-                        steamdbContainer.appendChild(luatoolsButton);
-                    }
-                    window.__LuaToolsButtonInserted = true;
-                    backendLog('LuaTools button inserted');
-                }
-            }
             }
 
             // status pills!! fire emoji
@@ -4217,16 +4944,16 @@
                         if (!btn) return;
 
                         let pillsContainer = btn.querySelector('.luatools-pills-container');
-                        
+
                         if (!pillsContainer) {
                             pillsContainer = document.createElement('div');
                             pillsContainer.className = 'luatools-pills-container';
                             btn.appendChild(pillsContainer);
                         }
-                        
+
                         const key = String(appid);
                         const gameData = (db && db[key]) ? db[key] : null;
-                        
+
                         // check denuvo
                         const drmNotice = document.querySelector('.DRM_notice');
                         const hasDenuvo = drmNotice && drmNotice.textContent.includes('Denuvo');
@@ -4235,7 +4962,7 @@
 
                         fixesPromise.then(function(fixesData) {
                             const hasFixes = fixesData && (
-                                (fixesData.genericFix && fixesData.genericFix.status === 200) || 
+                                (fixesData.genericFix && fixesData.genericFix.status === 200) ||
                                 (fixesData.onlineFix && fixesData.onlineFix.status === 200)
                             );
                             const showDenuvoPill = hasDenuvo && !hasFixes;
@@ -4248,7 +4975,7 @@
 
                             if (pillsContainer.dataset.content === cacheKey) return;
                             pillsContainer.dataset.content = cacheKey;
-                            
+
                             pillsContainer.innerHTML = '';
 
                             let status = 'untested';
@@ -4299,9 +5026,13 @@
                         });
                     });
                 }
-            } catch(e) { /* ignore */ }
+            } catch (e) {
+                /* ignore */ }
         } else {
-            if (!logState.missingOnce) { backendLog('LuaTools: steamdbContainer not found on this page'); logState.missingOnce = true; }
+            if (!logState.missingOnce) {
+                backendLog('LuaTools: steamdbContainer not found on this page');
+                logState.missingOnce = true;
+            }
         }
     }
 
@@ -4309,12 +5040,21 @@
     function onFrontendReady() {
         // Fetch settings on startup to ensure saved theme is applied across pages
         try {
-            fetchSettingsConfig(true).then(function(cfg){
-                try { ensureLuaToolsStyles(); } catch(_) {}
-            }).catch(function(_){});
-        } catch(_) {}
+            fetchSettingsConfig(true).then(function(cfg) {
+                try {
+                    ensureLuaToolsStyles();
+                } catch (_) {}
+            }).catch(function(_) {});
+        } catch (_) {}
 
         addLuaToolsButton();
+
+        // Show disclaimer if not yet accepted
+        try {
+            if (localStorage.getItem('luatools millennium disclaimer accepted') !== '1') {
+                showMillenniumDisclaimerModal();
+            }
+        } catch (_) {}
 
         // Show gamepad hint if connected (only in Big Picture mode)
         setTimeout(function() {
@@ -4371,19 +5111,25 @@
         // Ask backend if there is a queued startup message from InitApis
         try {
             if (typeof Millennium !== 'undefined' && typeof Millennium.callServerMethod === 'function') {
-                Millennium.callServerMethod('luatools', 'GetInitApisMessage', { contentScriptQuery: '' }).then(function(res){
+                Millennium.callServerMethod('luatools', 'GetInitApisMessage', {
+                    contentScriptQuery: ''
+                }).then(function(res) {
                     try {
                         const payload = typeof res === 'string' ? JSON.parse(res) : res;
                         if (payload && payload.message) {
                             const msg = String(payload.message);
                             // Check if this is an update message (contains "update" or "restart")
                             const isUpdateMsg = msg.toLowerCase().includes('update') || msg.toLowerCase().includes('restart');
-                            
+
                             if (isUpdateMsg) {
                                 // For update messages, use confirm dialog with OK (restart) and Cancel options
                                 showLuaToolsConfirm('LuaTools', msg, function() {
                                     // User clicked Confirm - restart Steam
-                                    try { Millennium.callServerMethod('luatools', 'RestartSteam', { contentScriptQuery: '' }); } catch(_) {}
+                                    try {
+                                        Millennium.callServerMethod('luatools', 'RestartSteam', {
+                                            contentScriptQuery: ''
+                                        });
+                                    } catch (_) {}
                                 }, function() {
                                     // User clicked Cancel - do nothing (just closes dialog)
                                 });
@@ -4392,32 +5138,34 @@
                                 ShowLuaToolsAlert('LuaTools', msg);
                             }
                         }
-                    } catch(_){ }
+                    } catch (_) {}
                 });
                 // Also show loaded apps list if present (only once per session)
                 try {
                     if (!sessionStorage.getItem('LuaToolsLoadedAppsGate')) {
                         sessionStorage.setItem('LuaToolsLoadedAppsGate', '1');
-                        Millennium.callServerMethod('luatools', 'ReadLoadedApps', { contentScriptQuery: '' }).then(function(res){
+                        Millennium.callServerMethod('luatools', 'ReadLoadedApps', {
+                            contentScriptQuery: ''
+                        }).then(function(res) {
                             try {
                                 const payload = typeof res === 'string' ? JSON.parse(res) : res;
                                 const apps = (payload && payload.success && Array.isArray(payload.apps)) ? payload.apps : [];
                                 if (apps.length > 0) {
                                     showLoadedAppsPopup(apps);
                                 }
-                            } catch(_){ }
+                            } catch (_) {}
                         });
                     }
-                } catch(_){ }
+                } catch (_) {}
             }
-        } catch(_) { }
+        } catch (_) {}
     }
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', onFrontendReady);
     } else {
         onFrontendReady();
     }
-    
+
     // Delegate click handling in case the DOM is re-rendered and listeners are lost
     // Use bubble phase instead of capture phase to avoid interfering with gamepad navigation
     document.addEventListener('click', function(evt) {
@@ -4445,44 +5193,69 @@
                         }
                         runState.inProgress = true;
                         runState.appid = appid;
-                        Millennium.callServerMethod('luatools', 'StartAddViaLuaTools', { appid, contentScriptQuery: '' });
+                        Millennium.callServerMethod('luatools', 'StartAddViaLuaTools', {
+                            appid,
+                            contentScriptQuery: ''
+                        });
                         startPolling(appid);
                     };
 
-                    // Check games database to decide whether to show warning modal
-                    fetchGamesDatabase().then(function(db) {
-                        try {
-                            const key = String(appid);
-                            const gameData = db && db[key] ? db[key] : null;
-                            if (gameData && gameData.playable === 0) {
-                                // warning modal
-                                showLuaToolsPlayableWarning('This game may not work, support for it wont be given in our discord', function() {
-                                    continueWithAdd();
-                                }, function() {
-                                });
-                            } else {
-                                continueWithAdd();
+                    // First check if it's a DLC
+                    fetch('https://store.steampowered.com/api/appdetails?appids=' + appid + '&filters=basic')
+                        .then(function(res) {
+                            return res.json();
+                        })
+                        .then(function(data) {
+                            if (data && data[appid] && data[appid].success && data[appid].data) {
+                                const info = data[appid].data;
+                                if (info.type === 'dlc' && info.fullgame && info.fullgame.appid) {
+                                    showDlcWarning(appid, info.fullgame.appid, info.fullgame.name);
+                                    return;
+                                }
                             }
-                        } catch(_) {
+
+                            // Not a DLC (or failed to check), proceed with database check
+                            return fetchGamesDatabase().then(function(db) {
+                                try {
+                                    const key = String(appid);
+                                    const gameData = db && db[key] ? db[key] : null;
+                                    if (gameData && gameData.playable === 0) {
+                                        // warning modal
+                                        showLuaToolsPlayableWarning('This game may not work, support for it wont be given in our discord', function() {
+                                            continueWithAdd();
+                                        }, function() {});
+                                    } else {
+                                        continueWithAdd();
+                                    }
+                                } catch (_) {
+                                    continueWithAdd();
+                                }
+                            });
+                        })
+                        .catch(function(err) {
+                            backendLog('LuaTools: DLC check failed: ' + err);
                             continueWithAdd();
-                        }
-                    }).catch(function() {
-                        continueWithAdd();
-                    });
+                        });
                 }
-            } catch(_) {}
+            } catch (_) {}
         }
     }, false); // Changed from true to false (bubble phase instead of capture phase)
 
     // Poll backend for progress and update progress bar and text
-    function startPolling(appid){
+    function startPolling(appid) {
         let done = false;
         let lastCheckedApi = null;
         let successfulApi = null; // Track which API successfully found the file
         const timer = setInterval(() => {
-            if (done) { clearInterval(timer); return; }
+            if (done) {
+                clearInterval(timer);
+                return;
+            }
             try {
-                Millennium.callServerMethod('luatools', 'GetAddViaLuaToolsStatus', { appid, contentScriptQuery: '' }).then(function(res){
+                Millennium.callServerMethod('luatools', 'GetAddViaLuaToolsStatus', {
+                    appid,
+                    contentScriptQuery: ''
+                }).then(function(res) {
                     try {
                         const payload = typeof res === 'string' ? JSON.parse(res) : res;
                         const st = payload && payload.state ? payload.state : {};
@@ -4540,7 +5313,8 @@
                                         // This API comes after the successful one, mark as skipped
                                         item.style.background = `rgba(0,0,0,0.15)`;
                                         item.style.borderColor = colors.borderRgba;
-                                        apiStatus.innerHTML = `<span style="color:${colors.textSecondary};">${lt('Skipped')}</span><i class="fa-solid fa-minus" style="color:${colors.textSecondary};"></i>`;                                    }
+                                        apiStatus.innerHTML = `<span style="color:${colors.textSecondary};">${lt('Skipped')}</span><i class="fa-solid fa-minus" style="color:${colors.textSecondary};"></i>`;
+                                    }
                                 });
                             }
 
@@ -4582,20 +5356,20 @@
                                     const apiName = item.getAttribute('data-api-name');
                                     const apiStatus = item.querySelector('.luatools-api-status');
                                     if (!apiStatus || !apiName) return;
-                                    
+
                                     const apiError = st.apiErrors[apiName];
                                     if (!apiError) return;
-                                    
+
                                     // Only show error if this API is not currently being checked
                                     if (st.currentApi === apiName && st.status === 'checking') return;
-                                    
+
                                     // Don't overwrite "Found" status
                                     const statusText = apiStatus.textContent || '';
                                     if (statusText.includes('Found') || statusText.includes('Encontrado')) return;
-                                    
+
                                     item.style.background = `rgba(255, 0, 0, 0.15)`;
                                     item.style.borderColor = '#ff5c5c';
-                                    
+
                                     if (apiError.type === 'timeout') {
                                         apiStatus.innerHTML = `<span style="color:#ff5c5c;">${lt('Error, Timed Out')}</span><i class="fa-solid fa-clock" style="color:#ff5c5c;"></i>`;
                                     } else if (apiError.type === 'error') {
@@ -4621,7 +5395,7 @@
                             if (st.status === 'done') status.textContent = lt('Finishing…');
                             if (st.status === 'failed') status.textContent = lt('Failed');
                         }
-                        if (st.status === 'downloading' || st.status === 'processing' || st.status === 'installing'){
+                        if (st.status === 'downloading' || st.status === 'processing' || st.status === 'installing') {
                             // reveal progress UI (if overlay visible)
                             if (wrap && wrap.style.display === 'none') wrap.style.display = 'block';
                             if (progressInfo && progressInfo.style.display === 'none') {
@@ -4629,9 +5403,11 @@
                                 progressInfo.style.justifyContent = 'space-between';
                             }
 
-                            const total = st.totalBytes || 0; const read = st.bytesRead || 0;
-                            let pct = total > 0 ? Math.floor((read/total)*100) : (read ? 1 : 0);
-                            if (pct > 100) pct = 100; if (pct < 0) pct = 0;
+                            const total = st.totalBytes || 0;
+                            const read = st.bytesRead || 0;
+                            let pct = total > 0 ? Math.floor((read / total) * 100) : (read ? 1 : 0);
+                            if (pct > 100) pct = 100;
+                            if (pct < 0) pct = 0;
 
                             // Update bar and percentage
                             if (bar) bar.style.width = pct + '%';
@@ -4656,7 +5432,7 @@
                             const cancelBtn = overlay ? overlay.querySelector('.luatools-cancel-btn') : null;
                             if (cancelBtn && st.status === 'downloading') cancelBtn.style.display = '';
                         }
-                        if (st.status === 'done'){
+                        if (st.status === 'done') {
                             // Update popup if visible
                             if (title) title.textContent = t('common.appName', 'LuaTools');
                             if (bar) bar.style.width = '100%';
@@ -4669,20 +5445,22 @@
                             if (hideBtn) hideBtn.innerHTML = '<span>' + lt('Close') + '</span>';
                             // hide progress visuals after a short beat
                             if (wrap || progressInfo) {
-                            setTimeout(function(){
-                                if (wrap) wrap.style.display = 'none';
-                                if (progressInfo) progressInfo.style.display = 'none';
-                            }, 300);
+                                setTimeout(function() {
+                                    if (wrap) wrap.style.display = 'none';
+                                    if (progressInfo) progressInfo.style.display = 'none';
+                                }, 300);
                             }
-                            done = true; clearInterval(timer);
-                            runState.inProgress = false; runState.appid = null;
+                            done = true;
+                            clearInterval(timer);
+                            runState.inProgress = false;
+                            runState.appid = null;
                             // Remove button since game is added (works even if popup is hidden)
                             const btnEl = document.querySelector('.luatools-button');
                             if (btnEl && btnEl.parentElement) {
                                 btnEl.parentElement.removeChild(btnEl);
                             }
                         }
-                        if (st.status === 'failed'){
+                        if (st.status === 'failed') {
                             // Mark all APIs as not found when failed (unless they have error status)
                             if (overlay && !successfulApi) {
                                 const colors = getThemeColors();
@@ -4691,7 +5469,7 @@
                                     const apiName = item.getAttribute('data-api-name');
                                     const apiStatus = item.querySelector('.luatools-api-status');
                                     if (!apiStatus) return;
-                                    
+
                                     // Skip if this API already has an error status
                                     if (st.apiErrors && st.apiErrors[apiName]) {
                                         const apiError = st.apiErrors[apiName];
@@ -4705,7 +5483,7 @@
                                         }
                                         return;
                                     }
-                                    
+
                                     // Check if this API is still in "Waiting..." or "Checking..." state
                                     const statusText = apiStatus.textContent || '';
                                     if (statusText.includes('Waiting') || statusText.includes('Esperando') || statusText.includes('Checking') || statusText.includes('Verificando')) {
@@ -4725,21 +5503,26 @@
                             if (hideBtn) hideBtn.innerHTML = '<span>' + lt('Close') + '</span>';
                             if (wrap) wrap.style.display = 'none';
                             if (progressInfo) progressInfo.style.display = 'none';
-                            done = true; clearInterval(timer);
-                            runState.inProgress = false; runState.appid = null;
+                            done = true;
+                            clearInterval(timer);
+                            runState.inProgress = false;
+                            runState.appid = null;
                         }
-                    } catch(_){ }
+                    } catch (_) {}
                 });
-            } catch(_){ clearInterval(timer); }
+            } catch (_) {
+                clearInterval(timer);
+            }
         }, 300);
     }
-    
+
     // Also try after a delay to catch dynamically loaded content
     setTimeout(addLuaToolsButton, 1000);
     setTimeout(addLuaToolsButton, 3000);
-    
+
     // Listen for URL changes (Steam uses pushState for navigation)
     let lastUrl = window.location.href;
+
     function checkUrlChange() {
         const currentUrl = window.location.href;
         if (currentUrl !== lastUrl) {
@@ -4748,6 +5531,8 @@
             window.__LuaToolsButtonInserted = false;
             window.__LuaToolsRestartInserted = false;
             window.__LuaToolsIconInserted = false;
+            window.__LuaToolsHeaderInserted = false;
+
             window.__LuaToolsPresenceCheckInFlight = false;
             window.__LuaToolsPresenceCheckAppId = undefined;
             // Update translations and re-add buttons
@@ -4772,7 +5557,7 @@
         originalReplaceState.apply(history, arguments);
         setTimeout(checkUrlChange, 100);
     };
-    
+
     // Use MutationObserver to catch dynamically added content
     // Heavily optimized and throttled version to avoid blocking gamepad
     if (typeof MutationObserver !== 'undefined') {
@@ -4807,10 +5592,10 @@
                             if (node.nodeType === 1) { // Element node
                                 // Quick class check without querySelector (faster)
                                 if (node.classList && (
-                                    node.classList.contains('steamdb-buttons') ||
-                                    node.classList.contains('apphub_OtherSiteInfo') ||
-                                    node.id === 'queueBtnFollow'
-                                )) {
+                                        node.classList.contains('steamdb-buttons') ||
+                                        node.classList.contains('apphub_OtherSiteInfo') ||
+                                        node.id === 'queueBtnFollow'
+                                    )) {
                                     shouldUpdate = true;
                                     break;
                                 }
@@ -4856,17 +5641,41 @@
         body.style.cssText = `font-size:14px;line-height:1.8;margin-bottom:16px;max-height:320px;overflow:auto;padding:16px;border:1px solid ${loadedAppsBodyColors.border};border-radius:12px;background:${loadedAppsBodyColors.bgContainer};`;
         if (apps && apps.length) {
             const list = document.createElement('div');
-            apps.forEach(function(item){
+            apps.forEach(function(item) {
                 const a = document.createElement('a');
                 a.href = 'steam://install/' + String(item.appid);
                 a.textContent = String(item.name || item.appid);
                 const linkColors = getThemeColors();
                 a.style.cssText = `display:block;color:${linkColors.textSecondary};text-decoration:none;padding:10px 16px;margin-bottom:8px;background:rgba(${linkColors.rgbString},0.08);border:1px solid rgba(${linkColors.rgbString},0.2);border-radius:4px;transition:all 0.3s ease;`;
-                a.onmouseover = function() { const c = getThemeColors(); this.style.background = `rgba(${c.rgbString},0.2)`; this.style.borderColor = c.accent; this.style.transform = 'translateX(4px)'; this.style.color = c.text; };
-                a.onmouseout = function() { const c = getThemeColors(); this.style.background = `rgba(${c.rgbString},0.08)`; this.style.borderColor = `rgba(${c.rgbString},0.2)`; this.style.transform = 'translateX(0)'; this.style.color = c.textSecondary; };
-                a.onclick = function(e){ e.preventDefault(); try { window.location.href = a.href; } catch(_) {} };
-                a.oncontextmenu = function(e){ e.preventDefault(); const url = 'https://steamdb.info/app/' + String(item.appid) + '/';
-                    try { Millennium.callServerMethod('luatools', 'OpenExternalUrl', { url, contentScriptQuery: '' }); } catch(_) {}
+                a.onmouseover = function() {
+                    const c = getThemeColors();
+                    this.style.background = `rgba(${c.rgbString},0.2)`;
+                    this.style.borderColor = c.accent;
+                    this.style.transform = 'translateX(4px)';
+                    this.style.color = c.text;
+                };
+                a.onmouseout = function() {
+                    const c = getThemeColors();
+                    this.style.background = `rgba(${c.rgbString},0.08)`;
+                    this.style.borderColor = `rgba(${c.rgbString},0.2)`;
+                    this.style.transform = 'translateX(0)';
+                    this.style.color = c.textSecondary;
+                };
+                a.onclick = function(e) {
+                    e.preventDefault();
+                    try {
+                        window.location.href = a.href;
+                    } catch (_) {}
+                };
+                a.oncontextmenu = function(e) {
+                    e.preventDefault();
+                    const url = 'https://steamdb.info/app/' + String(item.appid) + '/';
+                    try {
+                        Millennium.callServerMethod('luatools', 'OpenExternalUrl', {
+                            url,
+                            contentScriptQuery: ''
+                        });
+                    } catch (_) {}
                 };
                 list.appendChild(a);
             });
@@ -4884,14 +5693,27 @@
         dismissBtn.className = 'luatools-btn';
         dismissBtn.innerHTML = '<span>' + lt('Dismiss') + '</span>';
         dismissBtn.href = '#';
-        dismissBtn.onclick = function(e){ e.preventDefault(); try { Millennium.callServerMethod('luatools', 'DismissLoadedApps', { contentScriptQuery: '' }); } catch(_) {} try { sessionStorage.setItem('LuaToolsLoadedAppsShown', '1'); } catch(_) {} overlay.remove(); };
+        dismissBtn.onclick = function(e) {
+            e.preventDefault();
+            try {
+                Millennium.callServerMethod('luatools', 'DismissLoadedApps', {
+                    contentScriptQuery: ''
+                });
+            } catch (_) {}
+            try {
+                sessionStorage.setItem('LuaToolsLoadedAppsShown', '1');
+            } catch (_) {}
+            overlay.remove();
+        };
         btnRow.appendChild(instructionText);
         btnRow.appendChild(dismissBtn);
         modal.appendChild(title);
         modal.appendChild(body);
         modal.appendChild(btnRow);
         overlay.appendChild(modal);
-        overlay.addEventListener('click', function(e){ if (e.target === overlay) overlay.remove(); });
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) overlay.remove();
+        });
         document.body.appendChild(overlay);
 
         // Re-scan elements for gamepad navigation
