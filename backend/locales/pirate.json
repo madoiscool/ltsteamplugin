@@ -30,7 +30,11 @@
     "Confirm": "Aye, Confirm",
     "DLC Detected": "DLC Spotted, arrr!",
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     "DLCs are added together with the base game. To add fixes for this DLC, please go to the base game page: <br><br><b>{gameName}</b>": "DLCs be added together wit' th' base game, arrr. T' add fixes fer this DLC, please sail t' th' base game page: <br><br><b>{gameName}</b>",
+=======
+    "DLCs are added together with the base game. To add fixes for this DLC, please go to the base game page: <br><br><b>{gameName}</b>": "DLCs be added together wit' th' base game, arrr. T' add this DLC, please sail t' th' base game page: <br><br><b>{gameName}</b>",
+>>>>>>> Stashed changes
 =======
     "DLCs are added together with the base game. To add fixes for this DLC, please go to the base game page: <br><br><b>{gameName}</b>": "DLCs be added together wit' th' base game, arrr. T' add this DLC, please sail t' th' base game page: <br><br><b>{gameName}</b>",
 >>>>>>> Stashed changes

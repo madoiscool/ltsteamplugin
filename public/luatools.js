@@ -4471,7 +4471,11 @@
 
         var expectedPhrase = t('disclaimer.inputPlaceholder', 'I Understand').trim().toLowerCase();
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         input.oninput = function() {
+=======
+        input.oninput = function () {
+>>>>>>> Stashed changes
 =======
         input.oninput = function () {
 >>>>>>> Stashed changes
@@ -5083,7 +5087,11 @@
                 try {
                     ensureLuaToolsStyles();
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
                 } catch (_) {}
+=======
+                } catch (_) { }
+>>>>>>> Stashed changes
 =======
                 } catch (_) { }
 >>>>>>> Stashed changes
@@ -5096,9 +5104,15 @@
                         }
                     }
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
                 } catch (_) {}
             }).catch(function(_) {});
         } catch (_) {}
+=======
+                } catch (_) { }
+            }).catch(function (_) { });
+        } catch (_) { }
+>>>>>>> Stashed changes
 =======
                 } catch (_) { }
             }).catch(function (_) { });
@@ -5199,7 +5213,11 @@
                             Millennium.callServerMethod('luatools', 'ReadLoadedApps', {
                                 contentScriptQuery: ''
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
                             }).then(function(res) {
+=======
+                            }).then(function (res) {
+>>>>>>> Stashed changes
 =======
                             }).then(function (res) {
 >>>>>>> Stashed changes
@@ -5210,7 +5228,11 @@
                                         showLoadedAppsPopup(apps);
                                     }
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
                                 } catch (_) {}
+=======
+                                } catch (_) { }
+>>>>>>> Stashed changes
 =======
                                 } catch (_) { }
 >>>>>>> Stashed changes

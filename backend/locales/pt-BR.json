@@ -181,9 +181,15 @@
     "disclaimer.line1": "O LuaTools não é afiliado de forma alguma ao Millennium",
     "disclaimer.line2": "O Millennium NÃO oferecerá suporte para este plugin no servidor do Discord deles",
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     "disclaimer.line3": "Você será BANIDO dos servidores LuaTools e Millennium se buscar ajuda no Discord deles",
     "disclaimer.inputLabel": "digite \"Eu Entendo\" na caixa abaixo para continuar",
     "disclaimer.inputPlaceholder": "Eu Entendo",
+=======
+    "disclaimer.line3": "Você será BANIDO dos dois servidores se buscar ajuda no Discord do Millennium",
+    "disclaimer.inputLabel": "digite \"Eu Entendi\" na caixa abaixo para continuar",
+    "disclaimer.inputPlaceholder": "Eu Entendi",
+>>>>>>> Stashed changes
 =======
     "disclaimer.line3": "Você será BANIDO dos dois servidores se buscar ajuda no Discord do Millennium",
     "disclaimer.inputLabel": "digite \"Eu Entendi\" na caixa abaixo para continuar",

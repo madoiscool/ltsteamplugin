@@ -30,7 +30,11 @@
     "Confirm": "Confirmar",
     "DLC Detected": "DLC Detectado",
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     "DLCs are added together with the base game. To add fixes for this DLC, please go to the base game page: <br><br><b>{gameName}</b>": "Los DLCs se añaden junto con el juego base. Para añadir fixes para este DLC, ve a la página del juego base: <br><br><b>{gameName}</b>",
+=======
+    "DLCs are added together with the base game. To add fixes for this DLC, please go to the base game page: <br><br><b>{gameName}</b>": "Los DLCs se añaden junto con el juego base. Para añadir este DLC, ve a la página del juego base: <br><br><b>{gameName}</b>",
+>>>>>>> Stashed changes
 =======
     "DLCs are added together with the base game. To add fixes for this DLC, please go to the base game page: <br><br><b>{gameName}</b>": "Los DLCs se añaden junto con el juego base. Para añadir este DLC, ve a la página del juego base: <br><br><b>{gameName}</b>",
 >>>>>>> Stashed changes
