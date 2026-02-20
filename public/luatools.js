@@ -5044,17 +5044,17 @@
                 try {
                     ensureLuaToolsStyles();
                 } catch (_) {}
+
+                // Show disclaimer after translations are loaded so it displays in the correct language
+                try {
+                    if (localStorage.getItem('luatools millennium disclaimer accepted') !== '1') {
+                        showMillenniumDisclaimerModal();
+                    }
+                } catch (_) {}
             }).catch(function(_) {});
         } catch (_) {}
 
         addLuaToolsButton();
-
-        // Show disclaimer if not yet accepted
-        try {
-            if (localStorage.getItem('luatools millennium disclaimer accepted') !== '1') {
-                showMillenniumDisclaimerModal();
-            }
-        } catch (_) {}
 
         // Show gamepad hint if connected (only in Big Picture mode)
         setTimeout(function() {
