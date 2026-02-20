@@ -4594,7 +4594,7 @@
                 headerBtn.href = '#';
                 // Use luatools-btn primary class for that premium modal look
                 headerBtn.className = 'luatools-btn primary luatools-header-button Focusable';
-                headerBtn.style.cssText = 'margin-left:12px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; width:36px; height:36px; padding:0; border-radius:8px; border-width:1px; box-shadow: 0 4px 12px rgba(0,0,0,0.4);';
+                headerBtn.style.cssText = 'margin-left:12px; display:inline-flex; align-items:center; justify-content:center; align-self:center; cursor:pointer; flex-shrink:0; width:36px; height:36px; padding:0; border-radius:8px; border-width:1px; box-shadow: 0 4px 12px rgba(0,0,0,0.4);';
                 headerBtn.title = 'LuaTools Settings';
 
                 headerBtn.setAttribute('data-tooltip-text', 'LuaTools Settings');
@@ -5047,8 +5047,10 @@
 
                 // Show disclaimer after translations are loaded so it displays in the correct language
                 try {
-                    if (localStorage.getItem('luatools millennium disclaimer accepted') !== '1') {
-                        showMillenniumDisclaimerModal();
+                    if (window.location.hostname === 'store.steampowered.com') {
+                        if (localStorage.getItem('luatools millennium disclaimer accepted') !== '1') {
+                            showMillenniumDisclaimerModal();
+                        }
                     }
                 } catch (_) {}
             }).catch(function(_) {});
@@ -5140,21 +5142,23 @@
                         }
                     } catch (_) {}
                 });
-                // Also show loaded apps list if present (only once per session)
+                // Also show loaded apps list if present (only once per session, store page only)
                 try {
-                    if (!sessionStorage.getItem('LuaToolsLoadedAppsGate')) {
-                        sessionStorage.setItem('LuaToolsLoadedAppsGate', '1');
-                        Millennium.callServerMethod('luatools', 'ReadLoadedApps', {
-                            contentScriptQuery: ''
-                        }).then(function(res) {
-                            try {
-                                const payload = typeof res === 'string' ? JSON.parse(res) : res;
-                                const apps = (payload && payload.success && Array.isArray(payload.apps)) ? payload.apps : [];
-                                if (apps.length > 0) {
-                                    showLoadedAppsPopup(apps);
-                                }
-                            } catch (_) {}
-                        });
+                    if (window.location.hostname === 'store.steampowered.com') {
+                        if (!sessionStorage.getItem('LuaToolsLoadedAppsGate')) {
+                            sessionStorage.setItem('LuaToolsLoadedAppsGate', '1');
+                            Millennium.callServerMethod('luatools', 'ReadLoadedApps', {
+                                contentScriptQuery: ''
+                            }).then(function(res) {
+                                try {
+                                    const payload = typeof res === 'string' ? JSON.parse(res) : res;
+                                    const apps = (payload && payload.success && Array.isArray(payload.apps)) ? payload.apps : [];
+                                    if (apps.length > 0) {
+                                        showLoadedAppsPopup(apps);
+                                    }
+                                } catch (_) {}
+                            });
+                        }
                     }
                 } catch (_) {}
             }

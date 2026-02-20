@@ -43,6 +43,7 @@ venv.bak/
 .settings/
 *.sublime-project
 *.sublime-workspace
+.claude
 
 # OS Files
 .DS_Store
@@ -90,7 +91,6 @@ logs/
 *.cache
 GAMEPAD-CHANGES.md
 GAMEPAD-SYSTEM.md
-en.json
 .millennium/Dist/index.js
 .millennium/Dist/webkit.js
 /.millennium
