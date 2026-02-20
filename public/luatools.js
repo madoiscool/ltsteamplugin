@@ -4470,15 +4470,7 @@
         confirmBtn.style.pointerEvents = 'none';
 
         var expectedPhrase = t('disclaimer.inputPlaceholder', 'I Understand').trim().toLowerCase();
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-        input.oninput = function() {
-=======
         input.oninput = function () {
->>>>>>> Stashed changes
-=======
-        input.oninput = function () {
->>>>>>> Stashed changes
             if (this.value.trim().toLowerCase() === expectedPhrase) {
                 confirmBtn.style.opacity = '1';
                 confirmBtn.style.pointerEvents = 'auto';
@@ -5086,15 +5078,7 @@
             fetchSettingsConfig(true).then(function (cfg) {
                 try {
                     ensureLuaToolsStyles();
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-                } catch (_) {}
-=======
                 } catch (_) { }
->>>>>>> Stashed changes
-=======
-                } catch (_) { }
->>>>>>> Stashed changes
 
                 // Show disclaimer after translations are loaded so it displays in the correct language
                 try {
@@ -5103,21 +5087,9 @@
                             showMillenniumDisclaimerModal();
                         }
                     }
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-                } catch (_) {}
-            }).catch(function(_) {});
-        } catch (_) {}
-=======
                 } catch (_) { }
             }).catch(function (_) { });
         } catch (_) { }
->>>>>>> Stashed changes
-=======
-                } catch (_) { }
-            }).catch(function (_) { });
-        } catch (_) { }
->>>>>>> Stashed changes
 
         addLuaToolsButton();
 
@@ -5212,30 +5184,14 @@
                             sessionStorage.setItem('LuaToolsLoadedAppsGate', '1');
                             Millennium.callServerMethod('luatools', 'ReadLoadedApps', {
                                 contentScriptQuery: ''
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-                            }).then(function(res) {
-=======
                             }).then(function (res) {
->>>>>>> Stashed changes
-=======
-                            }).then(function (res) {
->>>>>>> Stashed changes
                                 try {
                                     const payload = typeof res === 'string' ? JSON.parse(res) : res;
                                     const apps = (payload && payload.success && Array.isArray(payload.apps)) ? payload.apps : [];
                                     if (apps.length > 0) {
                                         showLoadedAppsPopup(apps);
                                     }
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-                                } catch (_) {}
-=======
                                 } catch (_) { }
->>>>>>> Stashed changes
-=======
-                                } catch (_) { }
->>>>>>> Stashed changes
                             });
                         }
                     }

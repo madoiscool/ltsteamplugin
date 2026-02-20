@@ -29,15 +29,7 @@
     "Close": "fechar",
     "Confirm": "confirmar memo",
     "DLC Detected": "DLC caiu aí",
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-    "DLCs are added together with the base game. To add fixes for this DLC, please go to the base game page: <br><br><b>{gameName}</b>": "os DLC entram junto com o jogo base parceiro. pra adicionar fix pra esse DLC vai lá na página do jogo base: <br><br><b>{gameName}</b>",
-=======
     "DLCs are added together with the base game. To add fixes for this DLC, please go to the base game page: <br><br><b>{gameName}</b>": "os DLC entram junto com o jogo base parceiro. pra adicionar esse DLC aí, vai lá na página do jogo base: <br><br><b>{gameName}</b>",
->>>>>>> Stashed changes
-=======
-    "DLCs are added together with the base game. To add fixes for this DLC, please go to the base game page: <br><br><b>{gameName}</b>": "os DLC entram junto com o jogo base parceiro. pra adicionar esse DLC aí, vai lá na página do jogo base: <br><br><b>{gameName}</b>",
->>>>>>> Stashed changes
     "Discord": "zap azul",
     "Dismiss": "deixa quieto",
     "Downloading...": "baixando o bgl...",
@@ -115,18 +107,8 @@
     "common.status.success": "favela venceu viado",
     "common.translationMissing": "tradução sumiu tlgd",
     "common.warning": "avisando ai memo",
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-    "disclaimer.inputLabel": "mete \"tô ligado\" na caixinha aí pra continuá",
-    "disclaimer.inputPlaceholder": "tô ligado",
-=======
     "disclaimer.inputLabel": "mete \"blz\" na caixinha aí pra continuá",
     "disclaimer.inputPlaceholder": "blz",
->>>>>>> Stashed changes
-=======
-    "disclaimer.inputLabel": "mete \"blz\" na caixinha aí pra continuá",
-    "disclaimer.inputPlaceholder": "blz",
->>>>>>> Stashed changes
     "disclaimer.line1": "LuaTools não tem nada a ver com Millennium, são coisas diferentes",
     "disclaimer.line2": "Millennium não vai te dar suporte pra esse plugin no discord deles não",
     "disclaimer.line3": "vai tomar ban dos dois servidor se for lá no discord deles pedindo ajuda fi",

@@ -180,21 +180,9 @@
     "disclaimer.title": "Aviso Importante",
     "disclaimer.line1": "O LuaTools não é afiliado de forma alguma ao Millennium",
     "disclaimer.line2": "O Millennium NÃO oferecerá suporte para este plugin no servidor do Discord deles",
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-    "disclaimer.line3": "Você será BANIDO dos servidores LuaTools e Millennium se buscar ajuda no Discord deles",
+    "disclaimer.line3": "Você será BANIDO dos dois servidores se buscar ajuda no Discord do Millennium",
     "disclaimer.inputLabel": "digite \"Eu Entendo\" na caixa abaixo para continuar",
     "disclaimer.inputPlaceholder": "Eu Entendo",
-=======
-    "disclaimer.line3": "Você será BANIDO dos dois servidores se buscar ajuda no Discord do Millennium",
-    "disclaimer.inputLabel": "digite \"Eu Entendi\" na caixa abaixo para continuar",
-    "disclaimer.inputPlaceholder": "Eu Entendi",
->>>>>>> Stashed changes
-=======
-    "disclaimer.line3": "Você será BANIDO dos dois servidores se buscar ajuda no Discord do Millennium",
-    "disclaimer.inputLabel": "digite \"Eu Entendi\" na caixa abaixo para continuar",
-    "disclaimer.inputPlaceholder": "Eu Entendi",
->>>>>>> Stashed changes
     "DLC Detected": "DLC Detectada",
     "DLCs are added together with the base game. To add fixes for this DLC, please go to the base game page: <br><br><b>{gameName}</b>": "DLCs são adicionadas junto com o jogo base. Para adicionar esta DLC, por favor vá para a página do jogo base: <br><br><b>{gameName}</b>",
     "Go to Base Game": "Ir para o Jogo Base",
