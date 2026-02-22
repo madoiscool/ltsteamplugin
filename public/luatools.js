@@ -1439,6 +1439,8 @@
                 let steamLang = document.documentElement.lang || 'en';
                 if (steamLang.toLowerCase() === 'pt-br') steamLang = 'pt-BR';
                 if (steamLang.toLowerCase() === 'zh-cn') steamLang = 'zh-CN';
+                if (steamLang.toLowerCase() === 'zh-tw') steamLang = 'zh-TW';
+                if (steamLang.toLowerCase() === 'es-419') steamLang = 'es';
                 targetLanguage = useSteamLang ? steamLang : ((window.__LuaToolsI18n && window.__LuaToolsI18n.language) || 'en');
             }
             return Millennium.callServerMethod('luatools', 'GetTranslations', {

@@ -104,3 +104,5 @@ readme
 /tools
 .claude/settings.local.json
 /.claude
+.claude/settings.local.json
+.claude/settings.local.json
