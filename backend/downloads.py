@@ -580,14 +580,19 @@ def _process_and_install_lua(appid: int, zip_path: str) -> None:
             text = data.decode("utf-8", errors="replace")
 
         processed_lines = []
-        depots = []
+        depots = { "ids": [] , "lines": {} }
         for line in text.splitlines(True):
             if re.match(r"^\s*setManifestid\(", line) and not re.match(r"^\s*--", line):
                 line = re.sub(r"^(\s*)", r"\1--", line)
             processed_lines.append(line)
             if re.match(r"^\s*addappid\(", line) and not re.match(r"^\s*--", line):
                 if (m := re.search(r"\d+", line)):
-                    depots.append(int(m.group()))
+                    id = m.group()
+
+                    depots["ids"].append(id)
+                    if id not in depots["lines"]:
+                        depots["lines"][id] = []
+                    depots["lines"][id] = line
             
         processed_text = "".join(processed_lines)
 
@@ -608,11 +613,12 @@ def _process_and_install_lua(appid: int, zip_path: str) -> None:
             info = _fetch_app_info(appid)
             
             # Workshop presence
-            if info.get("workshop_depot", 0) == 0:
+            work_depot = str(info.get("workshop_depot", 0))
+            if work_depot == 0:
                 workshop_result = "No workshop for the game ✅"
             else:
-                # Ugly ass regex
-                if re.match(rf"^\s*addappid\(\s*{appid}\s*,\s*\d+\s*,\s*\"", processed_text):
+                # Checking if mentionned in addappid lines + if it includes a decryption key
+                if work_depot in depots["ids"] and re.search(rf",\d+,[\"']", depots["lines"][work_depot].replace(" ", "")):
                     workshop_result = "Included 🎉"
                 else:
                     workshop_result = "Missing ❌"
@@ -620,7 +626,7 @@ def _process_and_install_lua(appid: int, zip_path: str) -> None:
             # Dlc listing
             dlc_result = { "included": [], "missing": [] }
             if info.get("dlc_list", "") != "":
-                dlcs = info.get("dlc_list").split(",")
+                dlcs = info["dlc_list"].split(",")
 
                 for dlc in dlcs:
                     if int(dlc) in depots:
