@@ -547,6 +547,8 @@ def _process_and_install_lua(appid: int, zip_path: str) -> None:
                         out_path = os.path.join(depotcache_dir, pure)
                         with open(out_path, "wb") as manifest_file:
                             manifest_file.write(data)
+                            manifest_file.flush()
+                            os.fsync(manifest_file.fileno())  # Ensure physical write to disk before steamworks parses it
                         logger.log(f"LuaTools: Extracted manifest -> {out_path}")
                 except Exception as manifest_exc:
                     logger.warn(f"LuaTools: Failed to extract manifest {name}: {manifest_exc}")
@@ -580,19 +582,21 @@ def _process_and_install_lua(appid: int, zip_path: str) -> None:
             text = data.decode("utf-8", errors="replace")
 
         processed_lines = []
-        depots = { "ids": [] , "lines": {} }
+        # depots tracks addappid() lines: ids = list of depot id strings,
+        # lines = dict mapping id str -> raw line content for regex inspection
+        depots: Dict[str, Any] = {"ids": [], "lines": {}}
         for line in text.splitlines(True):
             if re.match(r"^\s*setManifestid\(", line) and not re.match(r"^\s*--", line):
                 line = re.sub(r"^(\s*)", r"\1--", line)
             processed_lines.append(line)
             if re.match(r"^\s*addappid\(", line) and not re.match(r"^\s*--", line):
                 if (m := re.search(r"\d+", line)):
-                    id = m.group()
-
-                    depots["ids"].append(id)
-                    if id not in depots["lines"]:
-                        depots["lines"][id] = []
-                    depots["lines"][id] = line
+                    depot_id = m.group()  # always a string (str)
+                    if depot_id not in depots["ids"]:
+                        depots["ids"].append(depot_id)
+                    # Store the raw line for key inspection (overwrite intentional:
+                    # we only need one representative line per depot)
+                    depots["lines"][depot_id] = line
             
         processed_text = "".join(processed_lines)
 
@@ -600,9 +604,21 @@ def _process_and_install_lua(appid: int, zip_path: str) -> None:
         dest_file = os.path.join(target_dir, f"{appid}.lua")
         if _is_download_cancelled(appid):
             raise RuntimeError("cancelled")
+            
+        # Delay to allow NTFS to index depotcache/*.manifest files
+        # Prevents race conditions where Steam reads the new .lua before manifests are physically available
+        time.sleep(0.5)
+        
         with open(dest_file, "w", encoding="utf-8") as output:
             output.write(processed_text)
+            output.flush()
+            os.fsync(output.fileno())  # Force immediate flush to disk
+            
         logger.log(f"LuaTools: Installed lua -> {dest_file}")
+        
+        # Allow steamworks file watcher to catch up
+        time.sleep(1.0)
+        
         _set_download_state(appid, {"installedPath": dest_file})
 
         # Check .lua content
@@ -612,24 +628,33 @@ def _process_and_install_lua(appid: int, zip_path: str) -> None:
             
             info = _fetch_app_info(appid)
             
-            # Workshop presence
+            # Workshop presence check
+            # BUG FIX: work_depot is str (result of str()), not int.
+            # Comparing str to int (== 0) always returns False in Python 3,
+            # which caused workshop to always show "Missing ❌" even without a workshop.
             work_depot = str(info.get("workshop_depot", 0))
-            if work_depot == 0:
+            if work_depot in ("0", "", "None", "False"):
                 workshop_result = "No workshop for the game ✅"
             else:
-                # Checking if mentionned in addappid lines + if it includes a decryption key
-                if work_depot in depots["ids"] and re.search(rf",\d+,[\"']", depots["lines"][work_depot].replace(" ", "")):
+                # Check if this depot is in addappid lines AND has a decryption key
+                if work_depot in depots["ids"] and re.search(
+                    r",\d+,[\"']", depots["lines"].get(work_depot, "").replace(" ", "")
+                ):
                     workshop_result = "Included 🎉"
                 else:
                     workshop_result = "Missing ❌"
             
-            # Dlc listing
-            dlc_result = { "included": [], "missing": [] }
-            if info.get("dlc_list", "") != "":
-                dlcs = info["dlc_list"].split(",")
-
+            # DLC listing
+            # BUG FIX: previously `if int(dlc) in depots:` checked whether
+            # the integer was a KEY of the dict {"ids": ..., "lines": ...},
+            # which is always False. Fixed to check depots["ids"] (a list of str).
+            dlc_result: Dict[str, list] = {"included": [], "missing": []}
+            dlc_list_raw = info.get("dlc_list", "")
+            if dlc_list_raw:
+                dlcs = [d.strip() for d in dlc_list_raw.split(",") if d.strip()]
                 for dlc in dlcs:
-                    if int(dlc) in depots:
+                    # depots["ids"] contains string depot IDs
+                    if str(dlc) in depots["ids"]:
                         dlc_result["included"].append(int(dlc))
                     else:
                         dlc_result["missing"].append(int(dlc))
