@@ -582,20 +582,25 @@ def _process_and_install_lua(appid: int, zip_path: str) -> None:
             text = data.decode("utf-8", errors="replace")
 
         processed_lines = []
-        # depots tracks addappid() lines: ids = list of depot id strings,
-        # lines = dict mapping id str -> raw line content for regex inspection
         depots: Dict[str, Any] = {"ids": [], "lines": {}}
+        
+        # Regex Optimization: Pre-compilation (Avoids re-initializing a thousand times inside a for loop)
+        rx_manifest = re.compile(r"^\s*setManifestid\(")
+        rx_appid = re.compile(r"^\s*addappid\(")
+        rx_comment = re.compile(r"^\s*--")
+        rx_digits = re.compile(r"\d+")
+        rx_space = re.compile(r"^(\s*)")
+        
         for line in text.splitlines(True):
-            if re.match(r"^\s*setManifestid\(", line) and not re.match(r"^\s*--", line):
-                line = re.sub(r"^(\s*)", r"\1--", line)
+            if rx_manifest.match(line) and not rx_comment.match(line):
+                line = rx_space.sub(r"\1--", line)
             processed_lines.append(line)
-            if re.match(r"^\s*addappid\(", line) and not re.match(r"^\s*--", line):
-                if (m := re.search(r"\d+", line)):
-                    depot_id = m.group()  # always a string (str)
+            
+            if rx_appid.match(line) and not rx_comment.match(line):
+                if (m := rx_digits.search(line)):
+                    depot_id = m.group()
                     if depot_id not in depots["ids"]:
                         depots["ids"].append(depot_id)
-                    # Store the raw line for key inspection (overwrite intentional:
-                    # we only need one representative line per depot)
                     depots["lines"][depot_id] = line
             
         processed_text = "".join(processed_lines)
@@ -607,17 +612,17 @@ def _process_and_install_lua(appid: int, zip_path: str) -> None:
             
         # Delay to allow NTFS to index depotcache/*.manifest files
         # Prevents race conditions where Steam reads the new .lua before manifests are physically available
-        time.sleep(0.5)
+        time.sleep(0.3)  # Reduzido de 0.5 para 0.3 (Suficiente após a extração RAM síncrona)
         
         with open(dest_file, "w", encoding="utf-8") as output:
             output.write(processed_text)
             output.flush()
-            os.fsync(output.fileno())  # Force immediate flush to disk
+            os.fsync(output.fileno())  # Force immediate flush to disk purely for the .lua file
             
         logger.log(f"LuaTools: Installed lua -> {dest_file}")
         
         # Allow steamworks file watcher to catch up
-        time.sleep(1.0)
+        time.sleep(0.5)  # Reduzido de 1.0 para 0.5
         
         _set_download_state(appid, {"installedPath": dest_file})
 
