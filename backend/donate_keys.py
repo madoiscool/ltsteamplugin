@@ -13,11 +13,34 @@ from logger import logger
 # Import private VDF parser - it's used internally for config.vdf parsing
 from steam_utils import _parse_vdf_simple  # type: ignore
 
+DONATED_APPIDS_FILE = os.path.join(os.path.dirname(__file__), "data", "donatedappids.txt")
 DONATION_URL = "http://167.235.229.108/donatekeys/send"
 DONATION_HEADERS = {
     "Content-Type": "text/plain",
     "User-Agent": USER_AGENT,
 }
+
+
+def _load_donated_appids() -> set:
+    """Load the set of already-donated app IDs from the cache file."""
+    if not os.path.exists(DONATED_APPIDS_FILE):
+        return set()
+    try:
+        with open(DONATED_APPIDS_FILE, "r", encoding="utf-8") as f:
+            return {line.strip() for line in f if line.strip()}
+    except Exception as exc:
+        logger.warn(f"LuaTools: Failed to read donated appids cache: {exc}")
+        return set()
+
+
+def _save_donated_appids(appids: set) -> None:
+    """Append newly donated app IDs to the cache file."""
+    try:
+        with open(DONATED_APPIDS_FILE, "a", encoding="utf-8") as f:
+            for appid in sorted(appids):
+                f.write(appid + "\n")
+    except Exception as exc:
+        logger.warn(f"LuaTools: Failed to save donated appids cache: {exc}")
 
 
 def validate_appid_key_pair(appid: str, key: str) -> bool:
@@ -160,6 +183,9 @@ def send_donation_keys(pairs: List[Tuple[str, str]]) -> bool:
     """
     Send donation keys to the donation endpoint.
 
+    Filters out already-donated app IDs using a local cache.
+    Only sends new pairs and records them on success.
+
     Args:
         pairs: List of (appid, key) tuples
 
@@ -170,12 +196,22 @@ def send_donation_keys(pairs: List[Tuple[str, str]]) -> bool:
         logger.log("LuaTools: No keys to donate")
         return False
 
+    already_donated = _load_donated_appids()
+    new_pairs = [(appid, key) for appid, key in pairs if appid not in already_donated]
+
+    if not new_pairs:
+        logger.log(
+            f"LuaTools: All {len(pairs)} keys already donated, skipping request"
+        )
+        return True
+
     try:
-        formatted_data = format_keys_for_donation(pairs)
+        formatted_data = format_keys_for_donation(new_pairs)
         client = get_http_client()
 
         logger.log(
-            f"LuaTools: Sending {len(pairs)} appid/key pairs to donation endpoint..."
+            f"LuaTools: Sending {len(new_pairs)} new appid/key pairs "
+            f"({len(pairs) - len(new_pairs)} already donated, skipped)"
         )
 
         # Local mirror sync
@@ -195,10 +231,10 @@ def send_donation_keys(pairs: List[Tuple[str, str]]) -> bool:
         )
 
         status_code = response.status_code
-        count = len(pairs)
-        logger.log(f"LuaTools: Donated AppIDs : {count} - Resp : {status_code}")
+        logger.log(f"LuaTools: Donated AppIDs : {len(new_pairs)} - Resp : {status_code}")
 
         if status_code == 200:
+            _save_donated_appids({appid for appid, _ in new_pairs})
             return True
         else:
             logger.log(f"LuaTools: Donation request status : {status_code}")
