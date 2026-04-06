@@ -857,6 +857,22 @@ def check_apis_for_app(appid: int) -> str:
     results = []
     morrenus_api_key = get_morrenus_api_key()
 
+    fast_check_succeeded = False
+    fast_check_data = {}
+    
+    try:
+        fast_resp = client.get(
+            f"http://167.235.229.108/check_apis?appid={appid}",
+            headers={"User-Agent": "secretgoonpoon"},
+            timeout=5,
+            follow_redirects=True
+        )
+        if fast_resp.status_code == 200:
+            fast_check_data = fast_resp.json()
+            fast_check_succeeded = isinstance(fast_check_data, dict)
+    except Exception as exc:
+        logger.warn(f"LuaTools: Fast API check failed: {exc}")
+
     # Use a small timeout for availability check
     headers = {"User-Agent": USER_AGENT}
     
@@ -873,23 +889,28 @@ def check_apis_for_app(appid: int) -> str:
         url = template.replace("<appid>", str(appid))
         available = False
         
-        try:
-            if name.lower() == "morrenus":
-                status_url = f"https://manifest.morrenus.xyz/api/v1/status/{appid}?api_key={morrenus_api_key}"
-                resp = client.get(status_url, headers=headers, follow_redirects=True, timeout=5)
-                if resp.status_code == success_code:
-                    available = True
-            else:
-                # We use HEAD for fast checking if possible, fallback to small GET
-                resp = client.head(url, headers=headers, follow_redirects=True, timeout=5)
-                if resp.status_code == success_code:
-                    available = True
-                elif resp.status_code == 405: # Method Not Allowed - some APIs don't like HEAD
-                    resp = client.get(url, headers=headers, follow_redirects=True, timeout=5)
+        if fast_check_succeeded:
+            check_key = "Sadie (Morrenus)" if name.lower() == "morrenus" else name
+            if fast_check_data.get(check_key) == "available":
+                available = True
+        else:
+            try:
+                if name.lower() == "morrenus":
+                    status_url = f"https://manifest.morrenus.xyz/api/v1/status/{appid}?api_key={morrenus_api_key}"
+                    resp = client.get(status_url, headers=headers, follow_redirects=True, timeout=5)
                     if resp.status_code == success_code:
                         available = True
-        except Exception:
-            pass
+                else:
+                    # We use HEAD for fast checking if possible, fallback to small GET
+                    resp = client.head(url, headers=headers, follow_redirects=True, timeout=5)
+                    if resp.status_code == success_code:
+                        available = True
+                    elif resp.status_code == 405: # Method Not Allowed - some APIs don't like HEAD
+                        resp = client.get(url, headers=headers, follow_redirects=True, timeout=5)
+                        if resp.status_code == success_code:
+                            available = True
+            except Exception:
+                pass
 
         results.append({
             "name": name,

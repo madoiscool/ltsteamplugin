@@ -183,6 +183,35 @@ def CheckApisForApp(appid: int, contentScriptQuery: str = "") -> str:
     return check_apis_for_app(appid)
 
 
+MORRENUS_STATS_CACHE = {}
+
+def GetMorrenusStats(api_key: str, force_refresh: bool = False, contentScriptQuery: str = "", **kwargs: Any) -> str:
+    import time
+    global MORRENUS_STATS_CACHE
+    
+    if "force_refresh" in kwargs:
+        force_refresh = bool(kwargs["force_refresh"])
+
+    now = time.time()
+    
+    if not force_refresh:
+        cached = MORRENUS_STATS_CACHE.get(api_key)
+        if cached and (now - cached["time"] < 600):
+            return cached["data"]
+
+    try:
+        from http_client import ensure_http_client
+        client = ensure_http_client("LuaTools: GetMorrenusStats")
+        resp = client.get(f"https://manifest.morrenus.xyz/api/v1/user/stats?api_key={api_key}", follow_redirects=True, timeout=10)
+        data = resp.text
+        if resp.status_code == 200:
+            MORRENUS_STATS_CACHE[api_key] = {"time": now, "data": data}
+        return data
+    except Exception as exc:
+        logger.warn(f"LuaTools: GetMorrenusStats failed: {exc}")
+        return json.dumps({"error": str(exc)})
+
+
 def StartAddViaLuaToolsFromUrl(appid: int, url: str, apiName: str, contentScriptQuery: str = "") -> str:
     return start_add_via_luatools_from_url(appid, url, apiName)
 

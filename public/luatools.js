@@ -4060,8 +4060,8 @@
                     return;
                   }
                   statsDiv.innerHTML = "<i class='fa-solid fa-spinner' style='animation:spin 1s linear infinite;margin-right:6px;'></i>" + lt("Checking key...");
-                  fetch("https://manifest.morrenus.xyz/api/v1/user/stats?api_key=" + encodeURIComponent(key))
-                    .then(r => r.json())
+                  Millennium.callServerMethod("luatools", "GetMorrenusStats", { api_key: key, contentScriptQuery: "" })
+                    .then(r => typeof r === "string" ? JSON.parse(r) : r)
                     .then(res => {
                       if (res && res.username) {
                         let expiryText = "";
@@ -6486,8 +6486,8 @@
                     if (cancelBtn) cancelBtn.style.display = "none";
                   }
                   
-                  fetch("https://manifest.morrenus.xyz/api/v1/user/stats?api_key=" + encodeURIComponent(morrenusKey))
-                    .then(r => r.json())
+                  Millennium.callServerMethod("luatools", "GetMorrenusStats", { api_key: morrenusKey, force_refresh: true, contentScriptQuery: "" })
+                    .then(r => typeof r === "string" ? JSON.parse(r) : r)
                     .then(res => {
                         if (res && res.can_make_requests === false) {
                             // exhausted usages or expired API key
