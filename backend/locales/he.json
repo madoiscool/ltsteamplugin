@@ -197,6 +197,12 @@
     "settings.useSteamLanguage.label": "השתמש בשפת Steam",
     "settings.useSteamLanguage.no": "לא",
     "settings.useSteamLanguage.yes": "כן",
-    "{fix} applied successfully!": "{fix} הוחל בהצלחה!"
+    "{fix} applied successfully!": "{fix} הוחל בהצלחה!",
+    "Searching across sources...": "translation missing",
+    "Game not found on any available API.": "translation missing",
+    "Select Download Source": "translation missing",
+    "Initializing download...": "translation missing",
+    "Loading APIs...": "translation missing",
+    "This game may not work, support for it wont be given in our discord": "translation missing"
   }
 }

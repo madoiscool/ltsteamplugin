@@ -197,6 +197,12 @@
     "settings.useSteamLanguage.label": "Użyj języka Steam",
     "settings.useSteamLanguage.no": "Nie",
     "settings.useSteamLanguage.yes": "Tak",
-    "{fix} applied successfully!": "{fix} zostało pomyślnie zastosowane!"
+    "{fix} applied successfully!": "{fix} zostało pomyślnie zastosowane!",
+    "Searching across sources...": "Szukanie we wszystkich źródłach...",
+    "Game not found on any available API.": "Nie znaleziono gry w żadnym dostępnym API.",
+    "Select Download Source": "Wybierz źródło pobierania",
+    "Initializing download...": "Inicjowanie pobierania...",
+    "Loading APIs...": "Ładowanie API...",
+    "This game may not work, support for it wont be given in our discord": "Ta gra może nie działać, wsparcie dla niej nie będzie udzielane na naszym Discordzie"
   }
 }

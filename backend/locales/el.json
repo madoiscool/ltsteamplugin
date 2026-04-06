@@ -197,6 +197,12 @@
     "settings.useSteamLanguage.label": "Χρήση Γλώσσας Steam",
     "settings.useSteamLanguage.no": "Όχι",
     "settings.useSteamLanguage.yes": "Ναι",
-    "{fix} applied successfully!": "Το {fix} εφαρμόστηκε επιτυχώς!"
+    "{fix} applied successfully!": "Το {fix} εφαρμόστηκε επιτυχώς!",
+    "Searching across sources...": "Αναζήτηση σε όλες τις πηγές...",
+    "Game not found on any available API.": "Το παιχνίδι δεν βρέθηκε σε κανένα διαθέσιμο API.",
+    "Select Download Source": "Επιλογή πηγής λήψης",
+    "Initializing download...": "Αρχικοποίηση λήψης...",
+    "Loading APIs...": "Φόρτωση API...",
+    "This game may not work, support for it wont be given in our discord": "Αυτό το παιχνίδι ενδέχεται να μην λειτουργεί, η υποστήριξη γι' αυτό δεν θα παρέχεται στο discord μας"
   }
 }

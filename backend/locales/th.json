@@ -197,6 +197,12 @@
     "settings.useSteamLanguage.label": "ใช้ภาษาของ Steam",
     "settings.useSteamLanguage.no": "ไม่",
     "settings.useSteamLanguage.yes": "ใช่",
-    "{fix} applied successfully!": "ติดตั้ง {fix} เรียบร้อยแล้ว!"
+    "{fix} applied successfully!": "ติดตั้ง {fix} เรียบร้อยแล้ว!",
+    "Searching across sources...": "translation missing",
+    "Game not found on any available API.": "translation missing",
+    "Select Download Source": "translation missing",
+    "Initializing download...": "translation missing",
+    "Loading APIs...": "translation missing",
+    "This game may not work, support for it wont be given in our discord": "translation missing"
   }
 }

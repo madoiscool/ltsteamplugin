@@ -842,6 +842,114 @@ def _download_zip_for_app(appid: int):
     _set_download_state(appid, {"status": "failed", "error": "Not available on any API"})
 
 
+def check_apis_for_app(appid: int) -> str:
+    """Check all enabled APIs for a specific appid and return their availability."""
+    try:
+        appid = int(appid)
+    except Exception:
+        return json.dumps({"success": False, "error": "Invalid appid"})
+
+    client = ensure_http_client("LuaTools: check_apis")
+    apis = load_api_manifest()
+    if not apis:
+        return json.dumps({"success": True, "results": []})
+
+    results = []
+    morrenus_api_key = get_morrenus_api_key()
+
+    # Use a small timeout for availability check
+    headers = {"User-Agent": USER_AGENT}
+    
+    for api in apis:
+        name = api.get("name", "Unknown")
+        template = api.get("url", "")
+        success_code = int(api.get("success_code", 200))
+
+        if "<moapikey>" in template:
+            if not morrenus_api_key:
+                continue
+            template = template.replace("<moapikey>", morrenus_api_key)
+
+        url = template.replace("<appid>", str(appid))
+        available = False
+        
+        try:
+            # We use HEAD for fast checking if possible, fallback to small GET
+            resp = client.head(url, headers=headers, follow_redirects=True, timeout=5)
+            if resp.status_code == success_code:
+                available = True
+            elif resp.status_code == 405: # Method Not Allowed - some APIs don't like HEAD
+                resp = client.get(url, headers=headers, follow_redirects=True, timeout=5)
+                if resp.status_code == success_code:
+                    available = True
+        except Exception:
+            pass
+
+        results.append({
+            "name": name,
+            "available": available,
+            "url": url if available else None
+        })
+
+    return json.dumps({"success": True, "results": results})
+
+
+def _download_zip_from_url(appid: int, url: str, api_name: str):
+    """Internal worker to download from a specific URL."""
+    client = ensure_http_client("LuaTools: download_direct")
+    dest_root = ensure_temp_download_dir()
+    dest_path = os.path.join(dest_root, f"{appid}.zip")
+    
+    _set_download_state(appid, {"status": "downloading", "currentApi": api_name, "bytesRead": 0, "totalBytes": 0, "dest": dest_path})
+
+    try:
+        headers = {"User-Agent": USER_AGENT}
+        with client.stream("GET", url, headers=headers, follow_redirects=True) as resp:
+            resp.raise_for_status()
+            total = int(resp.headers.get("Content-Length", "0") or "0")
+            _set_download_state(appid, {"totalBytes": total})
+            
+            with open(dest_path, "wb") as output:
+                for chunk in resp.iter_bytes():
+                    if _is_download_cancelled(appid):
+                        raise RuntimeError("cancelled")
+                    output.write(chunk)
+                    state = _get_download_state(appid)
+                    read = int(state.get("bytesRead", 0)) + len(chunk)
+                    _set_download_state(appid, {"bytesRead": read})
+
+        _set_download_state(appid, {"status": "processing"})
+        _process_and_install_lua(appid, dest_path)
+        
+        fetched_name = _fetch_app_name(appid) or f"UNKNOWN ({appid})"
+        _append_loaded_app(appid, fetched_name)
+        _log_appid_event(f"ADDED - {api_name}", appid, fetched_name)
+        
+        _set_download_state(appid, {"status": "done", "success": True, "api": api_name})
+
+    except Exception as exc:
+        if str(exc) == "cancelled":
+            if os.path.exists(dest_path):
+                os.remove(dest_path)
+            _set_download_state(appid, {"status": "cancelled", "error": "Cancelled by user"})
+        else:
+            logger.warn(f"LuaTools: _download_zip_from_url failed: {exc}")
+            _set_download_state(appid, {"status": "failed", "error": str(exc)})
+
+
+def start_add_via_luatools_from_url(appid: int, url: str, api_name: str) -> str:
+    """Initiate a download from a specific URL selected by the user."""
+    try:
+        appid = int(appid)
+    except Exception:
+        return json.dumps({"success": False, "error": "Invalid appid"})
+
+    _set_download_state(appid, {"status": "queued", "bytesRead": 0, "totalBytes": 0, "error": None})
+    thread = threading.Thread(target=_download_zip_from_url, args=(appid, url, api_name), daemon=True)
+    thread.start()
+    return json.dumps({"success": True})
+
+
 def start_add_via_luatools(appid: int) -> str:
     try:
         appid = int(appid)
@@ -1060,4 +1168,6 @@ __all__ = [
     "init_games_db",
     "read_loaded_apps",
     "start_add_via_luatools",
+    "check_apis_for_app",
+    "start_add_via_luatools_from_url",
 ]

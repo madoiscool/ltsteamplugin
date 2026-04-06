@@ -197,6 +197,12 @@
     "settings.useSteamLanguage.label": "Použít jazyk Steamu",
     "settings.useSteamLanguage.no": "Ne",
     "settings.useSteamLanguage.yes": "Ano",
-    "{fix} applied successfully!": "{fix} úspěšně použita!"
+    "{fix} applied successfully!": "{fix} úspěšně použita!",
+    "Searching across sources...": "Hledání ve zdrojích...",
+    "Game not found on any available API.": "Hra nebyla nalezena v žádném dostupném API.",
+    "Select Download Source": "Vybrat zdroj stahování",
+    "Initializing download...": "Inicializace stahování...",
+    "Loading APIs...": "Načítání API...",
+    "This game may not work, support for it wont be given in our discord": "Tato hra nemusí fungovat, podpora pro ni nebude poskytnuta na našem discordu"
   }
 }

@@ -197,6 +197,12 @@
     "settings.useSteamLanguage.label": "Bruk Steam-språk",
     "settings.useSteamLanguage.no": "Nei",
     "settings.useSteamLanguage.yes": "Ja",
-    "{fix} applied successfully!": "{fix} ble brukt!"
+    "{fix} applied successfully!": "{fix} ble brukt!",
+    "Searching across sources...": "translation missing",
+    "Game not found on any available API.": "translation missing",
+    "Select Download Source": "translation missing",
+    "Initializing download...": "translation missing",
+    "Loading APIs...": "translation missing",
+    "This game may not work, support for it wont be given in our discord": "translation missing"
   }
 }

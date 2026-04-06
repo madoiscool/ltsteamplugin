@@ -197,6 +197,12 @@
     "settings.useSteamLanguage.label": "Steam nyelv használata",
     "settings.useSteamLanguage.no": "Nem",
     "settings.useSteamLanguage.yes": "Igen",
-    "{fix} applied successfully!": "{fix} sikeresen alkalmazva!"
+    "{fix} applied successfully!": "{fix} sikeresen alkalmazva!",
+    "Searching across sources...": "translation missing",
+    "Game not found on any available API.": "translation missing",
+    "Select Download Source": "translation missing",
+    "Initializing download...": "translation missing",
+    "Loading APIs...": "translation missing",
+    "This game may not work, support for it wont be given in our discord": "translation missing"
   }
 }

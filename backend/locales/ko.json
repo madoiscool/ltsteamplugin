@@ -197,6 +197,12 @@
     "settings.useSteamLanguage.label": "Steam 언어 사용",
     "settings.useSteamLanguage.no": "아니오",
     "settings.useSteamLanguage.yes": "예",
-    "{fix} applied successfully!": "{fix}이(가) 성공적으로 적용되었습니다!"
+    "{fix} applied successfully!": "{fix}이(가) 성공적으로 적용되었습니다!",
+    "Searching across sources...": "translation missing",
+    "Game not found on any available API.": "translation missing",
+    "Select Download Source": "translation missing",
+    "Initializing download...": "translation missing",
+    "Loading APIs...": "translation missing",
+    "This game may not work, support for it wont be given in our discord": "translation missing"
   }
 }

@@ -197,6 +197,12 @@
     "settings.useSteamLanguage.label": "استخدام لغة Steam",
     "settings.useSteamLanguage.no": "لا",
     "settings.useSteamLanguage.yes": "نعم",
-    "{fix} applied successfully!": "تم تطبيق {fix} بنجاح!"
+    "{fix} applied successfully!": "تم تطبيق {fix} بنجاح!",
+    "Searching across sources...": "جاري البحث في المصادر...",
+    "Game not found on any available API.": "لم يتم العثور على اللعبة في أي من المصادر المتاحة.",
+    "Select Download Source": "اختر مصدر التحميل",
+    "Initializing download...": "جاري بدء التحميل...",
+    "Loading APIs...": "جاري تحميل الواجهات...",
+    "This game may not work, support for it wont be given in our discord": "قد لا تعمل هذه اللعبة، ولن يتم تقديم الدعم لها في الديسكورد الخاص بنا"
   }
 }

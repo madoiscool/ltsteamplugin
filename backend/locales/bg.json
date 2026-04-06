@@ -197,6 +197,12 @@
     "settings.useSteamLanguage.label": "Използвай езика на Steam",
     "settings.useSteamLanguage.no": "Не",
     "settings.useSteamLanguage.yes": "Да",
-    "{fix} applied successfully!": "{fix} е приложена успешно!"
+    "{fix} applied successfully!": "{fix} е приложена успешно!",
+    "Searching across sources...": "Търсене в източниците...",
+    "Game not found on any available API.": "Играта не е намерена в нито един наличен API.",
+    "Select Download Source": "Изберете източник за изтегляне",
+    "Initializing download...": "Инициализиране на изтеглянето...",
+    "Loading APIs...": "Зареждане на API-та...",
+    "This game may not work, support for it wont be given in our discord": "Тази игра може да не работи, поддръжка за нея няма да бъде предоставяна в нашия дискорд"
   }
 }

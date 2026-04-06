@@ -197,6 +197,12 @@
     "settings.useSteamLanguage.label": "Utiliser la langue de Steam",
     "settings.useSteamLanguage.no": "Non",
     "settings.useSteamLanguage.yes": "Oui",
-    "{fix} applied successfully!": "{fix} appliqué avec succès !"
+    "{fix} applied successfully!": "{fix} appliqué avec succès !",
+    "Searching across sources...": "translation missing",
+    "Game not found on any available API.": "translation missing",
+    "Select Download Source": "translation missing",
+    "Initializing download...": "translation missing",
+    "Loading APIs...": "translation missing",
+    "This game may not work, support for it wont be given in our discord": "translation missing"
   }
 }

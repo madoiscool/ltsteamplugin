@@ -197,6 +197,12 @@
     "settings.useSteamLanguage.label": "Gunakan Bahasa Steam",
     "settings.useSteamLanguage.no": "Tidak",
     "settings.useSteamLanguage.yes": "Ya",
-    "{fix} applied successfully!": "{fix} berhasil diterapkan!"
+    "{fix} applied successfully!": "{fix} berhasil diterapkan!",
+    "Searching across sources...": "translation missing",
+    "Game not found on any available API.": "translation missing",
+    "Select Download Source": "translation missing",
+    "Initializing download...": "translation missing",
+    "Loading APIs...": "translation missing",
+    "This game may not work, support for it wont be given in our discord": "translation missing"
   }
 }

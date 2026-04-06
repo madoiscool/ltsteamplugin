@@ -197,6 +197,12 @@
     "settings.useSteamLanguage.label": "Steam言語を使用",
     "settings.useSteamLanguage.no": "いいえ",
     "settings.useSteamLanguage.yes": "はい",
-    "{fix} applied successfully!": "{fix}が正常に適用されました！"
+    "{fix} applied successfully!": "{fix}が正常に適用されました！",
+    "Searching across sources...": "translation missing",
+    "Game not found on any available API.": "translation missing",
+    "Select Download Source": "translation missing",
+    "Initializing download...": "translation missing",
+    "Loading APIs...": "translation missing",
+    "This game may not work, support for it wont be given in our discord": "translation missing"
   }
 }

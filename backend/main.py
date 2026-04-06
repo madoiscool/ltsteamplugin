@@ -25,6 +25,7 @@ from auto_update import (
 from config import WEBKIT_DIR_NAME, WEB_UI_ICON_FILE, WEB_UI_JS_FILE
 from downloads import (
     cancel_add_via_luatools,
+    check_apis_for_app,
     delete_luatools_for_app,
     dismiss_loaded_apps,
     get_add_status,
@@ -35,6 +36,7 @@ from downloads import (
     init_applist,
     read_loaded_apps,
     start_add_via_luatools,
+    start_add_via_luatools_from_url,
 )
 from fixes import (
     apply_game_fix,
@@ -175,6 +177,14 @@ def GetApiList(contentScriptQuery: str = "") -> str:
 
 def CancelAddViaLuaTools(appid: int, contentScriptQuery: str = "") -> str:
     return cancel_add_via_luatools(appid)
+
+
+def CheckApisForApp(appid: int, contentScriptQuery: str = "") -> str:
+    return check_apis_for_app(appid)
+
+
+def StartAddViaLuaToolsFromUrl(appid: int, url: str, apiName: str, contentScriptQuery: str = "") -> str:
+    return start_add_via_luatools_from_url(appid, url, apiName)
 
 
 def GetIconDataUrl(contentScriptQuery: str = "") -> str:
