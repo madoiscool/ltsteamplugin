@@ -1,10 +1,10 @@
 :root {
     --lt-bg-primary: #1b2838;
     --lt-bg-secondary: #2a475e;
-    --lt-bg-tertiary: rgba(7, 7, 7, 0.86);
-    --lt-bg-hover: rgba(7, 7, 7, 0.86);
-    --lt-bg-container: rgba(11,20,30,0.6);
-    --lt-bg-container-gradient: rgba(11, 20, 30, 0.85), #0b141e;
+    --lt-bg-tertiary: rgba(44, 79, 112, 0.86);
+    --lt-bg-hover: rgba(68, 112, 153, 0.86);
+    --lt-bg-container: rgba(40, 74, 102, 0.6);
+    --lt-bg-container-gradient: rgba(40, 74, 102, 0.85), #284a66;
     --lt-accent: #66c0f4;
     --lt-accent-light: #a4d7f5;
     --lt-accent-dark: #4a9ece;

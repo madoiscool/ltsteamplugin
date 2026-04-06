@@ -23,18 +23,18 @@
     "Cancelling...": "tryinged 2 cancl it wait 1 sec pls holded on...",
     "Check for updates": "chekded if deres nu vershun 2 downlod",
     "Checking availability…": "chekinged if its avalbal 4 u wait holded on...",
-    "Checking content…": "chekinged da stuffz insideded wait pls...",
+"Checking content…": "chekinged da stuffz insideded wait pls..."
     "Checking generic fix...": "chekinged if deres a regulr fix ting...",
     "Checking online-fix...": "chekinged if deres a onlin fix ting on internets...",
     "Checking…": "chekinged stuffz rite now wait pls...",
     "Close": "Clos (da lil x buton in cornr)",
     "Confirm": "Yeh Im Sur Do It Now Pls",
-    "Content details =>": "Da Stuffz Detailz Ting =>",
+"Content details =>": "Da Stuffz Detailz Ting =>"
     "DLC Detected": "DLC Spotteded Oh No!!!",
     "DLCs are added together with the base game. To add fixes for this DLC, please go to the base game page: <br><br><b>{gameName}</b>": "da DLCz r addded 2geder wit da base gaem. 2 addded fixz 4 dis DLC pls goed 2 da base gaem paje: <br><br><b>{gameName}</b>",
     "Discord": "Dicsord App",
     "Dismiss": "Mak It Goed Awy 4Ever Rite Now",
-    "Dlc: ": "Dee El See Ting: ",
+"Dlc: ": "Dee El See Ting: "
     "Downloading...": "getinged da filez wait 1 sec or mayb 2 secs...",
     "Downloading: {percent}%": "Downlodinged: {percent}% (wait pls dont clik nuthing or it brek)",
     "Downloading…": "downlodinged da stuffz holded on pls wait...",
@@ -65,7 +65,7 @@
     "Generic fix found!": "foundededed a regulr fix YAAAAAAAY ME SO GUD AT FINDIN!!!",
     "Go to Base Game": "Goed 2 Da Base Gaem Rite Now",
     "Hide": "Hied Buton (mak it invisbal like magic)",
-    "Included": "ITS IN DERE YAY",
+"Included": "ITS IN DERE YAY"
     "Installing…": "putinged it on ur compooter masheen rite now wait...",
     "Join the Discord!": "COM JION DA DICSORD SERVER PLS!!! WERE SUPER NISE PPL I PROMIS!!!",
     "Left click to install, Right click for SteamDB": "clikded left buton 2 instal da ting or clikded rite buton 4 SteamDB ting (idk wat dat is just clikded stuffz til sumting hapens lol)",
@@ -79,12 +79,12 @@
     "LuaTools · Menu": "LooaToolz · Da Manu",
     "LuaTools · {api}": "LooaToolz · {api} Ting",
     "Manage Game": "Do Gaem Manageded Stuffz",
-    "Missing": "IT GONED OH NO",
+"Missing": "IT GONED OH NO"
     "No games found.": "deres no gaemz hear yet at all com bak latr mayb deres sum then???",
     "No generic fix": "no regulr fix existd sory bout dat mayb latr???",
     "No online-fix": "no onlin fix existdeded 4 dis gaem it ded",
     "No updates available.": "no nu updatz existd sory ur stuk wit dis old vershun 4ever n ever",
-    "No workshop for the game": "deres no werkshop 4 dis gaem dats ok tho",
+"No workshop for the game": "deres no werkshop 4 dis gaem dats ok tho"
     "Not found": "couldnt findeded it anywere at all sory me tride",
     "Online Fix": "Onlin Fixded (da internets won ting)",
     "Online Fix (Unsteam)": "Onlin Fixded (da Unsteam vershun ting idk wat dat meens tho)",
@@ -104,7 +104,7 @@
     "Unknown error": "sumting wenteded super duper rong but idk wat hapend lololol me confus",
     "Waiting…": "waitinged pls holded on rite now...",
     "Working…": "doin stuffz rite now wait pls holded on...",
-    "Workshop: ": "Werkshop Ting: ",
+"Workshop: ": "Werkshop Ting: "
     "bigpicture.mouseTip": "2 use mous moded in steam: guid buton + rite joystik, clikded wit RB",
     "common.alert.ok": "OK Buton (i git it now mayb)",
     "common.appName": "LuaTools",
@@ -197,6 +197,12 @@
     "settings.useSteamLanguage.label": "Use Steam Language ong",
     "settings.useSteamLanguage.no": "CAP",
     "settings.useSteamLanguage.yes": "YESSIR",
-    "{fix} applied successfully!": "{fix} werkdeded!!! YAAAAAAAY GUD JERB ME SO SMAT!!!"
+"{fix} applied successfully!": "{fix} werkdeded!!! YAAAAAAAY GUD JERB ME SO SMAT!!!",
+    "Searching across sources...": "Searching across sources...",
+    "Game not found on any available API.": "Game not found on any available API.",
+    "Select Download Source": "Select Download Source",
+    "Initializing download...": "Initializing download...",
+    "Loading APIs...": "Loading APIs...",
+    "This game may not work, support for it wont be given in our discord": "This game may not work, support for it wont be given in our discord"
   }
 }

@@ -65,7 +65,7 @@
     "Generic fix found!": "Generic fix found!",
     "Go to Base Game": "Go to Base Game",
     "Hide": "Hide",
-    "Included": "Included",
+    "Included": "Included 🎉",
     "Installing…": "Installing…",
     "Join the Discord!": "Join the Discord!",
     "Left click to install, Right click for SteamDB": "Left click to install, Right click for SteamDB",
@@ -79,13 +79,13 @@
     "LuaTools · Menu": "LuaTools · Menu",
     "LuaTools · {api}": "LuaTools · {api}",
     "Manage Game": "Manage Game",
-    "Missing": "Missing",
+    "Missing": "Missing ❌",
     "No games found.": "No games found.",
     "No generic fix": "No generic fix",
     "No online-fix": "No online-fix",
     "No updates available.": "No updates available.",
     "Not found": "Not found",
-    "No workshop for the game": "No workshop for the game",
+    "No workshop for the game": "No workshop for the game ✅",
     "Online Fix": "Online Fix",
     "Online Fix (Unsteam)": "Online Fix (Unsteam)",
     "Online-fix found!": "Online-fix found!",
@@ -197,6 +197,12 @@
     "settings.useSteamLanguage.label": "Use Steam Language",
     "settings.useSteamLanguage.description": "Use the Steam client's language instead of LuaTools setting.",
     "settings.useSteamLanguage.yes": "Yes",
-    "settings.useSteamLanguage.no": "No"
+    "settings.useSteamLanguage.no": "No",
+    "Searching across sources...": "Searching across sources...",
+    "Game not found on any available API.": "Game not found on any available API.",
+    "Select Download Source": "Select Download Source",
+    "Initializing download...": "Initializing download...",
+    "Loading APIs...": "Loading APIs...",
+    "This game may not work, support for it wont be given in our discord": "This game may not work, support for it wont be given in our discord"
   }
 }
