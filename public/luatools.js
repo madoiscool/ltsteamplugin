@@ -1238,18 +1238,35 @@
         const overlay = document.createElement("div");
         overlay.className = "luatools-settings-overlay";
         overlay.style.cssText =
-          "position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;";
+          "position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(12px);z-index:99999;display:flex;align-items:center;justify-content:center;";
 
         const modal = document.createElement("div");
         const colors = getThemeColors();
-        modal.style.cssText = `position:relative;background:${colors.modalBg};color:${colors.text};border:2px solid ${colors.border};border-radius:12px;width:460px;padding:20px 24px;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px ${colors.shadowRgba};animation:slideUp 0.1s ease-out;`;
+        modal.style.cssText = `position:relative;background:${colors.modalBg};color:${colors.text};border:1px solid ${colors.border};border-radius:16px;width:460px;padding:20px 24px;box-shadow:0 24px 80px rgba(0,0,0,.65), 0 0 0 1px ${colors.shadowRgba};animation:slideUp 0.12s ease-out;`;
 
         const header = document.createElement("div");
-        header.style.cssText = `display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid ${colors.borderRgba};`;
+        header.style.cssText = `display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid ${colors.borderRgba};`;
 
         const title = document.createElement("div");
-        title.style.cssText = `font-size:24px;color:${colors.text};font-weight:700;text-shadow:0 2px 8px ${colors.shadow};background:${colors.gradientLight};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;`;
-        title.textContent = t("menu.title", "LuaTools · Menu");
+        title.style.cssText = `display:flex;align-items:center;gap:10px;font-size:22px;color:${colors.text};font-weight:600;`;
+        const titleIcon = document.createElement("img");
+        titleIcon.style.cssText = "width:24px;height:24px;border-radius:4px;";
+        titleIcon.alt = "LuaTools";
+        try {
+          Millennium.callServerMethod("luatools", "GetIconDataUrl", {
+            contentScriptQuery: "",
+          }).then(function (res) {
+            try {
+              const p = typeof res === "string" ? JSON.parse(res) : res;
+              titleIcon.src = (p && p.success && p.dataUrl) ? p.dataUrl : "LuaTools/luatools-icon.png";
+            } catch (_) { titleIcon.src = "LuaTools/luatools-icon.png"; }
+          });
+        } catch (_) { titleIcon.src = "LuaTools/luatools-icon.png"; }
+        titleIcon.onerror = function () { this.style.display = "none"; };
+        const titleText = document.createElement("span");
+        titleText.textContent = t("menu.title", "LuaTools · Menu");
+        title.appendChild(titleIcon);
+        title.appendChild(titleText);
 
         const iconButtons = document.createElement("div");
         iconButtons.style.cssText = "display:flex;gap:12px;";
@@ -1300,50 +1317,31 @@
         container.style.cssText =
           "margin-top:16px;display:flex;flex-direction:column;gap:12px;align-items:stretch;";
 
-        function createSectionLabel(key, fallback, marginTop) {
-          const label = document.createElement("div");
-          const topValue = typeof marginTop === "number" ? marginTop : 12;
-          const labelColors = getThemeColors();
-          label.style.cssText = `font-size:12px;color:${labelColors.accent};margin-top:${topValue}px;margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;text-align:center;`;
-          label.textContent = t(key, fallback);
-          container.appendChild(label);
-          return label;
-        }
-
-        function createMenuButton(id, key, fallback, iconClass, isPrimary) {
+        function createCardButton(id, key, fallback, iconClass) {
           const btn = document.createElement("a");
           btn.id = id;
           btn.href = "#";
           const btnColors = getThemeColors();
-          btn.style.cssText = `display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 24px;background:linear-gradient(135deg, rgba(${btnColors.rgbString},0.15) 0%, rgba(${btnColors.rgbString},0.05) 100%);border:1px solid ${btnColors.borderRgba};border-radius:12px;color:${btnColors.text};font-size:15px;font-weight:500;text-decoration:none;transition:all 0.3s ease;cursor:pointer;position:relative;overflow:hidden;text-align:center;`;
+          btn.style.cssText = `display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;flex:1;background:rgba(${btnColors.rgbString},0.06);border:1px solid ${btnColors.borderRgba};border-radius:12px;color:${btnColors.text};font-size:11px;font-weight:500;text-decoration:none;transition:all 0.2s ease;cursor:pointer;text-align:center;padding:14px 6px;min-width:0;`;
           const iconHtml = iconClass
-            ? '<i class="fa-solid ' +
-              iconClass +
-              '" style="font-size:16px;"></i>'
+            ? '<i class="fa-solid ' + iconClass + '" style="font-size:22px;color:' + btnColors.accent + ';"></i>'
             : "";
-          const textSpan =
-            '<span style="text-align:center;">' + t(key, fallback) + "</span>";
+          const textSpan = '<span style="text-align:center;line-height:1.3;">' + t(key, fallback) + '</span>';
           btn.innerHTML = iconHtml + textSpan;
           btn.onmouseover = function () {
             const c = getThemeColors();
-            this.style.background = `linear-gradient(135deg, rgba(${c.rgbString},0.3) 0%, rgba(${c.rgbString},0.15) 100%)`;
+            this.style.background = `rgba(${c.rgbString},0.15)`;
             this.style.transform = "translateY(-2px)";
-            this.style.boxShadow = `0 8px 20px ${c.shadow.replace("0.4", "0.25")}`;
+            this.style.boxShadow = `0 8px 20px ${c.shadow.replace("0.4", "0.15")}`;
             this.style.borderColor = c.accent;
           };
           btn.onmouseout = function () {
             const c = getThemeColors();
-            this.style.background = `linear-gradient(135deg, rgba(${c.rgbString},0.15) 0%, rgba(${c.rgbString},0.05) 100%)`;
+            this.style.background = `rgba(${c.rgbString},0.06)`;
             this.style.transform = "translateY(0)";
             this.style.boxShadow = "none";
             this.style.borderColor = c.borderRgba;
           };
-          // Skip container append, we'll append to advancedButtons later if needed
-          // Wait, removeBtn and fixesMenuBtn still need to be appended.
-          // I'll leave the append inside createMenuButton but check types.
-          if (id !== "lt-settings-check" && id !== "lt-settings-fetch-apis") {
-            container.appendChild(btn);
-          }
           return btn;
         }
 
@@ -1368,55 +1366,54 @@
 
         // Check if we are on a game page
         const isGamePage = window.location.href.includes("/app/");
-        const manageGameLabel = createSectionLabel(
-          "menu.manageGameLabel",
-          "Manage Game",
-        );
-        if (!isGamePage) manageGameLabel.style.display = "none";
 
-        const removeBtn = createMenuButton(
-          "lt-settings-remove-lua",
-          "menu.removeLuaTools",
-          "Remove via LuaTools",
-          "fa-trash-can",
-        );
-        removeBtn.style.display = "none";
+        const removeBtn = document.createElement("a");
+        removeBtn.id = "lt-settings-remove-lua";
+        removeBtn.href = "#";
+        const removeBtnColors = getThemeColors();
+        removeBtn.style.cssText = `display:none;align-items:center;justify-content:center;gap:8px;padding:10px 16px;background:rgba(${removeBtnColors.rgbString},0.06);border:1px solid ${removeBtnColors.borderRgba};border-radius:10px;color:${removeBtnColors.textSecondary};font-size:13px;font-weight:500;text-decoration:none;transition:all 0.2s ease;cursor:pointer;text-align:center;`;
+        removeBtn.innerHTML = '<i class="fa-solid fa-trash-can" style="font-size:13px;"></i><span>' + t("menu.removeLuaTools", "Remove via LuaTools") + '</span>';
+        removeBtn.onmouseover = function () {
+          const c = getThemeColors();
+          this.style.background = `rgba(${c.rgbString},0.15)`;
+          this.style.borderColor = c.accent;
+        };
+        removeBtn.onmouseout = function () {
+          const c = getThemeColors();
+          this.style.background = `rgba(${c.rgbString},0.06)`;
+          this.style.borderColor = c.borderRgba;
+        };
+        container.appendChild(removeBtn);
 
-        const fixesMenuBtn = createMenuButton(
+        // Card button grid
+        const cardGrid = document.createElement("div");
+        cardGrid.style.cssText = "display:flex;gap:10px;justify-content:center;";
+
+        const fixesMenuBtn = createCardButton(
           "lt-settings-fixes-menu",
           "menu.fixesMenu",
           "Fixes Menu",
           "fa-wrench",
         );
-        if (!isGamePage) fixesMenuBtn.style.display = "none";
+        if (isGamePage) cardGrid.appendChild(fixesMenuBtn);
 
-        createSectionLabel("menu.advancedLabel", "Advanced");
-        const advancedButtons = document.createElement("div");
-        advancedButtons.style.cssText = "display:flex;gap:10px;";
-
-        const checkBtn = createMenuButton(
+        const checkBtn = createCardButton(
           "lt-settings-check",
           "menu.checkForUpdates",
-          "Check For Updates",
+          "Check Updates",
           "fa-cloud-arrow-down",
         );
-        checkBtn.style.flex = "1";
-        checkBtn.style.fontSize = "13px";
-        checkBtn.style.padding = "12px 10px";
+        cardGrid.appendChild(checkBtn);
 
-        const fetchApisBtn = createMenuButton(
+        const fetchApisBtn = createCardButton(
           "lt-settings-fetch-apis",
           "menu.fetchFreeApis",
-          "Fetch Free APIs",
+          "Fetch APIs",
           "fa-server",
         );
-        fetchApisBtn.style.flex = "1";
-        fetchApisBtn.style.fontSize = "13px";
-        fetchApisBtn.style.padding = "12px 10px";
+        cardGrid.appendChild(fetchApisBtn);
 
-        advancedButtons.appendChild(checkBtn);
-        advancedButtons.appendChild(fetchApisBtn);
-        container.appendChild(advancedButtons);
+        container.appendChild(cardGrid);
 
         body.appendChild(container);
 
@@ -1844,22 +1841,28 @@
     const overlay = document.createElement("div");
     overlay.className = "luatools-overlay";
     overlay.style.cssText =
-      "position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;";
+      "position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(12px);z-index:99999;display:flex;align-items:center;justify-content:center;";
 
     const modal = document.createElement("div");
     const colors = getThemeColors();
-    modal.style.cssText = `background:${colors.modalBg};color:${colors.text};border:2px solid ${colors.border};border-radius:8px;width:520px;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px ${colors.shadowRgba};animation:slideUp 0.1s ease-out;`;
+    modal.style.cssText = `background:${colors.modalBg};color:${colors.text};border:1px solid ${colors.border};border-radius:16px;width:520px;padding:28px 32px;box-shadow:0 24px 80px rgba(0,0,0,.65), 0 0 0 1px ${colors.shadowRgba};animation:slideUp 0.12s ease-out;`;
 
     const title = document.createElement("div");
     const titleColors = getThemeColors();
-    title.style.cssText = `font-size:22px;color:${titleColors.text};margin-bottom:20px;font-weight:700;text-shadow:0 2px 8px ${titleColors.shadow};background:${titleColors.gradientLight};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;`;
+    title.style.cssText = `display:flex;align-items:center;gap:10px;font-size:20px;color:${titleColors.text};margin-bottom:16px;font-weight:600;`;
     title.className = "luatools-title";
-    title.textContent = t("common.appName", "LuaTools");
+    const dlTitleIcon = document.createElement("i");
+    dlTitleIcon.className = "fa-solid fa-cloud-arrow-down";
+    dlTitleIcon.style.cssText = `color:${titleColors.accent};font-size:20px;`;
+    title.appendChild(dlTitleIcon);
+    const dlTitleText = document.createElement("span");
+    dlTitleText.textContent = lt("Select Download Source");
+    title.appendChild(dlTitleText);
 
-    // API list container
+    // API list container — card grid layout
     const apiListContainer = document.createElement("div");
     apiListContainer.className = "luatools-api-list";
-    apiListContainer.style.cssText = "margin-bottom:16px;";
+    apiListContainer.style.cssText = "display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;";
 
     // Placeholder while loading APIs
     const loadingItem = document.createElement("div");
@@ -1892,21 +1895,25 @@
                 const apiItem = document.createElement("div");
                 apiItem.className = `luatools-api-item luatools-api-${index}`;
                 apiItem.setAttribute("data-api-name", api.name);
-                apiItem.style.cssText = `display:flex;align-items:center;justify-content:space-between;padding:10px 14px;margin-bottom:8px;background:rgba(${colors.rgbString},0.1);border:1px solid ${colors.borderRgba};border-radius:6px;transition:all 0.2s;`;
+                apiItem.style.cssText = `display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;flex:1;min-width:80px;padding:12px 8px;background:rgba(${colors.rgbString},0.06);border:1px solid ${colors.borderRgba};border-radius:12px;transition:all 0.2s;text-align:center;`;
+
+                const apiIcon = document.createElement("i");
+                apiIcon.className = "fa-solid fa-server";
+                apiIcon.style.cssText = `font-size:18px;color:${colors.accent};`;
 
                 const apiName = document.createElement("div");
                 apiName.className = "luatools-api-name";
-                apiName.style.cssText = `font-size:14px;color:${colors.textSecondary};font-weight:500;`;
+                apiName.style.cssText = `font-size:11px;color:${colors.text};font-weight:500;line-height:1.2;`;
                 apiName.textContent = api.name;
 
                 const apiStatus = document.createElement("div");
                 apiStatus.className = "luatools-api-status";
-                apiStatus.style.cssText = `font-size:14px;color:${colors.textSecondary};display:flex;align-items:center;gap:6px;`;
+                apiStatus.style.cssText = `font-size:10px;color:${colors.textSecondary};display:flex;align-items:center;justify-content:center;gap:4px;`;
                 apiStatus.innerHTML =
-                  "<span>" +
-                  lt("Waiting…") +
-                  '</span><i class="fa-solid fa-spinner" style="animation: spin 1.5s linear infinite;"></i>';
+                  '<i class="fa-solid fa-spinner" style="font-size:10px;animation: spin 1.5s linear infinite;"></i>' +
+                  "<span>" + lt("Waiting…") + "</span>";
 
+                apiItem.appendChild(apiIcon);
                 apiItem.appendChild(apiName);
                 apiItem.appendChild(apiStatus);
                 apiListContainer.appendChild(apiItem);
@@ -1922,9 +1929,9 @@
     }
 
     const body = document.createElement("div");
-    body.style.cssText = `font-size:14px;line-height:1.4;margin-bottom:12px;color:${colors.textSecondary};`;
+    body.style.cssText = `display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;line-height:1.4;margin-bottom:12px;color:${colors.textSecondary};`;
     body.className = "luatools-status";
-    body.textContent = lt("Checking availability…");
+    body.innerHTML = '<i class="fa-solid fa-spinner" style="font-size:14px;animation: spin 1.5s linear infinite;"></i><span>' + lt("Checking availability…") + '</span>';
 
     const progressWrap = document.createElement("div");
     progressWrap.style.cssText = `background:rgba(0,0,0,0.3);height:20px;border-radius:4px;overflow:hidden;position:relative;display:none;border:1px solid ${colors.border};margin-top:12px;`;
@@ -1952,18 +1959,19 @@
 
     const btnRow = document.createElement("div");
     btnRow.style.cssText =
-      "margin-top:20px;display:flex;gap:8px;justify-content:flex-end;";
+      "margin-top:20px;display:flex;gap:8px;justify-content:center;";
     const cancelBtn = document.createElement("a");
     cancelBtn.className = "luatools-btn luatools-cancel-btn";
+    cancelBtn.style.cssText = "display:none;align-items:center;justify-content:center;text-align:center;";
     cancelBtn.innerHTML = `<span>${lt("Cancel")}</span>`;
     cancelBtn.href = "#";
-    cancelBtn.style.display = "none";
     cancelBtn.onclick = function (e) {
       e.preventDefault();
       cancelOperation();
     };
     const hideBtn = document.createElement("a");
     hideBtn.className = "luatools-btn luatools-hide-btn";
+    hideBtn.style.cssText = "display:flex;align-items:center;justify-content:center;text-align:center;";
     hideBtn.innerHTML = `<span>${lt("Hide")}</span>`;
     hideBtn.href = "#";
     hideBtn.onclick = function (e) {
@@ -2061,18 +2069,24 @@
     const overlay = document.createElement("div");
     overlay.className = "luatools-fixes-results-overlay";
     overlay.style.cssText =
-      "position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;";
+      "position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(12px);z-index:99999;display:flex;align-items:center;justify-content:center;";
 
     const modal = document.createElement("div");
     const colors = getThemeColors();
-    modal.style.cssText = `position:relative;background:${colors.modalBg};color:${colors.text};border:2px solid ${colors.border};border-radius:8px;width:640px;max-height:80vh;display:flex;flex-direction:column;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px ${colors.shadowRgba};animation:slideUp 0.1s ease-out;`;
+    modal.style.cssText = `position:relative;background:${colors.modalBg};color:${colors.text};border:1px solid ${colors.border};border-radius:16px;width:640px;max-height:80vh;display:flex;flex-direction:column;padding:28px 32px;box-shadow:0 24px 80px rgba(0,0,0,.65), 0 0 0 1px ${colors.shadowRgba};animation:slideUp 0.12s ease-out;`;
 
     const header = document.createElement("div");
-    header.style.cssText = `flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid ${colors.borderRgba};`;
+    header.style.cssText = `flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid ${colors.borderRgba};`;
 
     const title = document.createElement("div");
-    title.style.cssText = `font-size:24px;color:${colors.text};font-weight:700;text-shadow:0 2px 8px ${colors.shadow};background:${colors.gradientLight};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;`;
-    title.textContent = lt("LuaTools · Fixes Menu");
+    title.style.cssText = `display:flex;align-items:center;gap:10px;font-size:22px;color:${colors.text};font-weight:600;`;
+    const titleIcon = document.createElement("i");
+    titleIcon.className = "fa-solid fa-wrench";
+    titleIcon.style.cssText = `color:${colors.accent};font-size:20px;`;
+    const titleText = document.createElement("span");
+    titleText.textContent = lt("LuaTools · Fixes Menu");
+    title.appendChild(titleIcon);
+    title.appendChild(titleText);
 
     const iconButtons = document.createElement("div");
     iconButtons.style.cssText = "display:flex;gap:12px;";
@@ -2185,35 +2199,18 @@
     contentContainer.style.zIndex = "1";
 
     const columnsContainer = document.createElement("div");
-    columnsContainer.style.cssText = "display:flex;gap:16px;";
-
-    const leftColumn = document.createElement("div");
-    leftColumn.style.cssText =
-      "flex:1;display:flex;flex-direction:column;gap:16px;";
-
-    const rightColumn = document.createElement("div");
-    rightColumn.style.cssText =
-      "flex:1;display:flex;flex-direction:column;gap:16px;";
+    columnsContainer.style.cssText = "display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:16px;";
 
     function createFixButton(label, text, icon, isSuccess, onClick) {
-      const section = document.createElement("div");
-      section.style.cssText = "width:100%;text-align:center;";
-
-      const sectionLabel = document.createElement("div");
-      const labelColors = getThemeColors();
-      sectionLabel.style.cssText = `font-size:12px;color:${labelColors.accent};margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:1px;`;
-      sectionLabel.textContent = label;
-
       const btn = document.createElement("a");
       btn.href = "#";
       const btnColors = getThemeColors();
-      btn.style.cssText = `display:flex;align-items:center;justify-content:center;gap:10px;width:100%;box-sizing:border-box;padding:14px 24px;background:linear-gradient(135deg, rgba(${btnColors.rgbString},0.15) 0%, rgba(${btnColors.rgbString},0.05) 100%);border:1px solid ${btnColors.border};border-radius:12px;color:${btnColors.text};font-size:15px;font-weight:500;text-decoration:none;transition:all 0.3s ease;cursor:pointer;`;
-      btn.innerHTML =
-        '<i class="fa-solid ' +
-        icon +
-        '" style="font-size:16px;"></i><span>' +
-        text +
-        "</span>";
+      btn.style.cssText = `display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;flex:1 1 calc(50% - 10px);min-width:140px;box-sizing:border-box;padding:14px 6px;background:rgba(${btnColors.rgbString},0.06);border:1px solid ${btnColors.borderRgba};border-radius:12px;color:${btnColors.text};text-decoration:none;transition:all 0.2s ease;cursor:pointer;text-align:center;`;
+      
+      const iconHtml = '<i class="fa-solid ' + icon + '" style="font-size:22px;"></i>';
+      const labelHtml = '<span style="font-weight:600;font-size:13px;line-height:1.2;">' + label + '</span>';
+      const textHtml = '<span style="font-size:11px;opacity:0.8;line-height:1.2;">' + text + '</span>';
+      btn.innerHTML = iconHtml + labelHtml + textHtml;
 
       // If the active theme is light, make certain fix action texts/icons white for readability.
       try {
@@ -2234,10 +2231,7 @@
           noGenericLabel,
         ]);
         if (currentThemeKey === "light" && whiteTexts.has(String(text))) {
-          const spanEl = btn.querySelector("span");
-          const iconEl = btn.querySelector("i");
-          if (spanEl) spanEl.style.color = "#ffffff";
-          if (iconEl) iconEl.style.color = "#ffffff";
+          btn.querySelectorAll("span, i").forEach(el => el.style.color = "#ffffff");
         }
       } catch (_) {}
 
@@ -2281,10 +2275,7 @@
       }
 
       btn.onclick = onClick;
-
-      section.appendChild(sectionLabel);
-      section.appendChild(btn);
-      return section;
+      return btn;
     }
 
     // left thing in fixes modal
@@ -2309,11 +2300,11 @@
         }
       },
     );
-    leftColumn.appendChild(genericSection);
+    columnsContainer.appendChild(genericSection);
 
     if (!isGameInstalled) {
-      genericSection.querySelector("a").style.opacity = "0.5";
-      genericSection.querySelector("a").style.cursor = "not-allowed";
+      genericSection.style.opacity = "0.5";
+      genericSection.style.cursor = "not-allowed";
     }
 
     const onlineStatus = data.onlineFix.status;
@@ -2338,14 +2329,12 @@
         }
       },
     );
-    leftColumn.appendChild(onlineSection);
+    columnsContainer.appendChild(onlineSection);
 
     if (!isGameInstalled) {
-      onlineSection.querySelector("a").style.opacity = "0.5";
-      onlineSection.querySelector("a").style.cursor = "not-allowed";
+      onlineSection.style.opacity = "0.5";
+      onlineSection.style.cursor = "not-allowed";
     }
-
-    // right
     const aioSection = createFixButton(
       lt("All-In-One Fixes"),
       lt("Online Fix (Unsteam)"),
@@ -2366,10 +2355,10 @@
         }
       },
     );
-    rightColumn.appendChild(aioSection);
+    columnsContainer.appendChild(aioSection);
     if (!isGameInstalled) {
-      aioSection.querySelector("a").style.opacity = "0.5";
-      aioSection.querySelector("a").style.cursor = "not-allowed";
+      aioSection.style.opacity = "0.5";
+      aioSection.style.cursor = "not-allowed";
     }
 
     const unfixSection = createFixButton(
@@ -2398,10 +2387,10 @@
         }
       },
     );
-    rightColumn.appendChild(unfixSection);
+    columnsContainer.appendChild(unfixSection);
     if (!isGameInstalled) {
-      unfixSection.querySelector("a").style.opacity = "0.5";
-      unfixSection.querySelector("a").style.cursor = "not-allowed";
+      unfixSection.style.opacity = "0.5";
+      unfixSection.style.cursor = "not-allowed";
     }
 
     // Credit message
@@ -2435,19 +2424,18 @@
     gameHeader.appendChild(gameName);
     contentContainer.appendChild(gameHeader);
 
+    contentContainer.appendChild(columnsContainer);
+
     if (!isGameInstalled) {
       const notInstalledWarning = document.createElement("div");
       notInstalledWarning.style.cssText =
-        "margin-bottom: 16px; padding: 12px; background: rgba(255, 193, 7, 0.1); border: 1px solid rgba(255, 193, 7, 0.3); border-radius: 6px; color: #ffc107; font-size: 13px; text-align: center;";
+        "margin-top: 16px; padding: 12px; background: rgba(255, 193, 7, 0.1); border: 1px solid rgba(255, 193, 7, 0.3); border-radius: 6px; color: #ffc107; font-size: 13px; text-align: center;";
       notInstalledWarning.innerHTML =
         '<i class="fa-solid fa-circle-info" style="margin-right: 8px;"></i>' +
         t("menu.error.notInstalled", "Game is not installed");
       contentContainer.appendChild(notInstalledWarning);
     }
 
-    columnsContainer.appendChild(leftColumn);
-    columnsContainer.appendChild(rightColumn);
-    contentContainer.appendChild(columnsContainer);
     contentContainer.appendChild(creditMsg);
     body.appendChild(contentContainer);
 
@@ -2588,15 +2576,15 @@
     const overlay = document.createElement("div");
     overlay.className = "luatools-loading-fixes-overlay";
     overlay.style.cssText =
-      "position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;";
+      "position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(12px);z-index:99999;display:flex;align-items:center;justify-content:center;";
 
     const modal = document.createElement("div");
     const colors = getThemeColors();
-    modal.style.cssText = `background:${colors.modalBg};color:${colors.text};border:2px solid ${colors.border};border-radius:8px;width:480px;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px ${colors.shadowRgba};animation:slideUp 0.1s ease-out;`;
+    modal.style.cssText = `background:${colors.modalBg};color:${colors.text};border:1px solid ${colors.border};border-radius:16px;width:480px;padding:28px 32px;box-shadow:0 24px 80px rgba(0,0,0,.65), 0 0 0 1px ${colors.shadowRgba};animation:slideUp 0.12s ease-out;`;
 
     const title = document.createElement("div");
     const titleColorsLoading = getThemeColors();
-    title.style.cssText = `font-size:22px;color:${titleColorsLoading.text};margin-bottom:16px;font-weight:700;text-shadow:0 2px 8px ${titleColorsLoading.shadow};background:${titleColorsLoading.gradientLight};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;`;
+    title.style.cssText = `font-size:22px;color:${titleColorsLoading.text};margin-bottom:16px;font-weight:600;`;
     title.textContent = lt("Loading fixes...");
 
     const body = document.createElement("div");
@@ -2730,15 +2718,15 @@
     const overlay = document.createElement("div");
     overlay.className = "luatools-overlay";
     overlay.style.cssText =
-      "position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;";
+      "position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(12px);z-index:99999;display:flex;align-items:center;justify-content:center;";
 
     const modal = document.createElement("div");
     const colors = getThemeColors();
-    modal.style.cssText = `background:${colors.modalBg};color:${colors.text};border:2px solid ${colors.border};border-radius:8px;width:480px;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px ${colors.shadowRgba};animation:slideUp 0.1s ease-out;`;
+    modal.style.cssText = `background:${colors.modalBg};color:${colors.text};border:1px solid ${colors.border};border-radius:16px;width:480px;padding:28px 32px;box-shadow:0 24px 80px rgba(0,0,0,.65), 0 0 0 1px ${colors.shadowRgba};animation:slideUp 0.12s ease-out;`;
 
     const title = document.createElement("div");
     const applyFixTitleColors = getThemeColors();
-    title.style.cssText = `font-size:22px;color:${applyFixTitleColors.text};margin-bottom:16px;font-weight:700;text-shadow:0 2px 8px ${applyFixTitleColors.shadow};background:${applyFixTitleColors.gradientLight};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;`;
+    title.style.cssText = `font-size:22px;color:${applyFixTitleColors.text};margin-bottom:16px;font-weight:600;`;
     title.textContent = lt("Applying {fix}").replace("{fix}", fixType);
 
     const body = document.createElement("div");
@@ -2938,15 +2926,15 @@
     const overlay = document.createElement("div");
     overlay.className = "luatools-unfix-overlay";
     overlay.style.cssText =
-      "position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;";
+      "position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(12px);z-index:99999;display:flex;align-items:center;justify-content:center;";
 
     const modal = document.createElement("div");
     const colors = getThemeColors();
-    modal.style.cssText = `background:${colors.modalBg};color:${colors.text};border:2px solid ${colors.border};border-radius:8px;width:480px;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px ${colors.shadowRgba};animation:slideUp 0.1s ease-out;`;
+    modal.style.cssText = `background:${colors.modalBg};color:${colors.text};border:1px solid ${colors.border};border-radius:16px;width:480px;padding:28px 32px;box-shadow:0 24px 80px rgba(0,0,0,.65), 0 0 0 1px ${colors.shadowRgba};animation:slideUp 0.12s ease-out;`;
 
     const title = document.createElement("div");
     const unfixTitleColors = getThemeColors();
-    title.style.cssText = `font-size:22px;color:${unfixTitleColors.text};margin-bottom:16px;font-weight:700;text-shadow:0 2px 8px ${unfixTitleColors.shadow};background:${unfixTitleColors.gradientLight};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;`;
+    title.style.cssText = `font-size:22px;color:${unfixTitleColors.text};margin-bottom:16px;font-weight:600;`;
     title.textContent = lt("Un-Fixing game");
 
     const body = document.createElement("div");
@@ -3745,17 +3733,16 @@
 
           const optionEl = document.createElement("div");
           const optionColors = getThemeColors();
+          const alignItems = (option.type === "select" || option.type === "text") ? "center" : "flex-start";
           optionEl.style.cssText =
             j === 0
-              ? "padding-top:0;display:flex;justify-content:space-between;align-items:center;"
-              : "margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.05);display:flex;justify-content:space-between;align-items:center;";
+              ? `padding-top:0;display:flex;justify-content:space-between;align-items:${alignItems};gap:16px;`
+              : `margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.05);display:flex;justify-content:space-between;align-items:${alignItems};gap:16px;`;
           optionEl.dataset.settingOption = option.key;
 
           const labelWrap = document.createElement("div");
           labelWrap.className = "luatools-toggle-label-wrap";
           labelWrap.style.flex = "1";
-          labelWrap.style.paddingRight = "16px";
-          labelWrap.style.marginRight = "0";
 
           const optionLabel = document.createElement("div");
           const optLabelColors = getThemeColors();
@@ -3858,11 +3845,9 @@
               option.type === "select" || option.type === "text";
             if (isRightAligned) {
               optionEl.classList.add("luatools-toggle-container");
-              controlWrap.style.width = "160px";
-              controlWrap.style.flexShrink = "0";
-              controlWrap.style.display = "flex";
-              controlWrap.style.alignItems = "center";
-              controlWrap.style.justifyContent = "flex-end";
+              optionEl.style.width = "100%";
+              controlWrap.style.setProperty("width", "180px", "important");
+              controlWrap.style.setProperty("flex-shrink", "0", "important");
             } else {
               controlWrap.style.cssText = "margin-top:8px;";
             }
@@ -3872,7 +3857,7 @@
             if (option.type === "select") {
               const selectEl = document.createElement("select");
               const selectColors = getThemeColors();
-              selectEl.style.cssText = `padding:7px 32px 7px 10px !important;background:${selectColors.bgTertiary} !important;color:${selectColors.text} !important;border:1px solid ${selectColors.border} !important;border-radius:6px !important;font-size:13px !important;min-width:140px;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='${encodeURIComponent(selectColors.textSecondary)}' stroke-width='1.5' fill='none'/%3E%3C/svg%3E") !important;background-repeat:no-repeat !important;background-position:right 10px center !important;transition:border-color 0.2s ease, box-shadow 0.2s ease;`;
+              selectEl.style.cssText = `width:100%;padding:7px 32px 7px 10px !important;background:${selectColors.bgTertiary} !important;color:${selectColors.text} !important;border:1px solid ${selectColors.border} !important;border-radius:6px !important;font-size:13px !important;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='${encodeURIComponent(selectColors.textSecondary)}' stroke-width='1.5' fill='none'/%3E%3C/svg%3E") !important;background-repeat:no-repeat !important;background-position:right 10px center !important;transition:border-color 0.2s ease,box-shadow 0.2s ease;`;
               selectEl.onfocus = function () {
                 const c = getThemeColors();
                 this.style.borderColor = c.accent + " !important";
@@ -4082,7 +4067,7 @@
           if (useSteam !== false) {
             languageEl.style.display = "none";
           } else {
-            languageEl.style.display = "block";
+            languageEl.style.display = "flex";
           }
         }
       } catch (_) {}
@@ -4972,29 +4957,34 @@
     const overlay = document.createElement("div");
     overlay.className = "luatools-alert-overlay";
     overlay.style.cssText =
-      "position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(10px);z-index:100001;display:flex;align-items:center;justify-content:center;";
+      "position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(12px);z-index:100001;display:flex;align-items:center;justify-content:center;";
 
     const modal = document.createElement("div");
     const alertModalColors = getThemeColors();
-    modal.style.cssText = `background:${alertModalColors.modalBg};color:${alertModalColors.text};border:2px solid ${alertModalColors.border};border-radius:8px;width:450px;padding:32px 36px;box-shadow:0 20px 60px rgba(0,0,0,.9), 0 0 0 1px ${alertModalColors.shadowRgba};animation:slideUp 0.1s ease-out;`;
+    modal.style.cssText = `background:${alertModalColors.modalBg};color:${alertModalColors.text};border:1px solid ${alertModalColors.border};border-radius:16px;width:420px;padding:28px 32px;box-shadow:0 24px 80px rgba(0,0,0,.65), 0 0 0 1px ${alertModalColors.shadowRgba};animation:slideUp 0.12s ease-out;`;
+
+    const alertIconWrap = document.createElement("div");
+    alertIconWrap.style.cssText = "text-align:center;margin-bottom:12px;";
+    const alertIcon = document.createElement("i");
+    alertIcon.className = "fa-solid fa-circle-info";
+    alertIcon.style.cssText = `color:${alertModalColors.accent};font-size:32px;`;
+    alertIconWrap.appendChild(alertIcon);
 
     const titleEl = document.createElement("div");
-    const alertTitleColors = getThemeColors();
-    titleEl.style.cssText = `font-size:22px;color:${alertTitleColors.text};margin-bottom:20px;font-weight:700;text-align:left;text-shadow:0 2px 8px ${alertTitleColors.shadow};background:${alertTitleColors.gradientLight};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;`;
+    titleEl.style.cssText = `font-size:20px;color:${alertModalColors.text};margin-bottom:12px;font-weight:600;text-align:center;`;
     titleEl.textContent = String(title || "LuaTools");
 
     const messageEl = document.createElement("div");
-    const alertMsgColors = getThemeColors();
-    messageEl.style.cssText = `font-size:15px;line-height:1.6;margin-bottom:28px;color:${alertMsgColors.textSecondary};text-align:left;padding:0 8px;`;
+    messageEl.style.cssText = `font-size:14px;line-height:1.6;margin-bottom:24px;color:${alertModalColors.textSecondary};text-align:center;`;
     messageEl.textContent = String(message || "");
 
     const btnRow = document.createElement("div");
-    btnRow.style.cssText = "display:flex;justify-content:flex-end;";
+    btnRow.style.cssText = "display:flex;justify-content:center;";
 
     const okBtn = document.createElement("a");
     okBtn.href = "#";
     okBtn.className = "luatools-btn primary";
-    okBtn.style.minWidth = "140px";
+    okBtn.style.cssText = "min-width:140px;display:flex;align-items:center;justify-content:center;text-align:center;";
     okBtn.innerHTML = `<span>${lt("Close")}</span>`;
     okBtn.onclick = function (e) {
       e.preventDefault();
@@ -5006,6 +4996,7 @@
 
     btnRow.appendChild(okBtn);
 
+    modal.appendChild(alertIconWrap);
     modal.appendChild(titleEl);
     modal.appendChild(messageEl);
     modal.appendChild(btnRow);
@@ -5055,20 +5046,25 @@
     const overlay = document.createElement("div");
     overlay.className = "luatools-confirm-overlay";
     overlay.style.cssText =
-      "position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(10px);z-index:100001;display:flex;align-items:center;justify-content:center;";
+      "position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(12px);z-index:100001;display:flex;align-items:center;justify-content:center;";
 
     const modal = document.createElement("div");
     const confirmColors = getThemeColors();
-    modal.style.cssText = `background:${confirmColors.modalBg};color:${confirmColors.text};border:2px solid ${confirmColors.border};border-radius:8px;width:480px;padding:32px 36px;box-shadow:0 20px 60px rgba(0,0,0,.9), 0 0 0 1px ${confirmColors.shadowRgba};animation:slideUp 0.1s ease-out;`;
+    modal.style.cssText = `background:${confirmColors.modalBg};color:${confirmColors.text};border:1px solid ${confirmColors.border};border-radius:16px;width:420px;padding:28px 32px;box-shadow:0 24px 80px rgba(0,0,0,.65), 0 0 0 1px ${confirmColors.shadowRgba};animation:slideUp 0.12s ease-out;`;
+
+    const confirmIconWrap = document.createElement("div");
+    confirmIconWrap.style.cssText = "text-align:center;margin-bottom:12px;";
+    const confirmIcon = document.createElement("i");
+    confirmIcon.className = "fa-solid fa-circle-question";
+    confirmIcon.style.cssText = `color:${confirmColors.accent};font-size:32px;`;
+    confirmIconWrap.appendChild(confirmIcon);
 
     const titleEl = document.createElement("div");
-    const titleConfirmColors = getThemeColors();
-    titleEl.style.cssText = `font-size:22px;color:${titleConfirmColors.text};margin-bottom:20px;font-weight:700;text-align:center;text-shadow:0 2px 8px ${titleConfirmColors.shadow};background:${titleConfirmColors.gradientLight};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;`;
+    titleEl.style.cssText = `font-size:20px;color:${confirmColors.text};margin-bottom:12px;font-weight:600;text-align:center;`;
     titleEl.textContent = String(title || "LuaTools");
 
     const messageEl = document.createElement("div");
-    const msgColors = getThemeColors();
-    messageEl.style.cssText = `font-size:15px;line-height:1.6;margin-bottom:28px;color:${msgColors.textSecondary};text-align:center;`;
+    messageEl.style.cssText = `font-size:14px;line-height:1.6;margin-bottom:24px;color:${confirmColors.textSecondary};text-align:center;`;
     messageEl.textContent = String(message || lt("Are you sure?"));
 
     const btnRow = document.createElement("div");
@@ -5077,7 +5073,7 @@
     const cancelBtn = document.createElement("a");
     cancelBtn.href = "#";
     cancelBtn.className = "luatools-btn";
-    cancelBtn.style.flex = "1";
+    cancelBtn.style.cssText = "flex:1;display:flex;align-items:center;justify-content:center;text-align:center;";
     cancelBtn.innerHTML = `<span>${lt("Cancel")}</span>`;
     cancelBtn.onclick = function (e) {
       e.preventDefault();
@@ -5089,7 +5085,7 @@
     const confirmBtn = document.createElement("a");
     confirmBtn.href = "#";
     confirmBtn.className = "luatools-btn primary";
-    confirmBtn.style.flex = "1";
+    confirmBtn.style.cssText = "flex:1;display:flex;align-items:center;justify-content:center;text-align:center;";
     confirmBtn.innerHTML = `<span>${lt("Confirm")}</span>`;
     confirmBtn.onclick = function (e) {
       e.preventDefault();
@@ -5102,6 +5098,7 @@
     btnRow.appendChild(cancelBtn);
     btnRow.appendChild(confirmBtn);
 
+    modal.appendChild(confirmIconWrap);
     modal.appendChild(titleEl);
     modal.appendChild(messageEl);
     modal.appendChild(btnRow);
@@ -5138,36 +5135,36 @@
     const overlay = document.createElement("div");
     overlay.className = "luatools-dlc-warning-overlay luatools-overlay";
     overlay.style.cssText =
-      "position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(10px);z-index:100001;display:flex;align-items:center;justify-content:center;";
+      "position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(12px);z-index:100001;display:flex;align-items:center;justify-content:center;";
 
     const modal = document.createElement("div");
     const colors = getThemeColors();
-    modal.style.cssText = `background:${colors.modalBg};color:${colors.text};border:2px solid ${colors.border};border-radius:12px;width:520px;padding:36px;box-shadow:0 25px 70px rgba(0,0,0,.9);animation:slideUp 0.15s ease-out;`;
+    modal.style.cssText = `background:${colors.modalBg};color:${colors.text};border:1px solid ${colors.border};border-radius:16px;width:420px;padding:28px 32px;box-shadow:0 24px 80px rgba(0,0,0,.65), 0 0 0 1px ${colors.shadowRgba};animation:slideUp 0.12s ease-out;`;
 
     const header = document.createElement("div");
-    header.style.cssText = "text-align:center;margin-bottom:24px;";
+    header.style.cssText = "text-align:center;margin-bottom:16px;";
     const icon = document.createElement("i");
     icon.className = "fa-solid fa-circle-info";
-    icon.style.cssText = `color:${colors.accent};font-size:48px;filter:drop-shadow(0 0 10px ${colors.shadow});`;
+    icon.style.cssText = `color:${colors.accent};font-size:32px;`;
     header.appendChild(icon);
 
     const titleEl = document.createElement("div");
-    titleEl.style.cssText = `font-size:24px;font-weight:800;text-align:center;margin-bottom:16px;background:${colors.gradientLight};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;`;
+    titleEl.style.cssText = `font-size:20px;font-weight:600;text-align:center;margin-bottom:12px;color:${colors.text};`;
     titleEl.textContent = lt("DLC Detected");
 
     const messageEl = document.createElement("div");
-    messageEl.style.cssText = `font-size:16px;line-height:1.6;margin-bottom:32px;color:${colors.textSecondary};text-align:center;`;
+    messageEl.style.cssText = `font-size:14px;line-height:1.6;margin-bottom:24px;color:${colors.textSecondary};text-align:center;`;
     messageEl.innerHTML = lt(
       "DLCs are added together with the base game. To add fixes for this DLC, please go to the base game page: <br><br><b>{gameName}</b>",
     ).replace("{gameName}", fullgameName || lt("Base Game"));
 
     const btnRow = document.createElement("div");
-    btnRow.style.cssText = "display:flex;gap:16px;justify-content:center;";
+    btnRow.style.cssText = "display:flex;gap:12px;justify-content:center;";
 
     const cancelBtn = document.createElement("a");
     cancelBtn.href = "#";
     cancelBtn.className = "luatools-btn";
-    cancelBtn.style.flex = "1";
+    cancelBtn.style.cssText = "flex:1;display:flex;align-items:center;justify-content:center;text-align:center;";
     cancelBtn.innerHTML = `<span>${lt("Cancel")}</span>`;
     cancelBtn.onclick = function (e) {
       e.preventDefault();
@@ -5177,7 +5174,7 @@
     const goBtn = document.createElement("a");
     goBtn.href = "https://store.steampowered.com/app/" + fullgameAppid;
     goBtn.className = "luatools-btn primary";
-    goBtn.style.flex = "1.5";
+    goBtn.style.cssText = "flex:1.5;display:flex;align-items:center;justify-content:center;text-align:center;";
     goBtn.innerHTML = `<span>${lt("Go to Base Game")}</span>`;
     goBtn.onclick = function (e) {
       // Let the default link behavior happen (navigation)
@@ -5216,27 +5213,27 @@
     const overlay = document.createElement("div");
     overlay.className = "luatools-playable-warning-overlay luatools-overlay";
     overlay.style.cssText =
-      "position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);z-index:100001;display:flex;align-items:center;justify-content:center;";
+      "position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(12px);z-index:100001;display:flex;align-items:center;justify-content:center;";
 
     const modal = document.createElement("div");
-    modal.style.cssText =
-      "background:linear-gradient(180deg,#3a0f0f,#2a0b0b);color:#fff;border:2px solid rgba(255,80,80,0.9);border-radius:8px;width:540px;padding:24px 28px;box-shadow:0 20px 60px rgba(0,0,0,.9);";
+    const playableColors = getThemeColors();
+    modal.style.cssText = `background:${playableColors.modalBg};color:${playableColors.text};border:1px solid ${playableColors.border};border-radius:16px;width:420px;padding:28px 32px;box-shadow:0 24px 80px rgba(0,0,0,.65), 0 0 0 1px ${playableColors.shadowRgba};animation:slideUp 0.12s ease-out;`;
 
     const header = document.createElement("div");
     header.style.cssText =
       "display:flex;align-items:center;gap:12px;margin-bottom:14px;justify-content:center;";
     const icon = document.createElement("i");
     icon.className = "fa-solid fa-triangle-exclamation";
-    icon.style.cssText = "color:#ffddda;font-size:28px;";
+    icon.style.cssText = `color:${playableColors.accent};font-size:22px;`;
     const titleEl = document.createElement("div");
-    titleEl.style.cssText = "font-size:18px;font-weight:700;text-align:center;";
+    titleEl.style.cssText = `font-size:18px;font-weight:600;text-align:center;color:${playableColors.text};`;
     titleEl.textContent = t("common.warning", "Warning");
     header.appendChild(icon);
     header.appendChild(titleEl);
 
     const messageEl = document.createElement("div");
     messageEl.style.cssText =
-      "font-size:14px;line-height:1.5;margin-bottom:20px;color:#ffecec;text-align:center;padding:0 6px;";
+      `font-size:14px;line-height:1.5;margin-bottom:20px;color:${playableColors.textSecondary};text-align:center;padding:0 6px;`;
     messageEl.textContent = String(
       message ||
         "This game may not work, support for it wont be given in our discord",
@@ -5248,7 +5245,7 @@
     const cancelBtn = document.createElement("a");
     cancelBtn.href = "#";
     cancelBtn.className = "luatools-btn";
-    cancelBtn.style.flex = "1";
+    cancelBtn.style.cssText = "flex:1;display:flex;align-items:center;justify-content:center;text-align:center;";
     cancelBtn.innerHTML = `<span>${lt("Cancel")}</span>`;
     cancelBtn.onclick = function (e) {
       e.preventDefault();
@@ -5261,7 +5258,7 @@
     const proceedBtn = document.createElement("a");
     proceedBtn.href = "#";
     proceedBtn.className = "luatools-btn primary";
-    proceedBtn.style.flex = "1";
+    proceedBtn.style.cssText = "flex:1;display:flex;align-items:center;justify-content:center;text-align:center;";
     proceedBtn.innerHTML = `<span>${lt("Proceed")}</span>`;
     proceedBtn.onclick = function (e) {
       e.preventDefault();
@@ -5307,48 +5304,45 @@
     const overlay = document.createElement("div");
     overlay.className = "luatools-disclaimer-overlay luatools-overlay";
     overlay.style.cssText =
-      "position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(10px);z-index:100005;display:flex;align-items:center;justify-content:center;";
+      "position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(12px);z-index:100005;display:flex;align-items:center;justify-content:center;";
 
     const modal = document.createElement("div");
-    modal.style.cssText =
-      "background:linear-gradient(180deg,#5a4100,#362600);color:#fff;border:2px solid rgba(255,180,60,0.9);border-radius:12px;width:580px;padding:36px;box-shadow:0 25px 70px rgba(0,0,0,.9);animation:slideUp 0.2s ease-out;";
+    const disclaimerColors = getThemeColors();
+    modal.style.cssText = `background:${disclaimerColors.modalBg};color:${disclaimerColors.text};border:1px solid ${disclaimerColors.border};border-radius:16px;width:460px;padding:28px 32px;box-shadow:0 24px 80px rgba(0,0,0,.65), 0 0 0 1px ${disclaimerColors.shadowRgba};animation:slideUp 0.12s ease-out;`;
 
     const iconContainer = document.createElement("div");
-    iconContainer.style.cssText = "text-align:center;margin-bottom:20px;";
+    iconContainer.style.cssText = "text-align:center;margin-bottom:16px;";
     const icon = document.createElement("i");
     icon.className = "fa-solid fa-triangle-exclamation";
-    icon.style.cssText =
-      "color:#FFE1A8;font-size:48px;filter:drop-shadow(0 0 10px rgba(255,225,168,0.5));";
+    icon.style.cssText = `color:#FFD54F;font-size:32px;`;
     iconContainer.appendChild(icon);
 
     const titleEl = document.createElement("div");
-    titleEl.style.cssText =
-      "font-size:24px;font-weight:800;text-align:center;margin-bottom:24px;color:#FFE1A8;letter-spacing:0.5px;";
-    titleEl.textContent = t("disclaimer.title", "Security & Support Notice");
+    titleEl.style.cssText = `font-size:20px;font-weight:600;text-align:center;margin-bottom:16px;color:#FFD54F;`;
+    titleEl.textContent = t("disclaimer.title", "Quick Note");
 
     const messageEl = document.createElement("div");
-    messageEl.style.cssText =
-      "font-size:15px;line-height:1.6;margin-bottom:28px;color:#ffecec;text-align:center;";
+    messageEl.style.cssText = `font-size:13px;line-height:1.6;margin-bottom:20px;color:${disclaimerColors.textSecondary};text-align:center;`;
 
     const line1 = document.createElement("div");
-    line1.style.cssText = "margin-bottom:12px;font-weight:600;";
+    line1.style.cssText = `margin-bottom:8px;font-weight:500;color:${disclaimerColors.text};font-size:14px;`;
     line1.textContent = t(
       "disclaimer.line1",
-      "LuaTools is not affiliated in any way with Millennium",
+      "LuaTools is not affiliated with Millennium",
     );
 
     const line2 = document.createElement("div");
-    line2.style.cssText = "margin-bottom:12px;";
+    line2.style.cssText = "margin-bottom:8px;";
     line2.textContent = t(
       "disclaimer.line2",
-      "Millennium will NOT offer you support for this plugin on their discord server",
+      "Millennium will not offer support for this plugin on their server",
     );
 
     const line3 = document.createElement("div");
-    line3.style.cssText = "font-weight:700;color:#ff8e8e;";
+    line3.style.cssText = `font-weight:500;color:#FFD54F;font-size:13px;`;
     line3.textContent = t(
       "disclaimer.line3",
-      "You will be BANNED from both LuaTools and Millennium servers if you go to their discord asking for help",
+      "Please use our Discord for any questions — asking in Millennium servers may result in a ban",
     );
 
     messageEl.appendChild(line1);
@@ -5356,11 +5350,11 @@
     messageEl.appendChild(line3);
 
     const inputGroup = document.createElement("div");
-    inputGroup.style.cssText = "margin-bottom:24px;";
+    inputGroup.style.cssText = "margin-bottom:16px;";
 
     const inputLabel = document.createElement("div");
     inputLabel.style.cssText =
-      "font-size:12px;color:#8f98a0;margin-bottom:10px;text-align:center;text-transform:uppercase;letter-spacing:1px;";
+      `font-size:11px;color:${disclaimerColors.textSecondary};margin-bottom:8px;text-align:center;text-transform:uppercase;letter-spacing:1px;`;
     inputLabel.textContent = t(
       "disclaimer.inputLabel",
       'type "I Understand" in the box bellow to continue',
@@ -5370,14 +5364,14 @@
     input.type = "text";
     input.placeholder = t("disclaimer.inputPlaceholder", "I Understand");
     input.style.cssText =
-      "width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:12px;color:#fff;font-size:14px;outline:none;text-align:center;transition:all 0.3s ease;";
+      `width:100%;box-sizing:border-box;background:${disclaimerColors.bgTertiary};border:1px solid ${disclaimerColors.borderRgba};border-radius:10px;padding:10px 14px;color:${disclaimerColors.text};font-size:14px;outline:none;text-align:center;transition:all 0.2s ease;`;
     input.onfocus = function () {
-      this.style.borderColor = "rgba(255,255,255,0.3)";
-      this.style.background = "rgba(0,0,0,0.4)";
+      this.style.borderColor = disclaimerColors.accent;
+      this.style.boxShadow = `0 0 0 2px rgba(${disclaimerColors.rgbString},0.2)`;
     };
     input.onblur = function () {
-      this.style.borderColor = "rgba(255,255,255,0.1)";
-      this.style.background = "rgba(0,0,0,0.3)";
+      this.style.borderColor = disclaimerColors.borderRgba;
+      this.style.boxShadow = "none";
     };
 
     inputGroup.appendChild(inputLabel);
@@ -5389,10 +5383,10 @@
     const confirmBtn = document.createElement("a");
     confirmBtn.href = "#";
     confirmBtn.className = "luatools-btn primary";
-    confirmBtn.style.minWidth = "auto";
-    confirmBtn.style.background = "#FFEA00";
-    confirmBtn.style.color = "#000";
+    confirmBtn.style.minWidth = "160px";
     confirmBtn.style.justifyContent = "center";
+    confirmBtn.style.textAlign = "center";
+    confirmBtn.style.display = "flex";
     confirmBtn.innerHTML = `<span>${lt("Confirm")}</span>`;
     confirmBtn.style.opacity = "0.5";
     confirmBtn.style.pointerEvents = "none";
@@ -5404,7 +5398,7 @@
       if (this.value.trim().toLowerCase() === expectedPhrase) {
         confirmBtn.style.opacity = "1";
         confirmBtn.style.pointerEvents = "auto";
-        confirmBtn.style.boxShadow = "0 0 15px rgba(255,234,0,0.6)";
+        confirmBtn.style.boxShadow = `0 4px 12px ${disclaimerColors.shadow}`;
       } else {
         confirmBtn.style.opacity = "0.5";
         confirmBtn.style.pointerEvents = "none";
@@ -6392,18 +6386,23 @@
               if (apiList) {
                 apiList.innerHTML = "";
                 apiList.style.cssText =
-                  "display:flex; flex-direction:column; gap:12px; margin-top:16px;";
+                  "display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:16px;";
 
                 available.forEach((source) => {
                   const btn = document.createElement("a");
                   btn.href = "#";
                   btn.className = "luatools-btn focusable";
-                  btn.style.cssText = `display:flex; align-items:center; justify-content:center; padding:12px; background:rgba(${colors.rgbString},0.1); border:1px solid ${colors.borderRgba}; border-radius:8px; text-decoration:none; transition:all 0.2s ease;`;
+                  btn.style.cssText = `display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;flex:1;min-width:80px;padding:12px 8px;background:rgba(${colors.rgbString},0.06);border:1px solid ${colors.borderRgba};border-radius:12px;text-decoration:none;transition:all 0.2s ease;text-align:center;`;
+
+                  const srcIcon = document.createElement("i");
+                  srcIcon.className = "fa-solid fa-server";
+                  srcIcon.style.cssText = `font-size:18px;color:${colors.accent};`;
 
                   const name = document.createElement("div");
-                  name.style.cssText = `font-size:15px; font-weight:600; color:${colors.text};`;
+                  name.style.cssText = `font-size:11px; font-weight:500; color:${colors.text};line-height:1.2;`;
                   name.textContent = source.name;
 
+                  btn.appendChild(srcIcon);
                   btn.appendChild(name);
 
                   btn.onmouseover = function () {
@@ -6679,18 +6678,22 @@
             }
 
             if (status) {
+              const spinner = '<i class="fa-solid fa-spinner" style="font-size:14px;animation: spin 1.5s linear infinite;margin-right:8px;"></i>';
+              const dlIcon = '<i class="fa-solid fa-cloud-arrow-down" style="font-size:14px;animation: bounce 2s infinite;margin-right:8px;"></i>';
+              const gearIcon = '<i class="fa-solid fa-gear" style="font-size:14px;animation: spin 3s linear infinite;margin-right:8px;"></i>';
+
               if (st.status === "checking")
-                status.textContent = lt("Checking availability…");
+                status.innerHTML = spinner + "<span>" + lt("Checking availability…") + "</span>";
               if (st.status === "downloading")
-                status.textContent = lt("Downloading…");
+                status.innerHTML = dlIcon + "<span>" + lt("Downloading…") + "</span>";
               if (st.status === "processing")
-                status.textContent = lt("Processing package…");
+                status.innerHTML = gearIcon + "<span>" + lt("Processing package…") + "</span>";
               if (st.status === "installing")
-                status.textContent = lt("Installing…");
+                status.innerHTML = gearIcon + "<span>" + lt("Installing…") + "</span>";
               if (st.status === "checking content")
-                status.textContent = lt("Checking content…");
-              // if (st.status === 'done') status.textContent = lt('Finishing…');
-              if (st.status === "failed") status.textContent = lt("Failed");
+                status.innerHTML = spinner + "<span>" + lt("Checking content…") + "</span>";
+              if (st.status === "failed") 
+                status.innerHTML = '<i class="fa-solid fa-circle-xmark" style="color:#ff5c5c;font-size:14px;margin-right:8px;"></i><span>' + lt("Failed") + "</span>";
             }
             if (
               ["downloading", "processing", "installing"].includes(st.status)
@@ -6765,43 +6768,69 @@
 
             if (st.status === "done") {
               // Update popup if visible
-              if (status) {
-                const result = st.contentCheckResult;
+              if (overlay) {
+                const doneColors = getThemeColors();
+                // Hide API list for clean look
+                const apiList = overlay.querySelector(".luatools-api-list");
+                if (apiList) apiList.style.display = "none";
+                // Hide progress
+                if (wrap) wrap.style.display = "none";
+                if (progressInfo) progressInfo.style.display = "none";
+                // Hide cancel
+                const cancelBtn = overlay.querySelector(".luatools-cancel-btn");
+                if (cancelBtn) cancelBtn.style.display = "none";
 
-                if (!result) return (status.innerText = lt("Game added!"));
+                // Update title with success icon
+                if (title) {
+                  title.innerHTML = '';
+                  title.style.cssText = `display:flex;align-items:center;justify-content:center;gap:10px;font-size:20px;color:${doneColors.text};margin-bottom:12px;font-weight:600;`;
+                  const checkIcon = document.createElement("i");
+                  checkIcon.className = "fa-solid fa-circle-check";
+                  checkIcon.style.cssText = `color:${doneColors.accent};font-size:24px;`;
+                  const checkText = document.createElement("span");
+                  checkText.textContent = lt("Game Added!");
+                  title.appendChild(checkIcon);
+                  title.appendChild(checkText);
+                }
 
-                // \u00A0 is a white space (unless it's automatically trimmed)
-                const status_content = [
-                  lt("Game added!"),
-                  lt("Content details =>"),
-                  `\u00A0\u00A0• ${lt("Workshop: ")}${lt(result.workshop)}`,
-                ];
+                // Build status content
+                if (status) {
+                  const result = st.contentCheckResult;
+                  status.style.textAlign = "center";
 
-                if (result.dlc.missing.length || result.dlc.included.length) {
-                  status_content.push(`\u00A0\u00A0• ${lt("Dlc: ")}`);
-
-                  if (result.dlc.included.length > 0) {
-                    status_content.push(
-                      `\u00A0\u00A0\u00A0\u00A0◦ ${lt("Included")}: ${result.dlc.included.length}`,
-                    );
-                  }
-                  if (result.dlc.missing.length > 0) {
-                    status_content.push(
-                      `\u00A0\u00A0\u00A0\u00A0◦ ${lt("Missing")}: ${result.dlc.missing.length} (${result.dlc.missing.join(", ")})`,
-                    );
+                  if (!result) {
+                    status.innerText = lt("The game has been added successfully.");
+                  } else {
+                    const status_content = [
+                      lt("Content details =>"),
+                      `\u00A0\u00A0• ${lt("Workshop: ")}${lt(result.workshop)}`,
+                    ];
+                    if (result.dlc.missing.length || result.dlc.included.length) {
+                      status_content.push(`\u00A0\u00A0• ${lt("Dlc: ")}`);
+                      if (result.dlc.included.length > 0) {
+                        status_content.push(
+                          `\u00A0\u00A0\u00A0\u00A0◦ ${lt("Included")}: ${result.dlc.included.length}`,
+                        );
+                      }
+                      if (result.dlc.missing.length > 0) {
+                        status_content.push(
+                          `\u00A0\u00A0\u00A0\u00A0◦ ${lt("Missing")}: ${result.dlc.missing.length} (${result.dlc.missing.join(", ")})`,
+                        );
+                      }
+                    }
+                    status.style.whiteSpace = "pre-line";
+                    status.innerText = status_content.join("\n");
                   }
                 }
 
-                status.style.whiteSpace = "pre-line";
-                status.innerText = status_content.join("\n");
+                // Update Hide button to styled Close
+                const hideBtn = overlay.querySelector(".luatools-hide-btn");
+                if (hideBtn) {
+                  hideBtn.className = "luatools-btn primary luatools-hide-btn";
+                  hideBtn.style.cssText = "min-width:140px;display:flex;align-items:center;justify-content:center;text-align:center;";
+                  hideBtn.innerHTML = '<i class="fa-solid fa-xmark" style="margin-right:6px;"></i><span>' + lt("Close") + '</span>';
+                }
               }
-
-              // Update Hide button to Close
-              const hideBtn = overlay
-                ? overlay.querySelector(".luatools-hide-btn")
-                : null;
-              if (hideBtn)
-                hideBtn.innerHTML = "<span>" + lt("Close") + "</span>";
               done = true;
               clearInterval(timer);
               runState.inProgress = false;
