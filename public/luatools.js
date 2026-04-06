@@ -608,7 +608,7 @@
     function backendLog(message) {
         try {
             if (typeof Millennium !== 'undefined' && typeof Millennium.callServerMethod === 'function') {
-                Millennium.callServerMethod('luatools', 'Logger.log', {
+                Millennium.callServerMethod('LogFromFrontend', {
                     message: String(message)
                 });
             }
@@ -637,7 +637,7 @@
         if (typeof Millennium === 'undefined' || typeof Millennium.callServerMethod !== 'function') {
             return Promise.resolve({});
         }
-        return Millennium.callServerMethod('luatools', 'GetGamesDatabase', {
+        return Millennium.callServerMethod('GetGamesDatabase', {
             contentScriptQuery: ''
         })
             .then(function (res) {
@@ -660,7 +660,7 @@
         if (typeof Millennium === 'undefined' || typeof Millennium.callServerMethod !== 'function') {
             return Promise.resolve(null);
         }
-        return Millennium.callServerMethod('luatools', 'CheckForFixes', {
+        return Millennium.callServerMethod('CheckForFixes', {
             appid: appid,
             contentScriptQuery: ''
         })
@@ -823,7 +823,7 @@
         if (typeof Millennium === 'undefined' || typeof Millennium.callServerMethod !== 'function') {
             return Promise.resolve(null);
         }
-        return Millennium.callServerMethod('luatools', 'GetThemes', {
+        return Millennium.callServerMethod('GetThemes', {
             contentScriptQuery: ''
         }).then(function (res) {
             try {
@@ -1235,7 +1235,7 @@
                         overlay.remove();
                     } catch (_) { }
                     try {
-                        Millennium.callServerMethod('luatools', 'CheckForUpdatesNow', {
+                        Millennium.callServerMethod('CheckForUpdatesNow', {
                             contentScriptQuery: ''
                         }).then(function (res) {
                             try {
@@ -1256,7 +1256,7 @@
                     } catch (_) { }
                     const url = 'https://discord.gg/luatools';
                     try {
-                        Millennium.callServerMethod('luatools', 'OpenExternalUrl', {
+                        Millennium.callServerMethod('OpenExternalUrl', {
                             url,
                             contentScriptQuery: ''
                         });
@@ -1271,7 +1271,7 @@
                         overlay.remove();
                     } catch (_) { }
                     try {
-                        Millennium.callServerMethod('luatools', 'FetchFreeApisNow', {
+                        Millennium.callServerMethod('FetchFreeApisNow', {
                             contentScriptQuery: ''
                         }).then(function (res) {
                             try {
@@ -1320,7 +1320,7 @@
                             return;
                         }
 
-                        Millennium.callServerMethod('luatools', 'GetGameInstallPath', {
+                        Millennium.callServerMethod('GetGameInstallPath', {
                             appid,
                             contentScriptQuery: ''
                         }).then(function (pathRes) {
@@ -1359,7 +1359,7 @@
                 const match = window.location.href.match(/https:\/\/store\.steampowered\.com\/app\/(\d+)/) || window.location.href.match(/https:\/\/steamcommunity\.com\/app\/(\d+)/);
                 const appid = match ? parseInt(match[1], 10) : (window.__LuaToolsCurrentAppId || NaN);
                 if (!isNaN(appid) && typeof Millennium !== 'undefined' && typeof Millennium.callServerMethod === 'function') {
-                    Millennium.callServerMethod('luatools', 'HasLuaToolsForApp', {
+                    Millennium.callServerMethod('HasLuaToolsForApp', {
                         appid,
                         contentScriptQuery: ''
                     }).then(function (res) {
@@ -1369,7 +1369,7 @@
                             if (exists) {
                                 const doDelete = function () {
                                     try {
-                                        Millennium.callServerMethod('luatools', 'DeleteLuaToolsForApp', {
+                                        Millennium.callServerMethod('DeleteLuaToolsForApp', {
                                             appid,
                                             contentScriptQuery: ''
                                         }).then(function () {
@@ -1443,7 +1443,7 @@
                 if (steamLang.toLowerCase() === 'es-419') steamLang = 'es';
                 targetLanguage = useSteamLang ? steamLang : ((window.__LuaToolsI18n && window.__LuaToolsI18n.language) || 'en');
             }
-            return Millennium.callServerMethod('luatools', 'GetTranslations', {
+            return Millennium.callServerMethod('GetTranslations', {
                 language: targetLanguage,
                 contentScriptQuery: ''
             }).then(function (res) {
@@ -1510,7 +1510,7 @@
         showLuaToolsConfirm('LuaTools', lt('Restart Steam now?'),
             function () {
                 try {
-                    Millennium.callServerMethod('luatools', 'RestartSteam', {
+                    Millennium.callServerMethod('RestartSteam', {
                         contentScriptQuery: ''
                     });
                     // SteamClient.User.StartRestart(true) Unreliable, closes but doesn't restart (on my pc)
@@ -1562,7 +1562,7 @@
 
         // Load APIs dynamically from backend
         if (typeof Millennium !== 'undefined' && typeof Millennium.callServerMethod === 'function') {
-            Millennium.callServerMethod('luatools', 'GetApiList', {
+            Millennium.callServerMethod('GetApiList', {
                 contentScriptQuery: ''
             }).then(function (res) {
                 try {
@@ -1678,7 +1678,7 @@
                 const match = window.location.href.match(/https:\/\/store\.steampowered\.com\/app\/(\d+)/) || window.location.href.match(/https:\/\/steamcommunity\.com\/app\/(\d+)/);
                 const appid = match ? parseInt(match[1], 10) : (window.__LuaToolsCurrentAppId || NaN);
                 if (!isNaN(appid) && typeof Millennium !== 'undefined' && typeof Millennium.callServerMethod === 'function') {
-                    Millennium.callServerMethod('luatools', 'CancelAddViaLuaTools', {
+                    Millennium.callServerMethod('CancelAddViaLuaTools', {
                         appid,
                         contentScriptQuery: ''
                     });
@@ -2012,7 +2012,7 @@
                 shayenviLink.addEventListener('click', function (e) {
                     e.preventDefault();
                     try {
-                        Millennium.callServerMethod('luatools', 'OpenExternalUrl', {
+                        Millennium.callServerMethod('OpenExternalUrl', {
                             url: 'https://github.com/ShayneVi/',
                             contentScriptQuery: ''
                         });
@@ -2056,7 +2056,7 @@
             e.preventDefault();
             if (window.__LuaToolsGameInstallPath) {
                 try {
-                    Millennium.callServerMethod('luatools', 'OpenGameFolder', {
+                    Millennium.callServerMethod('OpenGameFolder', {
                         path: window.__LuaToolsGameInstallPath,
                         contentScriptQuery: ''
                     });
@@ -2106,7 +2106,7 @@
             } catch (_) { }
             const url = 'https://discord.gg/luatools';
             try {
-                Millennium.callServerMethod('luatools', 'OpenExternalUrl', {
+                Millennium.callServerMethod('OpenExternalUrl', {
                     url,
                     contentScriptQuery: ''
                 });
@@ -2124,7 +2124,7 @@
 
         function startUnfix(appid) {
             try {
-                Millennium.callServerMethod('luatools', 'UnFixGame', {
+                Millennium.callServerMethod('UnFixGame', {
                     appid: appid,
                     installPath: window.__LuaToolsGameInstallPath,
                     contentScriptQuery: ''
@@ -2251,7 +2251,7 @@
             backendLog('LuaTools: Applying fix ' + fixType + ' for appid ' + appid);
 
             // Start the download and extraction process
-            Millennium.callServerMethod('luatools', 'ApplyGameFix', {
+            Millennium.callServerMethod('ApplyGameFix', {
                 appid: appid,
                 downloadUrl: downloadUrl,
                 installPath: window.__LuaToolsGameInstallPath,
@@ -2337,7 +2337,7 @@
             if (span) span.textContent = lt('Cancelling...');
             const msgEl = document.getElementById('lt-fix-progress-msg');
             if (msgEl) msgEl.textContent = lt('Cancelling...');
-            Millennium.callServerMethod('luatools', 'CancelApplyFix', {
+            Millennium.callServerMethod('CancelApplyFix', {
                 appid: appid,
                 contentScriptQuery: ''
             }).then(function (res) {
@@ -2410,7 +2410,7 @@
                 const overlayEl = document.querySelector('.luatools-overlay');
                 if (!overlayEl) return; // Stop if overlay was closed
 
-                Millennium.callServerMethod('luatools', 'GetApplyFixStatus', {
+                Millennium.callServerMethod('GetApplyFixStatus', {
                     appid: appid,
                     contentScriptQuery: ''
                 }).then(function (res) {
@@ -2525,7 +2525,7 @@
                 const overlayEl = document.querySelector('.luatools-unfix-overlay');
                 if (!overlayEl) return; // Stop if overlay was closed
 
-                Millennium.callServerMethod('luatools', 'GetUnfixStatus', {
+                Millennium.callServerMethod('GetUnfixStatus', {
                     appid: appid,
                     contentScriptQuery: ''
                 }).then(function (res) {
@@ -2617,7 +2617,7 @@
             return Promise.reject(new Error(lt('LuaTools backend unavailable')));
         }
 
-        return Millennium.callServerMethod('luatools', 'GetSettingsConfig', {
+        return Millennium.callServerMethod('GetSettingsConfig', {
             contentScriptQuery: ''
         }).then(function (res) {
             const payload = typeof res === 'string' ? JSON.parse(res) : res;
@@ -3411,7 +3411,7 @@
             const loadingColors = getThemeColors();
             container.innerHTML = `<div style="padding:14px;text-align:center;color:${loadingColors.textSecondary};">${t('settings.installedFixes.loading', 'Scanning for installed fixes...')}</div>`;
 
-            Millennium.callServerMethod('luatools', 'GetInstalledFixes', {
+            Millennium.callServerMethod('GetInstalledFixes', {
                 contentScriptQuery: ''
             })
                 .then(function (res) {
@@ -3547,7 +3547,7 @@
                         deleteBtn.style.opacity = '0.6';
                         deleteBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
 
-                        Millennium.callServerMethod('luatools', 'UnFixGame', {
+                        Millennium.callServerMethod('UnFixGame', {
                             appid: fix.appid,
                             installPath: fix.installPath || '',
                             fixDate: fix.date || '',
@@ -3598,7 +3598,7 @@
 
                 pollCount++;
 
-                Millennium.callServerMethod('luatools', 'GetUnfixStatus', {
+                Millennium.callServerMethod('GetUnfixStatus', {
                     appid: appid,
                     contentScriptQuery: ''
                 })
@@ -3684,7 +3684,7 @@
         function loadInstalledLuaScripts(container) {
             container.innerHTML = '<div style="padding:14px;text-align:center;color:#c7d5e0;">' + t('settings.installedLua.loading', 'Scanning for installed Lua scripts...') + '</div>';
 
-            Millennium.callServerMethod('luatools', 'GetInstalledLuaScripts', {
+            Millennium.callServerMethod('GetInstalledLuaScripts', {
                 contentScriptQuery: ''
             })
                 .then(function (res) {
@@ -3828,7 +3828,7 @@
                         deleteBtn.style.opacity = '0.6';
                         deleteBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
 
-                        Millennium.callServerMethod('luatools', 'DeleteLuaToolsForApp', {
+                        Millennium.callServerMethod('DeleteLuaToolsForApp', {
                             appid: script.appid,
                             contentScriptQuery: ''
                         })
@@ -3945,7 +3945,7 @@
                 backendLog('LuaTools: sending settings payload ' + JSON.stringify(payloadToSend));
             } catch (_) { }
             // Pass flattened keys so Millennium handles the RPC arguments as expected.
-            Millennium.callServerMethod('luatools', 'ApplySettingsChanges', {
+            Millennium.callServerMethod('ApplySettingsChanges', {
                 contentScriptQuery: '',
                 changesJson: JSON.stringify(payloadToSend)
             }).then(function (res) {
@@ -4041,7 +4041,7 @@
             e.preventDefault();
             const url = 'https://discord.gg/luatools';
             try {
-                Millennium.callServerMethod('luatools', 'OpenExternalUrl', {
+                Millennium.callServerMethod('OpenExternalUrl', {
                     url,
                     contentScriptQuery: ''
                 });
@@ -4652,7 +4652,7 @@
                 img.style.verticalAlign = 'middle';
 
                 try {
-                    Millennium.callServerMethod('luatools', 'GetIconDataUrl', {
+                    Millennium.callServerMethod('GetIconDataUrl', {
                         contentScriptQuery: ''
                     }).then(function (res) {
                         try {
@@ -4787,7 +4787,7 @@
                             img.style.verticalAlign = 'middle';
                             // Try to fetch data URL for the icon from backend to avoid path issues
                             try {
-                                Millennium.callServerMethod('luatools', 'GetIconDataUrl', {
+                                Millennium.callServerMethod('GetIconDataUrl', {
                                     contentScriptQuery: ''
                                 }).then(function (res) {
                                     try {
@@ -4888,7 +4888,7 @@
                         window.__LuaToolsPresenceCheckInFlight = true;
                         window.__LuaToolsPresenceCheckAppId = appid;
                         window.__LuaToolsCurrentAppId = appid;
-                        Millennium.callServerMethod('luatools', 'HasLuaToolsForApp', {
+                        Millennium.callServerMethod('HasLuaToolsForApp', {
                             appid,
                             contentScriptQuery: ''
                         }).then(function (res) {
@@ -5153,7 +5153,7 @@
         // Ask backend if there is a queued startup message from InitApis
         try {
             if (typeof Millennium !== 'undefined' && typeof Millennium.callServerMethod === 'function') {
-                Millennium.callServerMethod('luatools', 'GetInitApisMessage', {
+                Millennium.callServerMethod('GetInitApisMessage', {
                     contentScriptQuery: ''
                 }).then(function (res) {
                     try {
@@ -5178,7 +5178,7 @@
                     if (window.location.hostname === 'store.steampowered.com') {
                         if (!sessionStorage.getItem('LuaToolsLoadedAppsGate')) {
                             sessionStorage.setItem('LuaToolsLoadedAppsGate', '1');
-                            Millennium.callServerMethod('luatools', 'ReadLoadedApps', {
+                            Millennium.callServerMethod('ReadLoadedApps', {
                                 contentScriptQuery: ''
                             }).then(function (res) {
                                 try {
@@ -5228,7 +5228,7 @@
                         }
                         runState.inProgress = true;
                         runState.appid = appid;
-                        Millennium.callServerMethod('luatools', 'StartAddViaLuaTools', {
+                        Millennium.callServerMethod('StartAddViaLuaTools', {
                             appid,
                             contentScriptQuery: ''
                         });
@@ -5278,7 +5278,7 @@
                 return;
             }
             try {
-                Millennium.callServerMethod('luatools', 'GetAddViaLuaToolsStatus', {
+                Millennium.callServerMethod('GetAddViaLuaToolsStatus', {
                     appid,
                     contentScriptQuery: ''
                 }).then(function (res) {
@@ -5756,7 +5756,7 @@
                     e.preventDefault();
                     const url = 'https://steamdb.info/app/' + String(item.appid) + '/';
                     try {
-                        Millennium.callServerMethod('luatools', 'OpenExternalUrl', {
+                        Millennium.callServerMethod('OpenExternalUrl', {
                             url,
                             contentScriptQuery: ''
                         });
@@ -5781,7 +5781,7 @@
         dismissBtn.onclick = function (e) {
             e.preventDefault();
             try {
-                Millennium.callServerMethod('luatools', 'DismissLoadedApps', {
+                Millennium.callServerMethod('DismissLoadedApps', {
                     contentScriptQuery: ''
                 });
             } catch (_) { }
