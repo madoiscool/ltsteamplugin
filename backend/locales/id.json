@@ -198,13 +198,13 @@
     "settings.useSteamLanguage.no": "Tidak",
     "settings.useSteamLanguage.yes": "Ya",
     "{fix} applied successfully!": "{fix} berhasil diterapkan!",
-    "Searching across sources...": "translation missing",
-    "Game not found on any available API.": "translation missing",
-    "Select Download Source": "translation missing",
-    "Initializing download...": "translation missing",
-    "Loading APIs...": "translation missing",
-    "This game may not work, support for it wont be given in our discord": "translation missing",
-    "settings.fastDownload.label": "translation missing",
-    "settings.fastDownload.description": "translation missing"
+    "Searching across sources...": "Mencari di semua sumber...",
+    "Game not found on any available API.": "Game tidak ditemukan di API mana pun yang tersedia.",
+    "Select Download Source": "Pilih Sumber Unduhan",
+    "Initializing download...": "Inisialisasi unduhan...",
+    "Loading APIs...": "Memuat API...",
+    "This game may not work, support for it wont be given in our discord": "Game ini mungkin tidak berfungsi, dukungan tidak akan diberikan di discord kami",
+    "settings.fastDownload.label": "Unduhan Cepat",
+    "settings.fastDownload.description": "Secara otomatis memilih sumber pertama yang tersedia saat menambahkan game."
   }
 }

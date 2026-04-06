@@ -198,12 +198,12 @@
     "settings.useSteamLanguage.no": "Não",
     "settings.useSteamLanguage.yes": "Sim",
     "{fix} applied successfully!": "{fix} aplicado com sucesso!",
-    "Searching across sources...": "translation missing",
-    "Game not found on any available API.": "translation missing",
-    "Select Download Source": "translation missing",
-    "Initializing download...": "translation missing",
-    "Loading APIs...": "translation missing",
-    "This game may not work, support for it wont be given in our discord": "translation missing",
+    "Searching across sources...": "A procurar em todas as fontes...",
+    "Game not found on any available API.": "Jogo não encontrado em nenhuma API disponível.",
+    "Select Download Source": "Selecionar fonte de download",
+    "Initializing download...": "A inicializar download...",
+    "Loading APIs...": "A carregar APIs...",
+    "This game may not work, support for it wont be given in our discord": "Este jogo pode não funcionar, suporte não será dado no nosso discord",
     "settings.fastDownload.label": "Download Rápido",
     "settings.fastDownload.description": "Escolher automaticamente a primeira fonte disponível ao adicionar um jogo."
   }

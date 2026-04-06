@@ -198,13 +198,13 @@
     "settings.useSteamLanguage.no": "아니오",
     "settings.useSteamLanguage.yes": "예",
     "{fix} applied successfully!": "{fix}이(가) 성공적으로 적용되었습니다!",
-    "Searching across sources...": "translation missing",
-    "Game not found on any available API.": "translation missing",
-    "Select Download Source": "translation missing",
-    "Initializing download...": "translation missing",
-    "Loading APIs...": "translation missing",
-    "This game may not work, support for it wont be given in our discord": "translation missing",
-    "settings.fastDownload.label": "translation missing",
-    "settings.fastDownload.description": "translation missing"
+    "Searching across sources...": "소스 검색 중...",
+    "Game not found on any available API.": "사용 가능한 API에서 게임을 찾을 수 없습니다.",
+    "Select Download Source": "다운로드 소스 선택",
+    "Initializing download...": "다운로드 초기화 중...",
+    "Loading APIs...": "API 로드 중...",
+    "This game may not work, support for it wont be given in our discord": "이 게임은 작동하지 않을 수 있으며, 저희 디스코드에서 지원되지 않습니다",
+    "settings.fastDownload.label": "빠른 다운로드",
+    "settings.fastDownload.description": "게임 추가 시 사용 가능한 첫 번째 소스를 자동으로 선택합니다."
   }
 }

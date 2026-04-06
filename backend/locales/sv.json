@@ -198,13 +198,13 @@
     "settings.useSteamLanguage.no": "Nej",
     "settings.useSteamLanguage.yes": "Ja",
     "{fix} applied successfully!": "{fix} tillämpades!",
-    "Searching across sources...": "translation missing",
-    "Game not found on any available API.": "translation missing",
-    "Select Download Source": "translation missing",
-    "Initializing download...": "translation missing",
-    "Loading APIs...": "translation missing",
-    "This game may not work, support for it wont be given in our discord": "translation missing",
-    "settings.fastDownload.label": "translation missing",
-    "settings.fastDownload.description": "translation missing"
+    "Searching across sources...": "Söker på tvärs av källor...",
+    "Game not found on any available API.": "Spelet hittades inte på någon tillgänglig API.",
+    "Select Download Source": "Välj nedladdningskälla",
+    "Initializing download...": "Initialiserar nedladdning...",
+    "Loading APIs...": "Laddar API:er...",
+    "This game may not work, support for it wont be given in our discord": "Det här spelet kanske inte fungerar, support ges inte i vår discord",
+    "settings.fastDownload.label": "Snabb nedladdning",
+    "settings.fastDownload.description": "Välj automatiskt den första tillgängliga källan när du lägger till et spel."
   }
 }

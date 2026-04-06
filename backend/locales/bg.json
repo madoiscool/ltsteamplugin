@@ -204,7 +204,7 @@
     "Initializing download...": "Инициализиране на изтеглянето...",
     "Loading APIs...": "Зареждане на API-та...",
     "This game may not work, support for it wont be given in our discord": "Тази игра може да не работи, поддръжка за нея няма да бъде предоставяна в нашия дискорд",
-    "settings.fastDownload.label": "translation missing",
-    "settings.fastDownload.description": "translation missing"
+    "settings.fastDownload.label": "Бързо изтегляне",
+    "settings.fastDownload.description": "Автоматично избиране на първия наличен източник при добавяне на игра."
   }
 }

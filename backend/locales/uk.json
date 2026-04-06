@@ -198,13 +198,13 @@
     "settings.useSteamLanguage.no": "Ні",
     "settings.useSteamLanguage.yes": "Так",
     "{fix} applied successfully!": "{fix} успішно застосовано!",
-    "Searching across sources...": "translation missing",
-    "Game not found on any available API.": "translation missing",
-    "Select Download Source": "translation missing",
-    "Initializing download...": "translation missing",
-    "Loading APIs...": "translation missing",
-    "This game may not work, support for it wont be given in our discord": "translation missing",
-    "settings.fastDownload.label": "translation missing",
-    "settings.fastDownload.description": "translation missing"
+    "Searching across sources...": "Пошук за всіма джерелами...",
+    "Game not found on any available API.": "Гру не знайдено в жодному доступному API.",
+    "Select Download Source": "Виберіть джерело завантаження",
+    "Initializing download...": "Ініціалізація завантаження...",
+    "Loading APIs...": "Завантаження API...",
+    "This game may not work, support for it wont be given in our discord": "Ця гра може не працювати, підтримка по ній в нашому Discord не надаватиметься",
+    "settings.fastDownload.label": "Швидке завантаження",
+    "settings.fastDownload.description": "Автоматично вибирати перше доступне джерело при додаванні гри."
   }
 }

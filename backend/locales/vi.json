@@ -198,13 +198,13 @@
     "settings.useSteamLanguage.no": "Không",
     "settings.useSteamLanguage.yes": "Có",
     "{fix} applied successfully!": "Đã áp dụng {fix} thành công!",
-    "Searching across sources...": "translation missing",
-    "Game not found on any available API.": "translation missing",
-    "Select Download Source": "translation missing",
-    "Initializing download...": "translation missing",
-    "Loading APIs...": "translation missing",
-    "This game may not work, support for it wont be given in our discord": "translation missing",
-    "settings.fastDownload.label": "translation missing",
-    "settings.fastDownload.description": "translation missing"
+    "Searching across sources...": "Đang tìm kiếm trên các nguồn...",
+    "Game not found on any available API.": "Không tìm thấy trò chơi trên bất kỳ API nào có sẵn.",
+    "Select Download Source": "Chọn nguồn tải xuống",
+    "Initializing download...": "Đang khởi tạo tải xuống...",
+    "Loading APIs...": "Đang tải API...",
+    "This game may not work, support for it wont be given in our discord": "Trò chơi này có thể không hoạt động, hỗ trợ sẽ không được cung cấp trong discord của chúng tôi",
+    "settings.fastDownload.label": "Tải xuống nhanh",
+    "settings.fastDownload.description": "Tự động chọn nguồn đầu tiên có sẵn khi thêm trò chơi."
   }
 }

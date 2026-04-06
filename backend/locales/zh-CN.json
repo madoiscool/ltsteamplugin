@@ -198,13 +198,13 @@
     "settings.useSteamLanguage.no": "否",
     "settings.useSteamLanguage.yes": "是",
     "{fix} applied successfully!": "{fix}已成功应用！",
-    "Searching across sources...": "translation missing",
-    "Game not found on any available API.": "translation missing",
-    "Select Download Source": "translation missing",
-    "Initializing download...": "translation missing",
-    "Loading APIs...": "translation missing",
-    "This game may not work, support for it wont be given in our discord": "translation missing",
-    "settings.fastDownload.label": "translation missing",
-    "settings.fastDownload.description": "translation missing"
+    "Searching across sources...": "跨源搜索中...",
+    "Game not found on any available API.": "在任何可用的 API 上都找不到游戏。",
+    "Select Download Source": "选择下载源",
+    "Initializing download...": "正在初始化下载...",
+    "Loading APIs...": "正在加载 API...",
+    "This game may not work, support for it wont be given in our discord": "此游戏可能无法运行，我们的 discord 将不提供支持",
+    "settings.fastDownload.label": "快速下载",
+    "settings.fastDownload.description": "添加游戏时自动选择第一个可用源。"
   }
 }

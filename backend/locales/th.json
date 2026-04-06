@@ -198,13 +198,13 @@
     "settings.useSteamLanguage.no": "ไม่",
     "settings.useSteamLanguage.yes": "ใช่",
     "{fix} applied successfully!": "ติดตั้ง {fix} เรียบร้อยแล้ว!",
-    "Searching across sources...": "translation missing",
-    "Game not found on any available API.": "translation missing",
-    "Select Download Source": "translation missing",
-    "Initializing download...": "translation missing",
-    "Loading APIs...": "translation missing",
-    "This game may not work, support for it wont be given in our discord": "translation missing",
-    "settings.fastDownload.label": "translation missing",
-    "settings.fastDownload.description": "translation missing"
+    "Searching across sources...": "กำลังค้นหาจากแหล่งต่างๆ...",
+    "Game not found on any available API.": "ไม่พบเกมใน API ที่พร้อมใช้งาน",
+    "Select Download Source": "เลือกแหล่งดาวน์โหลด",
+    "Initializing download...": "กำลังเริ่มต้นการดาวน์โหลด...",
+    "Loading APIs...": "กำลังโหลด API...",
+    "This game may not work, support for it wont be given in our discord": "เกมนี้อาจใช้งานไม่ได้ และจะไม่ได้รับการสนับสนุนใน Discord ของเรา",
+    "settings.fastDownload.label": "ดาวน์โหลดด่วน",
+    "settings.fastDownload.description": "เลือกแหล่งแรกที่ใช้งานได้โดยอัตโนมัติเมื่อเพิ่มเกม"
   }
 }

@@ -198,13 +198,13 @@
     "settings.useSteamLanguage.no": "Ei",
     "settings.useSteamLanguage.yes": "Kyllä",
     "{fix} applied successfully!": "{fix} otettu käyttöön onnistuneesti!",
-    "Searching across sources...": "translation missing",
-    "Game not found on any available API.": "translation missing",
-    "Select Download Source": "translation missing",
-    "Initializing download...": "translation missing",
-    "Loading APIs...": "translation missing",
-    "This game may not work, support for it wont be given in our discord": "translation missing",
-    "settings.fastDownload.label": "translation missing",
-    "settings.fastDownload.description": "translation missing"
+    "Searching across sources...": "Etsitään kaikista lähteistä...",
+    "Game not found on any available API.": "Peliä ei löytynyt saatavilla olevista API:ista.",
+    "Select Download Source": "Valitse latauslähde",
+    "Initializing download...": "Alustetaan latausta...",
+    "Loading APIs...": "Ladataan API:ita...",
+    "This game may not work, support for it wont be given in our discord": "Tämä peli ei välttämättä toimi, tukea sille ei anneta discordissamme",
+    "settings.fastDownload.label": "Pikalataus",
+    "settings.fastDownload.description": "Valitse automaattisesti ensimmäinen saatavilla oleva lähde peliä lisättäessä."
   }
 }

@@ -198,13 +198,13 @@
     "settings.useSteamLanguage.no": "Nem",
     "settings.useSteamLanguage.yes": "Igen",
     "{fix} applied successfully!": "{fix} sikeresen alkalmazva!",
-    "Searching across sources...": "translation missing",
-    "Game not found on any available API.": "translation missing",
-    "Select Download Source": "translation missing",
-    "Initializing download...": "translation missing",
-    "Loading APIs...": "translation missing",
-    "This game may not work, support for it wont be given in our discord": "translation missing",
-    "settings.fastDownload.label": "translation missing",
-    "settings.fastDownload.description": "translation missing"
+    "Searching across sources...": "Keresés a források között...",
+    "Game not found on any available API.": "A játék nem található egyetlen elérhető API-n sem.",
+    "Select Download Source": "Letöltési forrás kiválasztása",
+    "Initializing download...": "Letöltés inicializálása...",
+    "Loading APIs...": "API-k betöltése...",
+    "This game may not work, support for it wont be given in our discord": "Ez a játék esetleg nem működik, támogatást nem adunk hozzá a discordunkon",
+    "settings.fastDownload.label": "Gyors letöltés",
+    "settings.fastDownload.description": "Játék hozzáadásakor automatikusan válassza az első elérhető forrást."
   }
 }

@@ -198,13 +198,13 @@
     "settings.useSteamLanguage.no": "Nu",
     "settings.useSteamLanguage.yes": "Da",
     "{fix} applied successfully!": "{fix} aplicat cu succes!",
-    "Searching across sources...": "translation missing",
-    "Game not found on any available API.": "translation missing",
-    "Select Download Source": "translation missing",
-    "Initializing download...": "translation missing",
-    "Loading APIs...": "translation missing",
-    "This game may not work, support for it wont be given in our discord": "translation missing",
-    "settings.fastDownload.label": "translation missing",
-    "settings.fastDownload.description": "translation missing"
+    "Searching across sources...": "Căutare în toate sursele...",
+    "Game not found on any available API.": "Jocul nu a fost găsit pe niciun API disponibil.",
+    "Select Download Source": "Selectați sursa de descărcare",
+    "Initializing download...": "Inițializare descărcare...",
+    "Loading APIs...": "Se încarcă API-urile...",
+    "This game may not work, support for it wont be given in our discord": "Acest joc s-ar putea să nu funcționeze, nu se va oferi suport pe discordul nostru",
+    "settings.fastDownload.label": "Descărcare rapidă",
+    "settings.fastDownload.description": "Alegeți automat prima sursă disponibilă la adăugarea unui joc."
   }
 }
