@@ -6956,13 +6956,27 @@
                         );
                       }
                       if (result.dlc.missing.length > 0) {
+                        const missingLinks = result.dlc.missing
+                          .map(id => `<a href="#" class="lt-dlc-link" data-dlc-id="${id}" style="color:#67c1f5;text-decoration:underline;cursor:pointer;">${id}</a>`)
+                          .join(", ");
                         status_content.push(
-                          `\u00A0\u00A0\u00A0\u00A0◦ ${lt("Missing")}: ${result.dlc.missing.length} (${result.dlc.missing.join(", ")})`,
+                          `\u00A0\u00A0\u00A0\u00A0◦ ${lt("Missing")}: ${result.dlc.missing.length} (${missingLinks})`,
                         );
                       }
                     }
                     status.style.whiteSpace = "pre-line";
-                    status.innerText = status_content.join("\n");
+                    status.innerHTML = status_content.join("\n");
+                    status.querySelectorAll(".lt-dlc-link").forEach(function (link) {
+                      link.addEventListener("click", function (e) {
+                        e.preventDefault();
+                        try {
+                          Millennium.callServerMethod("luatools", "OpenExternalUrl", {
+                            url: "https://steamdb.info/app/" + link.dataset.dlcId + "/",
+                            contentScriptQuery: "",
+                          });
+                        } catch (_) {}
+                      });
+                    });
                   }
                 }
 

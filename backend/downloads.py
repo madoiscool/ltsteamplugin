@@ -629,7 +629,7 @@ def _process_and_install_lua(appid: int, zip_path: str) -> None:
                 dlcs = info["dlc_list"].split(",")
 
                 for dlc in dlcs:
-                    if int(dlc) in depots:
+                    if dlc in depots["ids"]:
                         dlc_result["included"].append(int(dlc))
                     else:
                         dlc_result["missing"].append(int(dlc))
