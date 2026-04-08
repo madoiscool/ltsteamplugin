@@ -1145,6 +1145,40 @@
                 0%, 100% { opacity: 1; }
                 50% { opacity: 0.7; }
             }
+
+            /* Store header button - LuaTools themed icon button */
+            button.luatools-header-button {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                align-self: center;
+                width: 32px;
+                height: 32px;
+                padding: 0;
+                border: 2px solid ${theme.border.replace("0.3", "0.5")};
+                border-radius: 8px;
+                background: ${theme.bgSecondary};
+                color: ${theme.text};
+                cursor: pointer;
+                transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                box-shadow: 0 2px 8px ${theme.shadow};
+                margin-left: 12px;
+            }
+            button.luatools-header-button:hover {
+                background: ${theme.bgHover};
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px ${theme.shadowHover};
+                border-color: ${theme.borderHover};
+            }
+            button.luatools-header-button:focus-visible {
+                outline: 2px solid ${theme.accent};
+                outline-offset: 2px;
+            }
+            button.luatools-header-button img,
+            button.luatools-header-button svg {
+                height: 16px;
+                width: 16px;
+            }
         `;
   }
 
@@ -1258,11 +1292,20 @@
           }).then(function (res) {
             try {
               const p = typeof res === "string" ? JSON.parse(res) : res;
-              titleIcon.src = (p && p.success && p.dataUrl) ? p.dataUrl : "LuaTools/luatools-icon.png";
-            } catch (_) { titleIcon.src = "LuaTools/luatools-icon.png"; }
+              titleIcon.src =
+                p && p.success && p.dataUrl
+                  ? p.dataUrl
+                  : "LuaTools/luatools-icon.png";
+            } catch (_) {
+              titleIcon.src = "LuaTools/luatools-icon.png";
+            }
           });
-        } catch (_) { titleIcon.src = "LuaTools/luatools-icon.png"; }
-        titleIcon.onerror = function () { this.style.display = "none"; };
+        } catch (_) {
+          titleIcon.src = "LuaTools/luatools-icon.png";
+        }
+        titleIcon.onerror = function () {
+          this.style.display = "none";
+        };
         const titleText = document.createElement("span");
         titleText.textContent = t("menu.title", "LuaTools · Menu");
         title.appendChild(titleIcon);
@@ -1324,9 +1367,16 @@
           const btnColors = getThemeColors();
           btn.style.cssText = `display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;flex:1;background:rgba(${btnColors.rgbString},0.06);border:1px solid ${btnColors.borderRgba};border-radius:12px;color:${btnColors.text};font-size:11px;font-weight:500;text-decoration:none;transition:all 0.2s ease;cursor:pointer;text-align:center;padding:14px 6px;min-width:0;`;
           const iconHtml = iconClass
-            ? '<i class="fa-solid ' + iconClass + '" style="font-size:22px;color:' + btnColors.accent + ';"></i>'
+            ? '<i class="fa-solid ' +
+              iconClass +
+              '" style="font-size:22px;color:' +
+              btnColors.accent +
+              ';"></i>'
             : "";
-          const textSpan = '<span style="text-align:center;line-height:1.3;">' + t(key, fallback) + '</span>';
+          const textSpan =
+            '<span style="text-align:center;line-height:1.3;">' +
+            t(key, fallback) +
+            "</span>";
           btn.innerHTML = iconHtml + textSpan;
           btn.onmouseover = function () {
             const c = getThemeColors();
@@ -1372,7 +1422,10 @@
         removeBtn.href = "#";
         const removeBtnColors = getThemeColors();
         removeBtn.style.cssText = `display:none;align-items:center;justify-content:center;gap:8px;padding:10px 16px;background:rgba(${removeBtnColors.rgbString},0.06);border:1px solid ${removeBtnColors.borderRgba};border-radius:10px;color:${removeBtnColors.textSecondary};font-size:13px;font-weight:500;text-decoration:none;transition:all 0.2s ease;cursor:pointer;text-align:center;`;
-        removeBtn.innerHTML = '<i class="fa-solid fa-trash-can" style="font-size:13px;"></i><span>' + t("menu.removeLuaTools", "Remove via LuaTools") + '</span>';
+        removeBtn.innerHTML =
+          '<i class="fa-solid fa-trash-can" style="font-size:13px;"></i><span>' +
+          t("menu.removeLuaTools", "Remove via LuaTools") +
+          "</span>";
         removeBtn.onmouseover = function () {
           const c = getThemeColors();
           this.style.background = `rgba(${c.rgbString},0.15)`;
@@ -1387,7 +1440,8 @@
 
         // Card button grid
         const cardGrid = document.createElement("div");
-        cardGrid.style.cssText = "display:flex;gap:10px;justify-content:center;";
+        cardGrid.style.cssText =
+          "display:flex;gap:10px;justify-content:center;";
 
         const fixesMenuBtn = createCardButton(
           "lt-settings-fixes-menu",
@@ -1906,7 +1960,9 @@
                 apiStatus.className = "luatools-api-status";
                 apiStatus.style.cssText = `font-size:14px;color:${colors.textSecondary};display:flex;align-items:center;gap:6px;`;
                 apiStatus.innerHTML =
-                  "<span>" + lt("Waiting…") + "</span>" +
+                  "<span>" +
+                  lt("Waiting…") +
+                  "</span>" +
                   '<i class="fa-solid fa-spinner" style="animation: spin 1.5s linear infinite;"></i>';
 
                 apiItem.appendChild(apiName);
@@ -1926,7 +1982,10 @@
     const body = document.createElement("div");
     body.style.cssText = `display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;line-height:1.4;margin-bottom:12px;color:${colors.textSecondary};`;
     body.className = "luatools-status";
-    body.innerHTML = '<i class="fa-solid fa-spinner" style="font-size:14px;animation: spin 1.5s linear infinite;"></i><span>' + lt("Checking availability…") + '</span>';
+    body.innerHTML =
+      '<i class="fa-solid fa-spinner" style="font-size:14px;animation: spin 1.5s linear infinite;"></i><span>' +
+      lt("Checking availability…") +
+      "</span>";
 
     const progressWrap = document.createElement("div");
     progressWrap.style.cssText = `background:rgba(0,0,0,0.3);height:20px;border-radius:4px;overflow:hidden;position:relative;display:none;border:1px solid ${colors.border};margin-top:12px;`;
@@ -1957,7 +2016,8 @@
       "margin-top:20px;display:flex;gap:8px;justify-content:center;";
     const cancelBtn = document.createElement("a");
     cancelBtn.className = "luatools-btn luatools-cancel-btn";
-    cancelBtn.style.cssText = "display:none;align-items:center;justify-content:center;text-align:center;";
+    cancelBtn.style.cssText =
+      "display:none;align-items:center;justify-content:center;text-align:center;";
     cancelBtn.innerHTML = `<span>${lt("Cancel")}</span>`;
     cancelBtn.href = "#";
     cancelBtn.onclick = function (e) {
@@ -1966,7 +2026,8 @@
     };
     const hideBtn = document.createElement("a");
     hideBtn.className = "luatools-btn luatools-hide-btn";
-    hideBtn.style.cssText = "display:flex;align-items:center;justify-content:center;text-align:center;";
+    hideBtn.style.cssText =
+      "display:flex;align-items:center;justify-content:center;text-align:center;";
     hideBtn.innerHTML = `<span>${lt("Hide")}</span>`;
     hideBtn.href = "#";
     hideBtn.onclick = function (e) {
@@ -2194,17 +2255,25 @@
     contentContainer.style.zIndex = "1";
 
     const columnsContainer = document.createElement("div");
-    columnsContainer.style.cssText = "display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:16px;";
+    columnsContainer.style.cssText =
+      "display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:16px;";
 
     function createFixButton(label, text, icon, isSuccess, onClick) {
       const btn = document.createElement("a");
       btn.href = "#";
       const btnColors = getThemeColors();
       btn.style.cssText = `display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;flex:1 1 calc(50% - 10px);min-width:140px;box-sizing:border-box;padding:14px 6px;background:rgba(${btnColors.rgbString},0.06);border:1px solid ${btnColors.borderRgba};border-radius:12px;color:${btnColors.text};text-decoration:none;transition:all 0.2s ease;cursor:pointer;text-align:center;`;
-      
-      const iconHtml = '<i class="fa-solid ' + icon + '" style="font-size:22px;"></i>';
-      const labelHtml = '<span style="font-weight:600;font-size:13px;line-height:1.2;">' + label + '</span>';
-      const textHtml = '<span style="font-size:11px;opacity:0.8;line-height:1.2;">' + text + '</span>';
+
+      const iconHtml =
+        '<i class="fa-solid ' + icon + '" style="font-size:22px;"></i>';
+      const labelHtml =
+        '<span style="font-weight:600;font-size:13px;line-height:1.2;">' +
+        label +
+        "</span>";
+      const textHtml =
+        '<span style="font-size:11px;opacity:0.8;line-height:1.2;">' +
+        text +
+        "</span>";
       btn.innerHTML = iconHtml + labelHtml + textHtml;
 
       // If the active theme is light, make certain fix action texts/icons white for readability.
@@ -2226,7 +2295,9 @@
           noGenericLabel,
         ]);
         if (currentThemeKey === "light" && whiteTexts.has(String(text))) {
-          btn.querySelectorAll("span, i").forEach(el => el.style.color = "#ffffff");
+          btn
+            .querySelectorAll("span, i")
+            .forEach((el) => (el.style.color = "#ffffff"));
         }
       } catch (_) {}
 
@@ -3626,22 +3697,25 @@
     function updateSaveState() {
       const hasChanges = Object.keys(collectChanges()).length > 0;
       const isBusy = saveBtn.dataset.busy === "1";
-      
+
       let morrenusKey = "";
       let foundMorrenusKey = false;
       for (const group in state.draft) {
-        if (state.draft[group] && state.draft[group].hasOwnProperty("morrenusApiKey")) {
+        if (
+          state.draft[group] &&
+          state.draft[group].hasOwnProperty("morrenusApiKey")
+        ) {
           morrenusKey = state.draft[group].morrenusApiKey;
           foundMorrenusKey = true;
           break;
         }
       }
-      
+
       let isValid = true;
       if (foundMorrenusKey && morrenusKey) {
-          isValid = /^smm_[0-9a-f]{96}$/.test(morrenusKey);
+        isValid = /^smm_[0-9a-f]{96}$/.test(morrenusKey);
       }
-      
+
       if (hasChanges && !isBusy && isValid) {
         saveBtn.dataset.disabled = "0";
         saveBtn.style.opacity = "";
@@ -3651,7 +3725,7 @@
         saveBtn.style.opacity = "0.6";
         saveBtn.style.cursor = "not-allowed";
       }
-      
+
       if (foundMorrenusKey && morrenusKey && !isValid) {
         setStatus(lt("Invalid Morrenus API Key format"), "#ff5c5c");
       }
@@ -3748,7 +3822,10 @@
 
           const optionEl = document.createElement("div");
           const optionColors = getThemeColors();
-          const alignItems = (option.type === "select" || option.type === "text") ? "center" : "flex-start";
+          const alignItems =
+            option.type === "select" || option.type === "text"
+              ? "center"
+              : "flex-start";
           optionEl.style.cssText =
             j === 0
               ? `padding-top:0;display:flex;justify-content:space-between;align-items:${alignItems};gap:16px;`
@@ -4047,37 +4124,62 @@
 
               if (option.key === "morrenusApiKey") {
                 const statsDiv = document.createElement("div");
-                statsDiv.style.cssText = "margin-top:8px;font-size:12px;color:" + textColors.textSecondary + ";width:180px;word-break:break-word;";
+                statsDiv.style.cssText =
+                  "margin-top:8px;font-size:12px;color:" +
+                  textColors.textSecondary +
+                  ";width:180px;word-break:break-word;";
                 controlWrap.appendChild(statsDiv);
-                 
-                const updateStats = function(key) {
+
+                const updateStats = function (key) {
                   if (!key || key.trim() === "") {
                     statsDiv.innerHTML = "";
                     return;
                   }
                   if (!/^smm_[0-9a-f]{96}$/.test(key)) {
-                    statsDiv.innerHTML = "<span style='color:#ff5c5c;'>" + lt("Invalid key format") + "</span>";
+                    statsDiv.innerHTML =
+                      "<span style='color:#ff5c5c;'>" +
+                      lt("Invalid key format") +
+                      "</span>";
                     return;
                   }
-                  statsDiv.innerHTML = "<i class='fa-solid fa-spinner' style='animation:spin 1s linear infinite;margin-right:6px;'></i>" + lt("Checking key...");
-                  Millennium.callServerMethod("luatools", "GetMorrenusStats", { api_key: key, contentScriptQuery: "" })
-                    .then(r => typeof r === "string" ? JSON.parse(r) : r)
-                    .then(res => {
+                  statsDiv.innerHTML =
+                    "<i class='fa-solid fa-spinner' style='animation:spin 1s linear infinite;margin-right:6px;'></i>" +
+                    lt("Checking key...");
+                  Millennium.callServerMethod("luatools", "GetMorrenusStats", {
+                    api_key: key,
+                    contentScriptQuery: "",
+                  })
+                    .then((r) => (typeof r === "string" ? JSON.parse(r) : r))
+                    .then((res) => {
                       if (res && res.username) {
                         let expiryText = "";
                         if (res.api_key_expires_at) {
                           const expiry = new Date(res.api_key_expires_at);
                           const now = new Date();
-                          const days = Math.max(0, Math.ceil((expiry - now) / (1000 * 60 * 60 * 24)));
+                          const days = Math.max(
+                            0,
+                            Math.ceil((expiry - now) / (1000 * 60 * 60 * 24)),
+                          );
                           expiryText = days + " " + lt("days left");
                         }
-                        const usage = typeof res.daily_usage !== 'undefined' ? res.daily_usage : "?";
-                        const limit = typeof res.daily_limit !== 'undefined' ? res.daily_limit : "?";
-                        
-                        const usageColor = typeof res.daily_usage !== 'undefined' && typeof res.daily_limit !== 'undefined' && res.daily_usage >= res.daily_limit ? "#ff5c5c" : textColors.accent;
+                        const usage =
+                          typeof res.daily_usage !== "undefined"
+                            ? res.daily_usage
+                            : "?";
+                        const limit =
+                          typeof res.daily_limit !== "undefined"
+                            ? res.daily_limit
+                            : "?";
+
+                        const usageColor =
+                          typeof res.daily_usage !== "undefined" &&
+                          typeof res.daily_limit !== "undefined" &&
+                          res.daily_usage >= res.daily_limit
+                            ? "#ff5c5c"
+                            : textColors.accent;
 
                         statsDiv.innerHTML = `
-                          <div style="padding:10px;background:rgba(255,255,255,0.04);border:1px solid ${textColors.borderRgba || 'rgba(255,255,255,0.1)'};border-radius:8px;">
+                          <div style="padding:10px;background:rgba(255,255,255,0.04);border:1px solid ${textColors.borderRgba || "rgba(255,255,255,0.1)"};border-radius:8px;">
                             <div style="font-weight:600;margin-bottom:6px;color:${textColors.text};"><i class="fa-solid fa-user" style="margin-right:6px;opacity:0.8;"></i>${res.username}</div>
                             <div style="display:flex;justify-content:space-between;margin-bottom:4px;color:${usageColor};font-weight:500;">
                                 <span><i class="fa-solid fa-chart-pie" style="margin-right:6px;"></i>${lt("Usage")}</span>
@@ -4090,18 +4192,25 @@
                           </div>
                         `;
                       } else {
-                        statsDiv.innerHTML = "<span style='color:#ff5c5c;'>" + lt("Invalid or rejected key") + "</span>";
+                        statsDiv.innerHTML =
+                          "<span style='color:#ff5c5c;'>" +
+                          lt("Invalid or rejected key") +
+                          "</span>";
                       }
                     })
-                    .catch(e => {
-                      statsDiv.innerHTML = "<span style='color:#ff5c5c;'>" + lt("Failed to verify key") + "</span>";
+                    .catch((e) => {
+                      statsDiv.innerHTML =
+                        "<span style='color:#ff5c5c;'>" +
+                        lt("Failed to verify key") +
+                        "</span>";
                     });
                 };
-                
+
                 updateStats(textInput.value);
-                
-                textInput.addEventListener("input", function() {
-                  if (textInput.apiDebounce) clearTimeout(textInput.apiDebounce);
+
+                textInput.addEventListener("input", function () {
+                  if (textInput.apiDebounce)
+                    clearTimeout(textInput.apiDebounce);
                   textInput.apiDebounce = setTimeout(() => {
                     updateStats(this.value);
                   }, 800);
@@ -5062,7 +5171,8 @@
     const okBtn = document.createElement("a");
     okBtn.href = "#";
     okBtn.className = "luatools-btn primary";
-    okBtn.style.cssText = "min-width:140px;display:flex;align-items:center;justify-content:center;text-align:center;";
+    okBtn.style.cssText =
+      "min-width:140px;display:flex;align-items:center;justify-content:center;text-align:center;";
     okBtn.innerHTML = `<span>${lt("Close")}</span>`;
     okBtn.onclick = function (e) {
       e.preventDefault();
@@ -5151,7 +5261,8 @@
     const cancelBtn = document.createElement("a");
     cancelBtn.href = "#";
     cancelBtn.className = "luatools-btn";
-    cancelBtn.style.cssText = "flex:1;display:flex;align-items:center;justify-content:center;text-align:center;";
+    cancelBtn.style.cssText =
+      "flex:1;display:flex;align-items:center;justify-content:center;text-align:center;";
     cancelBtn.innerHTML = `<span>${lt("Cancel")}</span>`;
     cancelBtn.onclick = function (e) {
       e.preventDefault();
@@ -5163,7 +5274,8 @@
     const confirmBtn = document.createElement("a");
     confirmBtn.href = "#";
     confirmBtn.className = "luatools-btn primary";
-    confirmBtn.style.cssText = "flex:1;display:flex;align-items:center;justify-content:center;text-align:center;";
+    confirmBtn.style.cssText =
+      "flex:1;display:flex;align-items:center;justify-content:center;text-align:center;";
     confirmBtn.innerHTML = `<span>${lt("Confirm")}</span>`;
     confirmBtn.onclick = function (e) {
       e.preventDefault();
@@ -5242,7 +5354,8 @@
     const cancelBtn = document.createElement("a");
     cancelBtn.href = "#";
     cancelBtn.className = "luatools-btn";
-    cancelBtn.style.cssText = "flex:1;display:flex;align-items:center;justify-content:center;text-align:center;";
+    cancelBtn.style.cssText =
+      "flex:1;display:flex;align-items:center;justify-content:center;text-align:center;";
     cancelBtn.innerHTML = `<span>${lt("Cancel")}</span>`;
     cancelBtn.onclick = function (e) {
       e.preventDefault();
@@ -5252,7 +5365,8 @@
     const goBtn = document.createElement("a");
     goBtn.href = "https://store.steampowered.com/app/" + fullgameAppid;
     goBtn.className = "luatools-btn primary";
-    goBtn.style.cssText = "flex:1.5;display:flex;align-items:center;justify-content:center;text-align:center;";
+    goBtn.style.cssText =
+      "flex:1.5;display:flex;align-items:center;justify-content:center;text-align:center;";
     goBtn.innerHTML = `<span>${lt("Go to Base Game")}</span>`;
     goBtn.onclick = function (e) {
       // Let the default link behavior happen (navigation)
@@ -5310,8 +5424,7 @@
     header.appendChild(titleEl);
 
     const messageEl = document.createElement("div");
-    messageEl.style.cssText =
-      `font-size:14px;line-height:1.5;margin-bottom:20px;color:${playableColors.textSecondary};text-align:center;padding:0 6px;`;
+    messageEl.style.cssText = `font-size:14px;line-height:1.5;margin-bottom:20px;color:${playableColors.textSecondary};text-align:center;padding:0 6px;`;
     messageEl.textContent = String(
       message ||
         "This game may not work, support for it wont be given in our discord",
@@ -5323,7 +5436,8 @@
     const cancelBtn = document.createElement("a");
     cancelBtn.href = "#";
     cancelBtn.className = "luatools-btn";
-    cancelBtn.style.cssText = "flex:1;display:flex;align-items:center;justify-content:center;text-align:center;";
+    cancelBtn.style.cssText =
+      "flex:1;display:flex;align-items:center;justify-content:center;text-align:center;";
     cancelBtn.innerHTML = `<span>${lt("Cancel")}</span>`;
     cancelBtn.onclick = function (e) {
       e.preventDefault();
@@ -5336,7 +5450,8 @@
     const proceedBtn = document.createElement("a");
     proceedBtn.href = "#";
     proceedBtn.className = "luatools-btn primary";
-    proceedBtn.style.cssText = "flex:1;display:flex;align-items:center;justify-content:center;text-align:center;";
+    proceedBtn.style.cssText =
+      "flex:1;display:flex;align-items:center;justify-content:center;text-align:center;";
     proceedBtn.innerHTML = `<span>${lt("Proceed")}</span>`;
     proceedBtn.onclick = function (e) {
       e.preventDefault();
@@ -5431,8 +5546,7 @@
     inputGroup.style.cssText = "margin-bottom:16px;";
 
     const inputLabel = document.createElement("div");
-    inputLabel.style.cssText =
-      `font-size:11px;color:${disclaimerColors.textSecondary};margin-bottom:8px;text-align:center;text-transform:uppercase;letter-spacing:1px;`;
+    inputLabel.style.cssText = `font-size:11px;color:${disclaimerColors.textSecondary};margin-bottom:8px;text-align:center;text-transform:uppercase;letter-spacing:1px;`;
     inputLabel.textContent = t(
       "disclaimer.inputLabel",
       'type "I Understand" in the box bellow to continue',
@@ -5441,8 +5555,7 @@
     const input = document.createElement("input");
     input.type = "text";
     input.placeholder = t("disclaimer.inputPlaceholder", "I Understand");
-    input.style.cssText =
-      `width:100%;box-sizing:border-box;background:${disclaimerColors.bgTertiary};border:1px solid ${disclaimerColors.borderRgba};border-radius:10px;padding:10px 14px;color:${disclaimerColors.text};font-size:14px;outline:none;text-align:center;transition:all 0.2s ease;`;
+    input.style.cssText = `width:100%;box-sizing:border-box;background:${disclaimerColors.bgTertiary};border:1px solid ${disclaimerColors.borderRgba};border-radius:10px;padding:10px 14px;color:${disclaimerColors.text};font-size:14px;outline:none;text-align:center;transition:all 0.2s ease;`;
     input.onfocus = function () {
       this.style.borderColor = disclaimerColors.accent;
       this.style.boxShadow = `0 0 0 2px rgba(${disclaimerColors.rgbString},0.2)`;
@@ -5630,28 +5743,12 @@
         !window.__LuaToolsHeaderInserted
       ) {
         ensureLuaToolsStyles();
-        // Find a native Steam header button (cart/wishlist) to copy its classes
-        const nativeBtn =
-          headerContainer.querySelector('a[href*="/cart/"]') ||
-          headerContainer.querySelector('a[href*="/wishlist/"]');
-        const nativeClasses = nativeBtn ? nativeBtn.className : "";
-
-        const headerBtn = document.createElement("a");
-        headerBtn.href = "#";
-        // Inherit native Steam button classes + our own marker class + Focusable
-        headerBtn.className =
-          (nativeClasses ? nativeClasses + " " : "") +
-          "luatools-header-button Focusable";
+        const headerBtn = document.createElement("button");
+        headerBtn.type = "button";
+        headerBtn.className = "luatools-header-button Focusable";
         headerBtn.tabIndex = "0";
-        headerBtn.style.marginLeft = "12px";
         headerBtn.title = "LuaTools Settings";
-
         headerBtn.setAttribute("data-tooltip-text", "LuaTools Settings");
-
-        // Wrap icon in a div like Steam cart/wishlist do (they use <div> or <svg> as direct children)
-        const iconWrap = document.createElement("div");
-        iconWrap.style.cssText =
-          "display:flex;align-items:center;justify-content:center;";
 
         const img = document.createElement("img");
         img.style.height = "18px";
@@ -5678,13 +5775,12 @@
         }
 
         img.onerror = function () {
-          // cogwhell fallback
-          iconWrap.innerHTML =
+          // cogwheel fallback
+          headerBtn.innerHTML =
             '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="LuaTools"><path fill="currentColor" d="M12 8a4 4 0 100 8 4 4 0 000-8zm9.94 3.06l-2.12-.35a7.962 7.962 0 00-1.02-2.46l1.29-1.72a.75.75 0 00-.09-.97l-1.41-1.41a.75.75 0 00-.97-.09l-1.72 1.29c-.77-.44-1.6-.78-2.46-1.02L13.06 2.06A.75.75 0 0012.31 2h-1.62a.75.75 0 00-.75.65l-.35 2.12a7.962 7.962 0 00-2.46 1.02L5 4.6a.75.75 0 00-.97.09L2.62 6.1a.75.75 0 00-.09.97l1.29 1.72c-.44.77-.78 1.6-1.02 2.46l-2.12.35a.75.75 0 00-.65.75v1.62c0 .37.27.69.63.75l2.14.36c.24.86.58 1.69 1.02 2.46L2.53 18a.75.75 0 00.09.97l1.41 1.41c.26.26.67.29.97.09l1.72-1.29c.77.44 1.6.78 2.46 1.02l.35 2.12c.06.36.38.63.75.63h1.62c.37 0 .69-.27.75-.63l.36-2.14c.86-.24 1.69-.58 2.46-1.02l1.72 1.29c.3.2.71.17.97-.09l1.41-1.41c.26-.26.29-.67.09-.97l-1.29-1.72c.44-.77.78-1.6 1.02-2.46l2.12-.35c.36-.06.63-.38.63-.75v-1.62a.75.75 0 00-.65-.75z"/></svg>';
         };
 
-        iconWrap.appendChild(img);
-        headerBtn.appendChild(iconWrap);
+        headerBtn.appendChild(img);
 
         headerBtn.onclick = function (e) {
           e.preventDefault();
@@ -6389,18 +6485,32 @@
 
                     let isFastDownload = true; // default
                     try {
-                      if (window.__LuaToolsSettings && window.__LuaToolsSettings.values && window.__LuaToolsSettings.values.general) {
-                        if (typeof window.__LuaToolsSettings.values.general.fastDownload !== 'undefined') {
-                           isFastDownload = window.__LuaToolsSettings.values.general.fastDownload;
+                      if (
+                        window.__LuaToolsSettings &&
+                        window.__LuaToolsSettings.values &&
+                        window.__LuaToolsSettings.values.general
+                      ) {
+                        if (
+                          typeof window.__LuaToolsSettings.values.general
+                            .fastDownload !== "undefined"
+                        ) {
+                          isFastDownload =
+                            window.__LuaToolsSettings.values.general
+                              .fastDownload;
                         }
                       }
-                    } catch(e) {}
+                    } catch (e) {}
 
                     if (available.length === 1 || isFastDownload) {
                       // Only one source or fast download enabled, proceed automatically with the first available
                       const source = available[0];
                       backendLog(
-                        "LuaTools: Auto-selecting " + (available.length === 1 ? "only source" : "source via fast download") + ": " + source.name,
+                        "LuaTools: Auto-selecting " +
+                          (available.length === 1
+                            ? "only source"
+                            : "source via fast download") +
+                          ": " +
+                          source.name,
                       );
                       startDirectDownload(appid, source.url, source.name);
                     } else {
@@ -6431,7 +6541,8 @@
                 if (overlay) {
                   // Reset for progress
                   const status = overlay.querySelector(".luatools-status");
-                  if (status) status.textContent = lt("Initializing download...");
+                  if (status)
+                    status.textContent = lt("Initializing download...");
                   const progressWrap = overlay.querySelector(
                     ".luatools-progress-wrap",
                   );
@@ -6440,7 +6551,9 @@
                     ".luatools-progress-info",
                   );
                   if (progressInfo) progressInfo.style.display = "block";
-                  const cancelBtn = overlay.querySelector(".luatools-cancel-btn");
+                  const cancelBtn = overlay.querySelector(
+                    ".luatools-cancel-btn",
+                  );
                   if (cancelBtn) cancelBtn.style.display = "flex";
                 } else {
                   showTestPopup();
@@ -6462,65 +6575,109 @@
               if (apiName && apiName.toLowerCase().includes("morrenus")) {
                 let morrenusKey = "";
                 try {
-                  if (window.__LuaToolsSettings && window.__LuaToolsSettings.values && window.__LuaToolsSettings.values.advanced) {
-                    morrenusKey = window.__LuaToolsSettings.values.advanced.morrenusApiKey || "";
+                  if (
+                    window.__LuaToolsSettings &&
+                    window.__LuaToolsSettings.values &&
+                    window.__LuaToolsSettings.values.advanced
+                  ) {
+                    morrenusKey =
+                      window.__LuaToolsSettings.values.advanced
+                        .morrenusApiKey || "";
                   }
                   if (!morrenusKey) {
                     for (const group in window.__LuaToolsSettings.values) {
-                      if (window.__LuaToolsSettings.values[group] && window.__LuaToolsSettings.values[group].morrenusApiKey) {
-                        morrenusKey = window.__LuaToolsSettings.values[group].morrenusApiKey;
+                      if (
+                        window.__LuaToolsSettings.values[group] &&
+                        window.__LuaToolsSettings.values[group].morrenusApiKey
+                      ) {
+                        morrenusKey =
+                          window.__LuaToolsSettings.values[group]
+                            .morrenusApiKey;
                         break;
                       }
                     }
                   }
-                } catch(e) {}
-                
+                } catch (e) {}
+
                 if (morrenusKey && /^smm_[0-9a-f]{96}$/.test(morrenusKey)) {
                   // Wait, check the limits
                   showTestPopup(); // Ensures basic loading modal is up
                   const overlay = document.querySelector(".luatools-overlay");
                   if (overlay) {
                     const status = overlay.querySelector(".luatools-status");
-                    if (status) status.textContent = lt("Verifying API limits...");
-                    const cancelBtn = overlay.querySelector(".luatools-cancel-btn");
+                    if (status)
+                      status.textContent = lt("Verifying API limits...");
+                    const cancelBtn = overlay.querySelector(
+                      ".luatools-cancel-btn",
+                    );
                     if (cancelBtn) cancelBtn.style.display = "none";
                   }
-                  
-                  Millennium.callServerMethod("luatools", "GetMorrenusStats", { api_key: morrenusKey, force_refresh: true, contentScriptQuery: "" })
-                    .then(r => typeof r === "string" ? JSON.parse(r) : r)
-                    .then(res => {
-                        if (res && res.detail === "API key not found or expired") {
-                            // 401 - invalid or expired key
-                            showLuaToolsPlayableWarning(
-                                lt("Your Morrenus API key is invalid or expired. Please check your key in the settings or regenerate it on the Morrenus website."),
-                                function() { showSettingsManagerPopup(false, null); },
-                                null
-                            );
-                            runState.inProgress = false;
-                        } else if (res && typeof res.detail === "string" && res.detail.startsWith("Daily limit reached")) {
-                            // 429 - daily limit exhausted
-                            showLuaToolsPlayableWarning(
-                                lt("You have exceeded your daily download limit. Please wait until tomorrow for more uses, or upgrade your plan on the Morrenus website."),
-                                function() { showSettingsManagerPopup(false, null); },
-                                null
-                            );
-                            runState.inProgress = false;
-                        } else if (res && typeof res.daily_usage !== "undefined" && typeof res.daily_limit !== "undefined" && res.daily_usage >= res.daily_limit) {
-                            // usage fields show limit reached (fallback)
-                            showLuaToolsPlayableWarning(
-                                lt("You have exceeded your daily download limit. Please wait until tomorrow for more uses, or upgrade your plan on the Morrenus website."),
-                                function() { showSettingsManagerPopup(false, null); },
-                                null
-                            );
-                            runState.inProgress = false;
-                        } else {
-                            performDownload();
-                        }
-                    })
-                    .catch(e => {
-                        backendLog("LuaTools: Error checking Morrenus API limit: " + e);
-                        // Network error or other, try to proceed and let the backend error it if needed
+
+                  Millennium.callServerMethod("luatools", "GetMorrenusStats", {
+                    api_key: morrenusKey,
+                    force_refresh: true,
+                    contentScriptQuery: "",
+                  })
+                    .then((r) => (typeof r === "string" ? JSON.parse(r) : r))
+                    .then((res) => {
+                      if (
+                        res &&
+                        res.detail === "API key not found or expired"
+                      ) {
+                        // 401 - invalid or expired key
+                        showLuaToolsPlayableWarning(
+                          lt(
+                            "Your Morrenus API key is invalid or expired. Please check your key in the settings or regenerate it on the Morrenus website.",
+                          ),
+                          function () {
+                            showSettingsManagerPopup(false, null);
+                          },
+                          null,
+                        );
+                        runState.inProgress = false;
+                      } else if (
+                        res &&
+                        typeof res.detail === "string" &&
+                        res.detail.startsWith("Daily limit reached")
+                      ) {
+                        // 429 - daily limit exhausted
+                        showLuaToolsPlayableWarning(
+                          lt(
+                            "You have exceeded your daily download limit. Please wait until tomorrow for more uses, or upgrade your plan on the Morrenus website.",
+                          ),
+                          function () {
+                            showSettingsManagerPopup(false, null);
+                          },
+                          null,
+                        );
+                        runState.inProgress = false;
+                      } else if (
+                        res &&
+                        typeof res.daily_usage !== "undefined" &&
+                        typeof res.daily_limit !== "undefined" &&
+                        res.daily_usage >= res.daily_limit
+                      ) {
+                        // usage fields show limit reached (fallback)
+                        showLuaToolsPlayableWarning(
+                          lt(
+                            "You have exceeded your daily download limit. Please wait until tomorrow for more uses, or upgrade your plan on the Morrenus website.",
+                          ),
+                          function () {
+                            showSettingsManagerPopup(false, null);
+                          },
+                          null,
+                        );
+                        runState.inProgress = false;
+                      } else {
                         performDownload();
+                      }
+                    })
+                    .catch((e) => {
+                      backendLog(
+                        "LuaTools: Error checking Morrenus API limit: " + e,
+                      );
+                      // Network error or other, try to proceed and let the backend error it if needed
+                      performDownload();
                     });
                   return; // yield execution to async fetch
                 }
@@ -6837,22 +6994,33 @@
             }
 
             if (status) {
-              const spinner = '<i class="fa-solid fa-spinner" style="font-size:14px;animation: spin 1.5s linear infinite;margin-right:8px;"></i>';
-              const dlIcon = '<i class="fa-solid fa-cloud-arrow-down" style="font-size:14px;animation: bounce 2s infinite;margin-right:8px;"></i>';
-              const gearIcon = '<i class="fa-solid fa-gear" style="font-size:14px;animation: spin 3s linear infinite;margin-right:8px;"></i>';
+              const spinner =
+                '<i class="fa-solid fa-spinner" style="font-size:14px;animation: spin 1.5s linear infinite;margin-right:8px;"></i>';
+              const dlIcon =
+                '<i class="fa-solid fa-cloud-arrow-down" style="font-size:14px;animation: bounce 2s infinite;margin-right:8px;"></i>';
+              const gearIcon =
+                '<i class="fa-solid fa-gear" style="font-size:14px;animation: spin 3s linear infinite;margin-right:8px;"></i>';
 
               if (st.status === "checking")
-                status.innerHTML = spinner + "<span>" + lt("Checking availability…") + "</span>";
+                status.innerHTML =
+                  spinner + "<span>" + lt("Checking availability…") + "</span>";
               if (st.status === "downloading")
-                status.innerHTML = dlIcon + "<span>" + lt("Downloading…") + "</span>";
+                status.innerHTML =
+                  dlIcon + "<span>" + lt("Downloading…") + "</span>";
               if (st.status === "processing")
-                status.innerHTML = gearIcon + "<span>" + lt("Processing package…") + "</span>";
+                status.innerHTML =
+                  gearIcon + "<span>" + lt("Processing package…") + "</span>";
               if (st.status === "installing")
-                status.innerHTML = gearIcon + "<span>" + lt("Installing…") + "</span>";
+                status.innerHTML =
+                  gearIcon + "<span>" + lt("Installing…") + "</span>";
               if (st.status === "checking content")
-                status.innerHTML = spinner + "<span>" + lt("Checking content…") + "</span>";
-              if (st.status === "failed") 
-                status.innerHTML = '<i class="fa-solid fa-circle-xmark" style="color:#ff5c5c;font-size:14px;margin-right:8px;"></i><span>' + lt("Failed") + "</span>";
+                status.innerHTML =
+                  spinner + "<span>" + lt("Checking content…") + "</span>";
+              if (st.status === "failed")
+                status.innerHTML =
+                  '<i class="fa-solid fa-circle-xmark" style="color:#ff5c5c;font-size:14px;margin-right:8px;"></i><span>' +
+                  lt("Failed") +
+                  "</span>";
             }
             if (
               ["downloading", "processing", "installing"].includes(st.status)
@@ -6941,7 +7109,7 @@
 
                 // Update title with success icon
                 if (title) {
-                  title.innerHTML = '';
+                  title.innerHTML = "";
                   title.style.cssText = `display:flex;align-items:center;justify-content:center;gap:10px;font-size:20px;color:${doneColors.text};margin-bottom:12px;font-weight:600;`;
                   const checkIcon = document.createElement("i");
                   checkIcon.className = "fa-solid fa-circle-check";
@@ -6958,13 +7126,18 @@
                   status.style.textAlign = "center";
 
                   if (!result) {
-                    status.innerText = lt("The game has been added successfully.");
+                    status.innerText = lt(
+                      "The game has been added successfully.",
+                    );
                   } else {
                     const status_content = [
                       lt("Content details =>"),
                       `\u00A0\u00A0• ${lt("Workshop: ")}${lt(result.workshop)}`,
                     ];
-                    if (result.dlc.missing.length || result.dlc.included.length) {
+                    if (
+                      result.dlc.missing.length ||
+                      result.dlc.included.length
+                    ) {
                       status_content.push(`\u00A0\u00A0• ${lt("Dlc: ")}`);
                       if (result.dlc.included.length > 0) {
                         status_content.push(
@@ -6973,7 +7146,10 @@
                       }
                       if (result.dlc.missing.length > 0) {
                         const missingLinks = result.dlc.missing
-                          .map(id => `<a href="#" class="lt-dlc-link" data-dlc-id="${id}" style="color:#67c1f5;text-decoration:underline;cursor:pointer;">${id}</a>`)
+                          .map(
+                            (id) =>
+                              `<a href="#" class="lt-dlc-link" data-dlc-id="${id}" style="color:#67c1f5;text-decoration:underline;cursor:pointer;">${id}</a>`,
+                          )
                           .join(", ");
                         status_content.push(
                           `\u00A0\u00A0\u00A0\u00A0◦ ${lt("Missing")}: ${result.dlc.missing.length} (${missingLinks})`,
@@ -6982,17 +7158,26 @@
                     }
                     status.style.whiteSpace = "pre-line";
                     status.innerHTML = status_content.join("\n");
-                    status.querySelectorAll(".lt-dlc-link").forEach(function (link) {
-                      link.addEventListener("click", function (e) {
-                        e.preventDefault();
-                        try {
-                          Millennium.callServerMethod("luatools", "OpenExternalUrl", {
-                            url: "https://steamdb.info/app/" + link.dataset.dlcId + "/",
-                            contentScriptQuery: "",
-                          });
-                        } catch (_) {}
+                    status
+                      .querySelectorAll(".lt-dlc-link")
+                      .forEach(function (link) {
+                        link.addEventListener("click", function (e) {
+                          e.preventDefault();
+                          try {
+                            Millennium.callServerMethod(
+                              "luatools",
+                              "OpenExternalUrl",
+                              {
+                                url:
+                                  "https://steamdb.info/app/" +
+                                  link.dataset.dlcId +
+                                  "/",
+                                contentScriptQuery: "",
+                              },
+                            );
+                          } catch (_) {}
+                        });
                       });
-                    });
                   }
                 }
 
@@ -7000,8 +7185,12 @@
                 const hideBtn = overlay.querySelector(".luatools-hide-btn");
                 if (hideBtn) {
                   hideBtn.className = "luatools-btn primary luatools-hide-btn";
-                  hideBtn.style.cssText = "min-width:140px;display:flex;align-items:center;justify-content:center;text-align:center;";
-                  hideBtn.innerHTML = '<i class="fa-solid fa-xmark" style="margin-right:6px;"></i><span>' + lt("Close") + '</span>';
+                  hideBtn.style.cssText =
+                    "min-width:140px;display:flex;align-items:center;justify-content:center;text-align:center;";
+                  hideBtn.innerHTML =
+                    '<i class="fa-solid fa-xmark" style="margin-right:6px;"></i><span>' +
+                    lt("Close") +
+                    "</span>";
                 }
               }
               done = true;
