@@ -74,7 +74,7 @@ SETTINGS_GROUPS: List[SettingGroup] = [
                 key="morrenusApiKey",
                 label="Morrenus API Key",
                 option_type="text",
-                description="API Key required to use Sadie Source. Get from manifest.morrenus.xyz",
+                description="API Key required to use Sadie Source. Get from hubcapmanifest.com",
                 default="",
                 metadata={"placeholder": "Enter your API key..."},
             ),

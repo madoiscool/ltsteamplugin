@@ -3885,16 +3885,16 @@
 
             // Special handling for Morrenus link
             if (
-              descTextVal.includes("manifest.morrenus.xyz") ||
+              descTextVal.includes("hubcapmanifest.com") ||
               descTextVal.includes("{link}")
             ) {
-              const url = "https://manifest.morrenus.xyz";
-              const linkHtml = `<a href="${url}" id="lt-morrenus-link" style="color:${optDescColors.accent};text-decoration:underline;">manifest.morrenus.xyz</a>`;
+              const url = "https://hubcapmanifest.com";
+              const linkHtml = `<a href="${url}" id="lt-morrenus-link" style="color:${optDescColors.accent};text-decoration:underline;">hubcapmanifest.com</a>`;
               if (descTextVal.includes("{link}")) {
                 descTextVal = descTextVal.replace("{link}", linkHtml);
               } else {
                 descTextVal = descTextVal.replace(
-                  "manifest.morrenus.xyz",
+                  "hubcapmanifest.com",
                   linkHtml,
                 );
               }

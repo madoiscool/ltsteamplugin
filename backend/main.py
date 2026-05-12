@@ -202,7 +202,7 @@ def GetMorrenusStats(api_key: str, force_refresh: bool = False, contentScriptQue
     try:
         from http_client import ensure_http_client
         client = ensure_http_client("LuaTools: GetMorrenusStats")
-        resp = client.get(f"https://manifest.morrenus.xyz/api/v1/user/stats?api_key={api_key}", follow_redirects=True, timeout=10)
+        resp = client.get(f"https://hubcapmanifest.com/api/v1/user/stats?api_key={api_key}", follow_redirects=True, timeout=10)
         data = resp.text
         if resp.status_code == 200:
             MORRENUS_STATS_CACHE[api_key] = {"time": now, "data": data}
