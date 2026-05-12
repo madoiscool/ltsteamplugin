@@ -3697,22 +3697,22 @@
       const hasChanges = Object.keys(collectChanges()).length > 0;
       const isBusy = saveBtn.dataset.busy === "1";
 
-      let morrenusKey = "";
-      let foundMorrenusKey = false;
+      let hubcapKey = "";
+      let foundHubcapKey = false;
       for (const group in state.draft) {
         if (
           state.draft[group] &&
           state.draft[group].hasOwnProperty("morrenusApiKey")
         ) {
-          morrenusKey = state.draft[group].morrenusApiKey;
-          foundMorrenusKey = true;
+          hubcapKey = state.draft[group].morrenusApiKey;
+          foundHubcapKey = true;
           break;
         }
       }
 
       let isValid = true;
-      if (foundMorrenusKey && morrenusKey) {
-        isValid = /^smm_[0-9a-f]{96}$/.test(morrenusKey);
+      if (foundHubcapKey && hubcapKey) {
+        isValid = /^smm_[0-9a-f]{96}$/.test(hubcapKey);
       }
 
       if (hasChanges && !isBusy && isValid) {
@@ -3725,7 +3725,7 @@
         saveBtn.style.cursor = "not-allowed";
       }
 
-      if (foundMorrenusKey && morrenusKey && !isValid) {
+      if (foundHubcapKey && hubcapKey && !isValid) {
         setStatus(lt("Invalid Morrenus API Key format"), "#ff5c5c");
       }
     }
@@ -3883,13 +3883,13 @@
               option.description,
             );
 
-            // Special handling for Morrenus link
+            // Special handling for hubcap link
             if (
               descTextVal.includes("hubcapmanifest.com") ||
               descTextVal.includes("{link}")
             ) {
               const url = "https://hubcapmanifest.com";
-              const linkHtml = `<a href="${url}" id="lt-morrenus-link" style="color:${optDescColors.accent};text-decoration:underline;">hubcapmanifest.com</a>`;
+              const linkHtml = `<a href="${url}" id="lt-hubcap-link" style="color:${optDescColors.accent};text-decoration:underline;">hubcapmanifest.com</a>`;
               if (descTextVal.includes("{link}")) {
                 descTextVal = descTextVal.replace("{link}", linkHtml);
               } else {
@@ -3903,7 +3903,7 @@
               // Add event listener after appending to document or wait?
               // Better: use a selector later or add it now if possible.
               setTimeout(() => {
-                const link = document.getElementById("lt-morrenus-link");
+                const link = document.getElementById("lt-hubcap-link");
                 if (link) {
                   link.onclick = (e) => {
                     e.preventDefault();
@@ -6502,24 +6502,24 @@
               };
 
               if (apiName && apiName.toLowerCase().includes("morrenus")) {
-                let morrenusKey = "";
+                let hubcapKey = "";
                 try {
                   if (
                     window.__LuaToolsSettings &&
                     window.__LuaToolsSettings.values &&
                     window.__LuaToolsSettings.values.advanced
                   ) {
-                    morrenusKey =
+                    hubcapKey =
                       window.__LuaToolsSettings.values.advanced
                         .morrenusApiKey || "";
                   }
-                  if (!morrenusKey) {
+                  if (!hubcapKey) {
                     for (const group in window.__LuaToolsSettings.values) {
                       if (
                         window.__LuaToolsSettings.values[group] &&
                         window.__LuaToolsSettings.values[group].morrenusApiKey
                       ) {
-                        morrenusKey =
+                        hubcapKey =
                           window.__LuaToolsSettings.values[group]
                             .morrenusApiKey;
                         break;
@@ -6528,7 +6528,7 @@
                   }
                 } catch (e) { }
 
-                if (morrenusKey && /^smm_[0-9a-f]{96}$/.test(morrenusKey)) {
+                if (hubcapKey && /^smm_[0-9a-f]{96}$/.test(hubcapKey)) {
                   // Wait, check the limits
                   showTestPopup(); // Ensures basic loading modal is up
                   const overlay = document.querySelector(".luatools-overlay");
@@ -6543,7 +6543,7 @@
                   }
 
                   Millennium.callServerMethod("luatools", "GetMorrenusStats", {
-                    api_key: morrenusKey,
+                    api_key: hubcapKey,
                     force_refresh: true,
                     contentScriptQuery: "",
                   })
