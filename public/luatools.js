@@ -2119,13 +2119,7 @@
     percent.className = "luatools-percent";
     percent.textContent = "0%";
 
-    const downloadSize = document.createElement("span");
-    downloadSize.className = "luatools-download-size";
-    downloadSize.style.cssText = "margin-left:12px;";
-    downloadSize.textContent = "";
-
     progressInfo.appendChild(percent);
-    progressInfo.appendChild(downloadSize);
 
     const btnRow = document.createElement("div");
     btnRow.style.cssText =
