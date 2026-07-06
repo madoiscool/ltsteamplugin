@@ -1034,16 +1034,13 @@
   // Theme definitions (pulled from themes.json; inline only used as fallback)
   const DEFAULT_THEMES = {
     original: {
-      name: "Original",
       bgPrimary: "#1b2838",
       bgSecondary: "#2a475e",
       bgTertiary: "rgba(44, 79, 112, 0.86)",
       bgHover: "rgba(68, 112, 153, 0.86)",
       bgContainer: "rgba(40, 74, 102, 0.6)",
-      bgContainerGradient: "rgba(40, 74, 102, 0.85), #0b141e",
       accent: "#66c0f4",
       accentLight: "#a4d7f5",
-      accentDark: "#4a9ece",
       border: "rgba(102,192,244,0.3)",
       borderHover: "rgba(102,192,244,0.8)",
       text: "#fff",
@@ -1087,7 +1084,6 @@
         const key = t.value || t.key;
         map[key] = Object.assign({}, t, {
           value: key,
-          name: t.name || key,
         });
       });
       if (Object.keys(map).length === 0) return;
