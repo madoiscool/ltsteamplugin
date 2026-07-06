@@ -636,9 +636,6 @@
         .then((r) => r.json())
         .catch(() => ({ success: false }));
 
-    // Legacy status shape the frontend pollers treat as "finished".
-    const DONE = { success: true, state: { status: "done" } };
-
     // Raw fetch() to 127.0.0.1 from this HTTPS page is blocked as mixed content.
     // Route through the CDP bridge (window.Millennium, defined by the CEF injector's
     // polyfill) instead, which makes the real HTTP call from the app process itself.
@@ -651,24 +648,12 @@
       // ── Real endpoints (LuaTools GUI HTTP server) ──
       HasLuaToolsForApp: (a) => call("HasLuaToolsForApp", { appid: aid(a) }),
       DeleteLuaToolsForApp: (a) => call("DeleteLuaToolsForApp", { appid: aid(a) }),
-      // Original in-page add flow, powered by the app's headless download pipeline
-      // (app downloads/installs in the background; the plugin renders progress).
-      CheckApisForApp: (a) => call("CheckApisForApp", { appid: aid(a) }),
-      StartAddViaLuaToolsFromUrl: (a) =>
-        call("StartAddViaLuaToolsFromUrl", {
-          appid: aid(a),
-          // Download is by source NAME via the app's authenticated proxy.
-          source: a && (a.apiName || a.source),
-        }),
-      GetAddViaLuaToolsStatus: (a) => call("GetAddViaLuaToolsStatus", { appid: aid(a) }),
       CancelAddViaLuaTools: (a) => call("CancelAddViaLuaTools", { appid: aid(a) }),
       RestartSteam: () => call("RestartSteam", {}),
       OpenExternalUrl: (a) => postJson("/open-url", { url: a && a.url }),
       CheckForUpdatesNow: () => postJson("/check-updates"),
       ReadLoadedApps: () => getJson("/loaded-apps"),
       DismissLoadedApps: () => postJson("/loaded-apps"),
-      // Fixes surface the app's own window instead of an in-plugin panel.
-      ApplyGameFix: (a) => postJson("/open/fix/" + aid(a)).then(() => DONE),
       // GetSettingsConfig is a DATA fetch the frontend runs on load — it must NOT
       // open anything (the Settings *button* opens the app via /open/settings).
       // Return a benign empty config so settings loading succeeds silently.
@@ -699,37 +684,11 @@
       GetGamesDatabase: () => Promise.resolve({ success: true, database: {} }),
       GetThemes: () => Promise.resolve({ success: true, themes: [] }),
       GetIconDataUrl: () => Promise.resolve({ success: true, dataUrl: "data:image/png;base64,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" }),
-      GetInstalledLuaScripts: () =>
-        Promise.resolve({ success: true, scripts: [] }),
-      GetInstalledFixes: () => Promise.resolve({ success: true, fixes: [] }),
       CheckForFixes: () =>
         Promise.resolve({ success: true, hasFix: false, fixes: [] }),
-      GetApplyFixStatus: () => Promise.resolve(DONE),
-      CancelApplyFix: () => Promise.resolve({ success: true }),
-      UnFixGame: () =>
-        Promise.resolve({ success: false, error: "Not implemented" }),
-      GetUnfixStatus: () => Promise.resolve(DONE),
-      ApplySettingsChanges: () => Promise.resolve({ success: true }),
-      GetGameInstallPath: () => Promise.resolve({ success: false }),
-      OpenGameFolder: () => Promise.resolve({ success: true }),
 
-      // ── API subsystem: mostly app-owned. GetApiList feeds the add popup's
-      // source list, so it returns the app's DYNAMIC per-game sources (via
-      // /check-sources for the current appid); the rest stay empty. ──
-      GetApiList: () => {
-        const m = location.href.match(/\/app\/(\d+)/);
-        const id = "" + (window.__LuaToolsCurrentAppId || (m && m[1]) || "");
-        if (!id) return Promise.resolve({ success: true, apis: [] });
-        return postJson("/check-sources/" + id).then((r) => ({
-          success: true,
-          apis:
-            r && r.results
-              ? r.results.map((x) => ({ name: x.name }))
-              : [],
-        }));
-      },
+      // ── API subsystem: mostly app-owned. ──
       GetInitApisMessage: () => Promise.resolve({ success: true, message: "" }),
-      GetMorrenusStats: () => Promise.resolve({ success: true }),
     };
 
     return {
