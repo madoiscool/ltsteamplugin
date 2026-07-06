@@ -952,7 +952,6 @@
   // anti-spam state
   const logState = {
     missingOnce: false,
-    existsOnce: false,
   };
   // click/run debounce state
   const runState = {
