@@ -638,8 +638,8 @@
       RestartSteam: () => call("RestartSteam", {}),
       OpenExternalUrl: (a) => postJson("/open-url", { url: a && a.url }),
       CheckForUpdatesNow: () => postJson("/check-updates"),
-      ReadLoadedApps: () => getJson("/loaded-apps"),
-      DismissLoadedApps: () => postJson("/loaded-apps"),
+      ReadLoadedApps: () => call("ReadLoadedApps", {}),
+      DismissLoadedApps: () => call("DismissLoadedApps", {}),
       // GetSettingsConfig is a DATA fetch the frontend runs on load — it must NOT
       // open anything (the Settings *button* opens the app via /open/settings).
       // Return a benign empty config so settings loading succeeds silently.
@@ -3539,9 +3539,13 @@
     if (apps && apps.length) {
       const list = document.createElement("div");
       apps.forEach(function (item) {
+        // Backend sends [{appid, name}], but tolerate a bare appid number too so a missing
+        // name never renders as literal "undefined".
+        const appid = item && typeof item === "object" ? item.appid : item;
+        const name = item && typeof item === "object" ? item.name : null;
         const a = document.createElement("a");
-        a.href = "steam://install/" + String(item.appid);
-        a.textContent = String(item.name || item.appid);
+        a.href = "steam://install/" + String(appid);
+        a.textContent = String(name || appid);
         const linkColors = getThemeColors();
         a.style.cssText = `display:block;color:${linkColors.textSecondary};text-decoration:none;padding:10px 16px;margin-bottom:8px;background:rgba(${linkColors.rgbString},0.08);border:1px solid rgba(${linkColors.rgbString},0.2);border-radius:4px;transition:all 0.3s ease;`;
         a.onmouseover = function () {
@@ -3566,7 +3570,7 @@
         };
         a.oncontextmenu = function (e) {
           e.preventDefault();
-          const url = "https://steamdb.info/app/" + String(item.appid) + "/";
+          const url = "https://steamdb.info/app/" + String(appid) + "/";
           try {
             Millennium.callServerMethod("luatools", "OpenExternalUrl", {
               url,

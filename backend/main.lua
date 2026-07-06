@@ -119,6 +119,15 @@ function OpenFix(appid)
     return backend_request("POST", "/open/fix/" .. tostring(appid))
 end
 
+-- "Games added since last Steam restart" popup: read the list, then dismiss it.
+function ReadLoadedApps()
+    return backend_request("GET", "/loaded-apps")
+end
+
+function DismissLoadedApps()
+    return backend_request("POST", "/loaded-apps")
+end
+
 -- ── Webkit file management (lifted verbatim from the old backend) ─────────────
 
 local function copy_webkit_files()
