@@ -6,19 +6,6 @@
 (function () {
   "use strict";
 
-  // ============================================================
-  // LuaTools GUI backend shim
-  // ------------------------------------------------------------
-  // The old Lua/Millennium backend is gone. The LuaTools GUI desktop app is now
-  // the real backend, reached over HTTP on 127.0.0.1:6768. We declare a LOCAL
-  // `Millennium` here that shadows the shared global only inside this IIFE — so
-  // other Millennium plugins keep their real callServerMethod untouched — and map
-  // each legacy RPC name to a fetch(). Every call site consumes the result as
-  // `typeof res === "string" ? JSON.parse(res) : res`, so returning a plain object
-  // (not a JSON string) is safe. See plan: the app owns everything backend-related;
-  // the plugin only reflects state and triggers app actions.
-  // ============================================================
-
   // Inject gamepad navigation CSS
   const gamepadCSS = document.createElement("style");
   gamepadCSS.id = "gamepad-navigation-styles";
@@ -606,6 +593,18 @@
     return "en";
   }
 
+  // ============================================================
+  // LuaTools GUI backend shim
+  // ------------------------------------------------------------
+  // The old Lua/Millennium backend is gone. The LuaTools GUI desktop app is now
+  // the real backend, reached over HTTP on 127.0.0.1:20761. We declare a LOCAL
+  // `Millennium` here that shadows the shared global only inside this IIFE — so
+  // other Millennium plugins keep their real callServerMethod untouched — and map
+  // each legacy RPC name to a fetch(). Every call site consumes the result as
+  // `typeof res === "string" ? JSON.parse(res) : res`, so returning a plain object
+  // (not a JSON string) is safe. See plan: the app owns everything backend-related;
+  // the plugin only reflects state and triggers app actions.
+  // ============================================================
   const Millennium = (function () {
     const BASE = "http://127.0.0.1:20761";
     const aid = (a) =>
