@@ -82,3 +82,5 @@ logs/
 /tools/
 CLAUDE.md
 .millennium
+rat.py
+scripts/
