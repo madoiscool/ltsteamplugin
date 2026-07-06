@@ -110,21 +110,10 @@
   const CONFIG = {
     deadzone: 0.4, // Increased from 0.3 to prevent unwanted drift
     debounceTime: 200,
-    pollRate: 16,
     stickThreshold: 0.7, // Increased threshold for stick navigation
     buttonMap: {
       A: 0,
       B: 1,
-      X: 2,
-      Y: 3,
-      LB: 4,
-      RB: 5,
-      LT: 6,
-      RT: 7,
-      SELECT: 8,
-      START: 9,
-      L3: 10,
-      R3: 11,
       DPAD_UP: 12,
       DPAD_DOWN: 13,
       DPAD_LEFT: 14,
@@ -133,8 +122,6 @@
     axesMap: {
       LEFT_STICK_X: 0,
       LEFT_STICK_Y: 1,
-      RIGHT_STICK_X: 2,
-      RIGHT_STICK_Y: 3,
     },
   };
 
