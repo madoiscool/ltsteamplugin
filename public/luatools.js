@@ -1261,7 +1261,7 @@
   }
 
   // Trigger load (non-blocking). Keeps DEFAULT_THEMES as a safe fallback.
-  const themeLoadPromise = loadThemes();
+  loadThemes();
 
   function getCurrentThemeKey() {
     try {
