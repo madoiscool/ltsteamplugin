@@ -3642,11 +3642,6 @@
     ensureFontAwesome();
     ensureLuaToolsStyles();
     const overlay = document.createElement("div");
-    overlay.style.cssText =
-      "position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease-out;";
-    overlay.className = "luatools-loadedapps-overlay";
-    overlay.style.cssText =
-      "position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease-out;";
     overlay.className = "luatools-loadedapps-overlay";
     overlay.style.cssText =
       "position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;";
