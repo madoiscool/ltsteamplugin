@@ -1852,9 +1852,10 @@
                         .then(function () {
                           try {
                             window.__LuaToolsButtonInserted = false;
+                            window.__LuaToolsGameAdded = false;
                             window.__LuaToolsPresenceCheckInFlight = false;
                             window.__LuaToolsPresenceCheckAppId = undefined;
-                            addLuaToolsButton();
+                            addLuaToolsButton(true);
                             const successText = t(
                               "menu.remove.success",
                               "LuaTools removed for this app.",
@@ -2683,10 +2684,12 @@
   let lastButtonCheckTime = 0;
   const BUTTON_CHECK_THROTTLE = 500; // Only run once every 500ms
 
-  function addLuaToolsButton() {
-    // Throttle to prevent blocking gamepad input
+  function addLuaToolsButton(force) {
+    // Throttle to prevent blocking gamepad input. Bypassed (force=true) for retry- and
+    // observer-driven calls that fire the moment a container appears — those must not be
+    // swallowed, or the "Add via LuaTools" button intermittently never gets inserted.
     const now = Date.now();
-    if (now - lastButtonCheckTime < BUTTON_CHECK_THROTTLE) {
+    if (!force && now - lastButtonCheckTime < BUTTON_CHECK_THROTTLE) {
       return; // Skip this execution, too soon
     }
     lastButtonCheckTime = now;
@@ -2697,6 +2700,7 @@
       // Page changed - reset button insertion flag and update translations
       window.__LuaToolsLastUrl = currentUrl;
       window.__LuaToolsButtonInserted = false;
+      window.__LuaToolsGameAdded = false;
       window.__LuaToolsRestartInserted = false;
       window.__LuaToolsIconInserted = false;
       window.__LuaToolsHeaderInserted = false;
@@ -2959,6 +2963,10 @@
                   backendLog(
                     "LuaTools already present for this app; not inserting button",
                   );
+                  // Resolved: game is already added, so the Add button is intentionally
+                  // omitted. Mark it so ensureLuaToolsUI stops retrying (button will never
+                  // appear, and that's correct) instead of spinning to the attempt cap.
+                  window.__LuaToolsGameAdded = true;
                   window.__LuaToolsPresenceCheckInFlight = false;
                   return;
                 }
@@ -3183,13 +3191,24 @@
   function ensureLuaToolsUI(attempt) {
     attempt = attempt || 0;
     try {
-      addLuaToolsButton();
+      addLuaToolsButton(true);
     } catch (err) {
       backendLog("LuaTools: ensureLuaToolsUI attempt " + attempt + " threw: " + err);
     }
 
+    // The global header (._1wn1lBlAzl3HMRqS1llwie) is present almost immediately, but a game
+    // page's button row (.apphub_OtherSiteInfo / .steamdb-buttons) loads later. Exiting on
+    // headerReady alone quit before that row existed, so the "Add via LuaTools" button was
+    // intermittently never inserted on game-page loads/refreshes. On a game page, keep
+    // retrying (within the ~7.2s cap) until the button is actually resolved — either inserted
+    // (__LuaToolsButtonInserted) or the game is already added (__LuaToolsGameAdded).
     var headerReady = !!document.querySelector(".luatools-header-button");
-    if (headerReady || attempt >= 12) {
+    var onGamePage = /\/app\/\d+/.test(window.location.href);
+    var buttonSettled =
+      !onGamePage ||
+      window.__LuaToolsButtonInserted === true ||
+      window.__LuaToolsGameAdded === true;
+    if ((headerReady && buttonSettled) || attempt >= 12) {
       window.__LuaToolsReady = true;
       return;
     }
@@ -3409,6 +3428,7 @@
       lastUrl = currentUrl;
       // URL changed - reset flags and update buttons
       window.__LuaToolsButtonInserted = false;
+      window.__LuaToolsGameAdded = false;
       window.__LuaToolsRestartInserted = false;
       window.__LuaToolsIconInserted = false;
       window.__LuaToolsHeaderInserted = false;
@@ -3418,7 +3438,7 @@
       // Update translations and re-add buttons
       ensureTranslationsLoaded(false).then(function () {
         updateButtonTranslations();
-        addLuaToolsButton();
+        addLuaToolsButton(true);
       });
     }
   }
@@ -3455,60 +3475,34 @@
   }
   bootSettings();
 
-  // Use MutationObserver to catch dynamically added content
-  // Heavily optimized and throttled version to avoid blocking gamepad
+  // Catch dynamically added content: Steam builds out the header and the game-page button
+  // row asynchronously (and re-injects links well after page load). Debounce each mutation
+  // burst into one cheap check — if a target container is present but our button isn't there
+  // yet, (re)insert. The old version scanned only the first 10 mutations / first 3 added nodes
+  // and matched only top-level added nodes, so a container inserted nested inside a larger
+  // subtree (common) was missed — that was a primary cause of the button intermittently not
+  // appearing. A couple of querySelectors per debounced burst is negligible for gamepad input.
   if (typeof MutationObserver !== "undefined") {
     let mutationTimeout;
-    let lastMutationProcessTime = 0;
-    const MUTATION_THROTTLE = 1000; // Only process once per second
 
-    const observer = new MutationObserver(function (mutations) {
-      // Additional throttle on top of debounce
-      const now = Date.now();
-      if (now - lastMutationProcessTime < MUTATION_THROTTLE) {
-        return; // Skip if processed recently
-      }
-
-      // Debounce mutations to avoid blocking the UI
+    const observer = new MutationObserver(function () {
       clearTimeout(mutationTimeout);
       mutationTimeout = setTimeout(function () {
-        lastMutationProcessTime = Date.now();
-
-        let shouldUpdate = false;
-        // Quick check: only process first 10 mutations to avoid long loops
-        const mutationsToCheck = Math.min(mutations.length, 10);
-
-        for (let i = 0; i < mutationsToCheck; i++) {
-          const mutation = mutations[i];
-          if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
-            // Only check first 3 added nodes to avoid blocking
-            const nodesToCheck = Math.min(mutation.addedNodes.length, 3);
-
-            for (let j = 0; j < nodesToCheck; j++) {
-              const node = mutation.addedNodes[j];
-              if (node.nodeType === 1) {
-                // Element node
-                // Quick class check without querySelector (faster)
-                if (
-                  node.classList &&
-                  (node.classList.contains("steamdb-buttons") ||
-                    node.classList.contains("apphub_OtherSiteInfo") ||
-                    node.id === "queueBtnFollow")
-                ) {
-                  shouldUpdate = true;
-                  break;
-                }
-              }
-            }
-          }
-          if (shouldUpdate) break;
-        }
-
-        if (shouldUpdate) {
+        var gameContainer = document.querySelector(
+          ".steamdb-buttons, [data-steamdb-buttons], .apphub_OtherSiteInfo, #queueBtnFollow",
+        );
+        var needGameBtn =
+          !!gameContainer &&
+          !document.querySelector(".luatools-button") &&
+          window.__LuaToolsGameAdded !== true;
+        var needHeaderBtn =
+          !!document.querySelector("._1wn1lBlAzl3HMRqS1llwie") &&
+          !document.querySelector(".luatools-header-button");
+        if (needGameBtn || needHeaderBtn) {
           updateButtonTranslations();
-          addLuaToolsButton();
+          addLuaToolsButton(true);
         }
-      }, 300); // Increased debounce to 300ms
+      }, 300);
     });
 
     observer.observe(document.body, {
