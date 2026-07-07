@@ -2462,8 +2462,8 @@
       const style = document.createElement("style");
       style.id = "luatools-spacing-styles";
       style.textContent = `
-                .luatools-restart-button { margin-left: 6px !important; margin-right: 6px !important; }
-                .luatools-button { margin-right: 0 !important; position: relative !important; }
+                .luatools-restart-button { margin-left: 0 !important; margin-right: 3px !important; }
+                .luatools-button { margin-left: 0 !important; margin-right: 0 !important; position: relative !important; }
                 .luatools-pills-container {
                     position: absolute !important;
                     top: -25px !important;
