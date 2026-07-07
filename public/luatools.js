@@ -3196,19 +3196,16 @@
       backendLog("LuaTools: ensureLuaToolsUI attempt " + attempt + " threw: " + err);
     }
 
-    // The global header (._1wn1lBlAzl3HMRqS1llwie) is present almost immediately, but a game
-    // page's button row (.apphub_OtherSiteInfo / .steamdb-buttons) loads later. Exiting on
-    // headerReady alone quit before that row existed, so the "Add via LuaTools" button was
-    // intermittently never inserted on game-page loads/refreshes. On a game page, keep
-    // retrying (within the ~7.2s cap) until the button is actually resolved — either inserted
-    // (__LuaToolsButtonInserted) or the game is already added (__LuaToolsGameAdded).
+    // Mark ready once the header button is up (or retries exhausted). This is the signal
+    // CefInjectorService uses to STOP re-injecting — it must NOT be gated on the game-page
+    // "Add" button: that button's row loads later and its presence check is async, so gating
+    // ready on it keeps the page "not ready", triggering an endless re-injection loop that
+    // replaces the Millennium bridge's _pending/_readyResponses maps every cycle and orphans
+    // the in-flight presence check (button then never resolves). Instead, the game button is
+    // handled independently by the MutationObserver below, which reliably fires when the
+    // button row appears — decoupled from the ready/injection signal.
     var headerReady = !!document.querySelector(".luatools-header-button");
-    var onGamePage = /\/app\/\d+/.test(window.location.href);
-    var buttonSettled =
-      !onGamePage ||
-      window.__LuaToolsButtonInserted === true ||
-      window.__LuaToolsGameAdded === true;
-    if ((headerReady && buttonSettled) || attempt >= 12) {
+    if (headerReady || attempt >= 12) {
       window.__LuaToolsReady = true;
       return;
     }
