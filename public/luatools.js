@@ -3,8 +3,19 @@
 // ============================================
 // GAMEPAD NAVIGATION SYSTEM - Inline Version
 // ============================================
-(function () {
+(function gamepadNavigationSystem() {
   "use strict";
+
+  // On heavy pages (e.g. the store home) Millennium can evaluate this script before
+  // <head> exists, so document.head.appendChild below would throw and abort the ENTIRE
+  // file (both IIFEs) — which is why the header button/loaded-apps popup silently never
+  // appeared there. Defer to DOMContentLoaded if the DOM isn't ready yet.
+  if (!document.head) {
+    document.addEventListener("DOMContentLoaded", gamepadNavigationSystem, {
+      once: true,
+    });
+    return;
+  }
 
   // Inject gamepad navigation CSS
   const gamepadCSS = document.createElement("style");
@@ -521,8 +532,15 @@
 // ============================================
 // LUATOOLS MAIN CODE
 // ============================================
-(function () {
+(function luaToolsMain() {
   "use strict";
+
+  // Same early-eval guard as the first IIFE: if Millennium evaluated this before the DOM
+  // is ready, defer to DOMContentLoaded so nothing below runs against a missing head/body.
+  if (!document.head || !document.body) {
+    document.addEventListener("DOMContentLoaded", luaToolsMain, { once: true });
+    return;
+  }
 
   // Guard against re-injection into a still-alive JS context. CefInjectorService (LuaLoader mode)
   // re-injects this whole script whenever window.__LuaToolsReady isn't true yet — which can happen
