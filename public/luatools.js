@@ -808,15 +808,38 @@
         left.textContent = s.displayName || s.name;
         const right = document.createElement("div");
         right.style.cssText =
+          "font-size:13px;display:flex;align-items:center;gap:6px;";
+        // Status → icon + colour, so found/not-found/needs-key/downloading read at a glance.
+        let badge, icon, statusColor;
+        if (s.downloading) {
+          badge = lt("Downloading…");
+          icon = "fa-solid fa-spinner";
+          statusColor = colors.accent;
+        } else if (s.needsKey && s.locked) {
+          badge = lt("Needs key");
+          icon = "fa-solid fa-lock";
+          statusColor = "#ffc107"; // amber
+        } else if (!s.available) {
+          badge = lt("Not found");
+          icon = "fa-solid fa-circle-xmark";
+          statusColor = "#ff6b6b"; // muted red
+        } else {
+          badge = lt("Available");
+          icon = "fa-solid fa-circle-check";
+          statusColor = "#5cb85c"; // green
+        }
+        const statusIcon = document.createElement("i");
+        statusIcon.className = icon;
+        statusIcon.style.cssText =
           "font-size:13px;color:" +
-          colors.textSecondary +
-          ";display:flex;align-items:center;gap:8px;";
-        let badge;
-        if (s.downloading) badge = lt("Downloading…");
-        else if (s.needsKey && s.locked) badge = lt("Needs key");
-        else if (!s.available) badge = lt("Not found");
-        else badge = lt("Available");
-        right.textContent = badge + (s.stats ? " (" + s.stats + ")" : "");
+          statusColor +
+          ";" +
+          (s.downloading ? "animation: spin 1.5s linear infinite;" : "");
+        const statusText = document.createElement("span");
+        statusText.style.color = statusColor;
+        statusText.textContent = badge + (s.stats ? " (" + s.stats + ")" : "");
+        right.appendChild(statusIcon);
+        right.appendChild(statusText);
         item.appendChild(left);
         item.appendChild(right);
         if (clickable && s.canDownload && !s.downloading) {
@@ -869,14 +892,24 @@
               statusEl.textContent =
                 st.installStatus || lt("The game has been added successfully.");
             if (wrap) wrap.style.display = "none";
-            const cancel = q(".luatools-cancel-btn");
-            if (cancel) cancel.style.display = "none";
             const hide = q(".luatools-hide-btn");
             if (hide) hide.innerHTML = "<span>" + lt("Close") + "</span>";
             // Game is added → remove the store-page "Add via LuaTools" button.
             if (anchor && anchor.parentElement)
               anchor.parentElement.removeChild(anchor);
             window.__LuaToolsButtonInserted = false;
+            // Re-render the sources one last time with downloading forced off, so the row that
+            // was mid-download resolves to its final status instead of a frozen "Downloading…"
+            // spinner (the poll stops here, so nothing else would clear it).
+            if (st.sources && st.sources.length) {
+              renderKey = "";
+              renderSources(
+                st.sources.map(function (s) {
+                  return Object.assign({}, s, { downloading: false });
+                }),
+                false,
+              );
+            }
             return;
           }
           if (st.error) {
@@ -893,7 +926,8 @@
             return;
           }
           if (st.checking && (!st.sources || !st.sources.length)) {
-            if (statusEl) statusEl.textContent = lt("Checking sources…");
+            // Still checking, no sources yet — leave the initial "Checking availability…"
+            // spinner as-is (same phase; no need for a second, spinner-less string).
             return;
           }
           const dl = (st.sources || []).filter(function (s) {
@@ -923,8 +957,8 @@
               if (statusEl) statusEl.textContent = lt("Starting download…");
               renderSources(st.sources, false);
             } else {
-              if (statusEl)
-                statusEl.textContent = lt("Select a download source:");
+              // Title already says "Select Download Source" — no redundant bottom line.
+              if (statusEl) statusEl.textContent = "";
               renderSources(st.sources, true);
             }
           }
@@ -2067,16 +2101,11 @@
     dlTitleText.textContent = lt("Select Download Source");
     title.appendChild(dlTitleText);
 
-    // API list container
+    // API list container — starts empty; the "Checking availability…" status below conveys
+    // loading, and renderSources() fills this once the app reports sources.
     const apiListContainer = document.createElement("div");
     apiListContainer.className = "luatools-api-list";
     apiListContainer.style.cssText = "margin-bottom:16px;";
-
-    // Placeholder while loading APIs
-    const loadingItem = document.createElement("div");
-    loadingItem.style.cssText = `text-align:center;padding:10px;color:${colors.textSecondary};font-size:13px;`;
-    loadingItem.textContent = lt("Loading APIs...");
-    apiListContainer.appendChild(loadingItem);
 
     // NOTE: the source list is populated/updated by startLuaToolsAdd() from the
     // app's live DownloadViewModel state (/add-status). We intentionally do NOT
@@ -2111,27 +2140,22 @@
     const btnRow = document.createElement("div");
     btnRow.style.cssText =
       "margin-top:20px;display:flex;gap:8px;justify-content:center;";
-    const cancelBtn = document.createElement("a");
-    cancelBtn.className = "luatools-btn luatools-cancel-btn";
-    cancelBtn.style.cssText =
-      "display:none;align-items:center;justify-content:center;text-align:center;";
-    cancelBtn.innerHTML = `<span>${lt("Cancel")}</span>`;
-    cancelBtn.href = "#";
-    cancelBtn.onclick = function (e) {
-      e.preventDefault();
-      cancelOperation();
-    };
+    // Single button: "Cancel" while the add is in flight (stops it + closes), "Close" once it's
+    // finished (just closes). The poll flips the label to "Close" on success. Class kept as
+    // .luatools-hide-btn so the poll's existing selector still finds it.
     const hideBtn = document.createElement("a");
     hideBtn.className = "luatools-btn luatools-hide-btn";
     hideBtn.style.cssText =
       "display:flex;align-items:center;justify-content:center;text-align:center;";
-    hideBtn.innerHTML = `<span>${lt("Hide")}</span>`;
+    hideBtn.innerHTML = `<span>${lt("Cancel")}</span>`;
     hideBtn.href = "#";
     hideBtn.onclick = function (e) {
       e.preventDefault();
+      // If the add already finished, the label is "Close" → just dismiss. Otherwise cancel it.
+      var label = (hideBtn.textContent || "").trim().toLowerCase();
+      if (label !== lt("Close").trim().toLowerCase()) cancelOperation();
       cleanup();
     };
-    btnRow.appendChild(cancelBtn);
     btnRow.appendChild(hideBtn);
 
     modal.appendChild(title);
@@ -2154,8 +2178,9 @@
       overlay.remove();
     }
 
+    // Tell the backend to stop the in-flight add. The caller (the button) closes the popup
+    // right after, so there's no UI to update here.
     function cancelOperation() {
-      // Call backend to cancel the operation
       try {
         const match =
           window.location.href.match(
@@ -2178,19 +2203,6 @@
           });
         }
       } catch (_) {}
-      // Update UI to show cancelled
-      const status = overlay.querySelector(".luatools-status");
-      if (status) status.textContent = lt("Cancelled");
-      const cancelBtn = overlay.querySelector(".luatools-cancel-btn");
-      if (cancelBtn) cancelBtn.style.display = "none";
-      const hideBtn = overlay.querySelector(".luatools-hide-btn");
-      if (hideBtn) hideBtn.innerHTML = `<span>${lt("Close")}</span>`;
-      // Hide progress UI
-      const wrap = overlay.querySelector(".luatools-progress-wrap");
-      const progressInfo = overlay.querySelector(".luatools-progress-info");
-      if (wrap) wrap.style.display = "none";
-      if (progressInfo) progressInfo.style.display = "none";
-      // Reset run state
       runState.inProgress = false;
       runState.appid = null;
     }
