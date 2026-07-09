@@ -883,16 +883,25 @@
 
     // This setInterval only self-clears on SUCCESS. A cancelled or errored add would otherwise leak it
     // forever, and the leaked timers flood the CDP RPC bridge until a later picker hangs on "Checking
+    // availability". Stop any prior poll first, and record this one on runState so cleanup()/cancel — which
+    // live in a different scope and can't see `timer` — can stop it too.
+    if (runState.pollTimer) { clearInterval(runState.pollTimer); runState.pollTimer = null; }
     const timer = setInterval(function () {
       if (finished) {
         clearInterval(timer);
+        runState.pollTimer = null;
         return;
       }
       window.Millennium.callServerMethod("luatools", "GetLuaToolsAddStatus", { appid })
         .then(function (st) {
           if (typeof st === "string") st = JSON.parse(st);
           const overlay = document.querySelector(".luatools-overlay");
-          if (!overlay) return;
+          if (!overlay) {
+            // Popup was closed/cancelled out from under us — stop polling so this timer can't leak.
+            clearInterval(timer);
+            runState.pollTimer = null;
+            return;
+          }
           const statusEl = q(".luatools-status");
           const titleEl = q(".luatools-title");
           const wrap = q(".luatools-progress-wrap");
@@ -902,6 +911,7 @@
           if (st.installed || st.installStatus) {
             finished = true;
             clearInterval(timer);
+            runState.pollTimer = null;
             runState.inProgress = false;
             runState.appid = null;
             if (titleEl) titleEl.textContent = lt("Game Added!");
@@ -982,6 +992,7 @@
         })
         .catch(function () {});
     }, 350);
+    runState.pollTimer = timer;
   }
 
   backendLog("LuaTools script loaded");
@@ -997,6 +1008,7 @@
   const runState = {
     inProgress: false,
     appid: null,
+    pollTimer: null, // id of the active GetLuaToolsAddStatus setInterval, so cancel/close can stop it
   };
 
   // Games Database - backend handles caching
@@ -2192,6 +2204,7 @@
     }, 150);
 
     function cleanup() {
+      // The status poll (setInterval in startLuaToolsAdd) lives in another scope — this is the only place a
       // cancel/close can reach it. Skipping this leaks the timer and floods the CDP bridge (picker hangs).
       if (runState.pollTimer) { clearInterval(runState.pollTimer); runState.pollTimer = null; }
       overlay.remove();
