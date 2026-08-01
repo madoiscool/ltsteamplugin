@@ -613,7 +613,7 @@
     if (isGamepadUA) bigPictureScore += 2;
     if (isClientUA) bigPictureScore -= 2;
 
-    // Touch class (weight: 1 point - additional indicator)
+    // Touch grass (weight: 1 point - additional indicator)
     if (hasTouchClass) bigPictureScore += 1;
 
     // Positive score = Big Picture, negative/zero = Normal
@@ -4514,9 +4514,9 @@
       if (totalPages > 1) {
          const paginationDiv = document.createElement("div");
          paginationDiv.style.cssText = "display:flex;justify-content:center;align-items:center;margin-top:14px;gap:15px;margin-bottom:10px;";
-         
+
          const btnColors = getThemeColors();
-         
+
          const prevBtn = document.createElement("a");
          prevBtn.href = "#";
          prevBtn.innerHTML = '<i class="fa-solid fa-chevron-left"></i>';
@@ -4885,7 +4885,7 @@
             const rc = getThemeColors();
             row.style.cssText = `display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(${rc.rgbString},0.04);border:1px solid ${rc.border};border-radius:8px;margin-bottom:8px;transition:all 0.2s ease;`;
             row.draggable = false;
-            
+
             // Reorder tracking
             // Since currentName can change if the user renames the API, we update dataset.apiName on rename
             row.dataset.apiName = currentName;
@@ -4907,12 +4907,12 @@
                      c.style.borderBottomColor = rc.border;
                   }
                 });
-                
+
                 // Collect new order and save ONLY once drag is completed
                 const newOrder = Array.from(listEl.children)
                   .filter(function(c) { return c.dataset.apiName; })
                   .map(function(c) { return c.dataset.apiName; });
-                
+
                 Millennium.callServerMethod("luatools", "ReorderApis", { apiNames: JSON.stringify(newOrder), contentScriptQuery: "" })
                   .then(function(r) {
                     const rp = typeof r === "string" ? JSON.parse(r) : r;
