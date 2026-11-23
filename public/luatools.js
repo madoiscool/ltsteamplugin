@@ -83,8 +83,6 @@
     `;
   document.head.appendChild(gamepadCSS);
 
-  // Gamepad Navigation System
-  // ALL LuaTools overlays that should block Steam navigation
   const OVERLAY_SELECTORS = [
     ".luatools-overlay",
     ".luatools-settings-overlay",
@@ -99,10 +97,10 @@
   const OVERLAY_SELECTOR_STRING = OVERLAY_SELECTORS.join(", ");
 
   const CONFIG = {
-    deadzone: 0.4, // Increased from 0.3 to prevent unwanted drift
+    deadzone: 0.4,
     debounceTime: 200,
     pollRate: 16,
-    stickThreshold: 0.7, // Increased threshold for stick navigation
+    stickThreshold: 0.7,
     buttonMap: {
       A: 0,
       B: 1,
@@ -129,13 +127,8 @@
     },
   };
 
-  // B button handler removed - users should use the modal buttons directly
-  // This prevents conflicts with Steam's back navigation
   let onBackHandler = function () {
-    console.log(
-      "[Gamepad] B button pressed - ignoring (use modal buttons instead)",
-    );
-    // Do nothing - let users navigate with D-pad/stick and press A on Cancel/Back buttons
+    console.log("[Gamepad] B button pressed - ignoring (use modal buttons instead)");
   };
 
   const state = {
@@ -144,15 +137,11 @@
     focusableElements: [],
     currentFocusIndex: 0,
     lastNavigationTime: 0,
-    lastAxisValues: {
-      x: 0,
-      y: 0,
-    },
+    lastAxisValues: { x: 0, y: 0 },
     buttonStates: {},
     animationFrameId: null,
   };
 
-  // duplicated from main code thing for reliability
   function isBigPictureMode() {
     if (typeof window.__LUATOOLS_IS_BIG_PICTURE__ !== "undefined") {
       return window.__LUATOOLS_IS_BIG_PICTURE__;
@@ -431,23 +420,13 @@
     state.animationFrameId = requestAnimationFrame(pollGamepad);
   }
 
-  // Block Steam's gamepad navigation when overlay is active
   function blockSteamNavigation(event) {
     const hasActiveOverlay = document.querySelector(OVERLAY_SELECTOR_STRING);
 
     if (hasActiveOverlay && state.gamepadConnected) {
-      // Block arrow keys, Enter, Escape, Backspace and other navigation keys
-      // Note: Steam may translate gamepad B button to Escape or Backspace
       const navKeys = [
-        "ArrowUp",
-        "ArrowDown",
-        "ArrowLeft",
-        "ArrowRight",
-        "Enter",
-        "Escape",
-        "Backspace",
-        " ",
-        "Tab",
+        "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
+        "Enter", "Escape", "Backspace", " ", "Tab",
       ];
       if (navKeys.includes(event.key)) {
         event.preventDefault();
@@ -459,16 +438,11 @@
     }
   }
 
-  // Block clicks on Steam UI when overlay is active
   function blockSteamClicks(event) {
     const hasActiveOverlay = document.querySelector(OVERLAY_SELECTOR_STRING);
 
     if (hasActiveOverlay && state.gamepadConnected) {
-      // Only allow clicks inside the overlay
-      const clickedInsideOverlay = event.target.closest(
-        OVERLAY_SELECTOR_STRING,
-      );
-
+      const clickedInsideOverlay = event.target.closest(OVERLAY_SELECTOR_STRING);
       if (!clickedInsideOverlay) {
         event.preventDefault();
         event.stopPropagation();
@@ -479,7 +453,6 @@
     }
   }
 
-  // Block browser history navigation when overlay is active
   function blockHistoryNavigation(event) {
     const hasActiveOverlay = document.querySelector(OVERLAY_SELECTOR_STRING);
     if (hasActiveOverlay && state.gamepadConnected) {
@@ -487,7 +460,6 @@
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
-      // Push the current state back to prevent navigation
       window.history.pushState(null, "", window.location.href);
       return false;
     }
@@ -507,25 +479,17 @@
     // Block Steam's keyboard navigation when overlay is active
     document.addEventListener("keydown", blockSteamNavigation, true);
     document.addEventListener("keyup", blockSteamNavigation, true);
-
-    // Block clicks outside overlay when gamepad is active
     document.addEventListener("click", blockSteamClicks, true);
     document.addEventListener("mousedown", blockSteamClicks, true);
-
-    // Block browser history navigation (back button)
     window.addEventListener("popstate", blockHistoryNavigation, true);
 
     const gamepads = navigator.getGamepads();
     for (let i = 0; i < gamepads.length; i++) {
       if (gamepads[i]) {
-        onGamepadConnected({
-          gamepad: gamepads[i],
-        });
+        onGamepadConnected({ gamepad: gamepads[i] });
         break;
       }
     }
-
-    // Don't scan on init - only scan when overlays are opened
 
     console.log("[Gamepad] Initialization complete");
   }
@@ -538,33 +502,19 @@
 
   window.GamepadNav = {
     scanElements: scanFocusableElements,
-    setBackHandler: function (fn) {
-      if (typeof fn === "function") {
-        onBackHandler = fn;
-      }
-    },
+    setBackHandler: function (fn) { if (typeof fn === "function") onBackHandler = fn; },
     focusElement: focusElement,
-    getCurrentIndex: function () {
-      return state.currentFocusIndex;
-    },
-    getElements: function () {
-      return state.focusableElements;
-    },
-    isConnected: function () {
-      return state.gamepadConnected;
-    },
+    getCurrentIndex: function () { return state.currentFocusIndex; },
+    getElements: function () { return state.focusableElements; },
+    isConnected: function () { return state.gamepadConnected; },
   };
 })();
 
-// ============================================
-// LUATOOLS MAIN CODE
-// ============================================
 (function () {
   "use strict";
 
-  // Guard against re-injection into a still-alive JS context. CefInjectorService (LuaLoader mode)
-  // re-injects this whole script whenever window.__LuaToolsReady isn't true yet — which can happen
-  // while THIS injection's own async setup is still in flight (see the retry loop in
+  if (window.__LuaToolsInjected) return;
+  window.__LuaToolsInjected = true;
   // addLuaToolsButton() and where __LuaToolsReady actually gets set, near the end of this IIFE). Without
   // this guard, a second injection into the same live realm would throw "Identifier already declared"
   // on every top-level const below. A real navigation creates a brand-new JS realm with no such flag,
@@ -633,25 +583,12 @@
 
   // ============================================================
   // LuaTools GUI backend shim
-  // ------------------------------------------------------------
-  // The old Lua/Millennium backend is gone. The LuaTools GUI desktop app is now
-  // the real backend, reached over HTTP on 127.0.0.1:6767. The page can't fetch()
-  // that directly (mixed content), so every RPC routes through the CDP bridge
-  // (window.Millennium, defined by the CEF injector's polyfill), which makes the
-  // real HTTP call from the app process. We declare a LOCAL `Millennium` here that
-  // shadows the shared global only inside this IIFE — so other Millennium plugins
-  // keep their real callServerMethod untouched — and map each legacy RPC name to a
-  // bridge call. Every call site consumes the result as
-  // `typeof res === "string" ? JSON.parse(res) : res`, so returning a plain object
-  // (not a JSON string) is safe. See plan: the app owns everything backend-related;
-  // the plugin only reflects state and triggers app actions.
-  // ============================================================
+  // The desktop app is the real backend (HTTP on 127.0.0.1:6767).
+  // Page can't fetch directly (mixed content), so RPC routes through CDP bridge.
+  // Local Millennium shadows the shared global so other plugins keep their callServerMethod.
   const Millennium = (function () {
     const aid = (a) =>
       a && typeof a === "object" ? (a.appid ?? a.appId ?? a.id) : a;
-
-    // Raw fetch() to 127.0.0.1 from this HTTPS page is blocked as mixed content.
-    // Route through the CDP bridge (window.Millennium, defined by the CEF injector's
     // polyfill) instead, which makes the real HTTP call from the app process itself.
     const call = (method, args) =>
       window.Millennium.callServerMethod("luatools", method, args || {}).then(
@@ -721,45 +658,30 @@
     };
   })();
 
-  // Big Picture Mode Detector - Multi-method system for maximum reliability
   function isBigPictureMode() {
     const htmlClasses = document.documentElement.className;
     const userAgent = navigator.userAgent;
 
-    // METHOD 1: HTML Classes
-    // Big Picture: 'BasicUI' + 'touch'
-    // Normal Mode: 'DesktopUI' (without 'touch')
     const hasBigPictureClass = htmlClasses.includes("BasicUI");
     const hasDesktopClass = htmlClasses.includes("DesktopUI");
     const hasTouchClass = htmlClasses.includes("touch");
 
-    // METHOD 2: User Agent
-    // Big Picture: 'Valve Steam Gamepad'
-    // Normal Mode: 'Valve Steam Client'
     const isGamepadUA = userAgent.includes("Valve Steam Gamepad");
     const isClientUA = userAgent.includes("Valve Steam Client");
 
-    // Scoring system: each indicator adds points
     let bigPictureScore = 0;
 
-    // BasicUI/DesktopUI class (weight: 3 points - highly reliable)
     if (hasBigPictureClass) bigPictureScore += 3;
     if (hasDesktopClass) bigPictureScore -= 3;
 
-    // User Agent (weight: 2 points - reliable)
     if (isGamepadUA) bigPictureScore += 2;
     if (isClientUA) bigPictureScore -= 2;
 
-    // Touch class (weight: 1 point - additional indicator)
     if (hasTouchClass) bigPictureScore += 1;
 
-    // Positive score = Big Picture, negative/zero = Normal
-    const isBigPicture = bigPictureScore > 0;
-
-    return isBigPicture;
+    return bigPictureScore > 0;
   }
 
-  // Detect and save mode at startup
   window.__LUATOOLS_IS_BIG_PICTURE__ = isBigPictureMode();
 
   // Forward logs to Millennium backend so they appear in the dev console
@@ -801,9 +723,6 @@
     runState.inProgress = true;
     runState.appid = appid;
     showTestPopup();
-    // Raw fetch() to 127.0.0.1 is blocked as mixed content on this HTTPS store page;
-    // route through the CDP bridge (window.Millennium -> CefInjectorService -> HttpClient)
-    // instead, which makes the actual HTTP call from the app process, not the browser.
     window.Millennium.callServerMethod("luatools", "StartLuaToolsAdd", {
       appid,
       name: getPageGameName(),
@@ -2174,9 +2093,8 @@
     apiListContainer.className = "luatools-api-list";
     apiListContainer.style.cssText = "margin-bottom:16px;";
 
-    // NOTE: the source list is populated/updated by startLuaToolsAdd() from the
-    // app's live DownloadViewModel state (/add-status). We intentionally do NOT
-    // pre-fill it here — doing so raced with (and clobbered) the clickable rows.
+    // Source list populated by startLuaToolsAdd() from /add-status.
+    // Not pre-filled here to avoid race with clickable rows.
 
     const body = document.createElement("div");
     body.style.cssText = `display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;line-height:1.4;margin-bottom:12px;color:${colors.textSecondary};`;
@@ -2612,25 +2530,20 @@
     }
   }
 
-  // Function to add the LuaTools button
-  // Add throttle to prevent excessive executions
+  // Throttle button insertion to 500ms to avoid blocking gamepad input.
+  // force=true bypasses throttle for retry/observer-driven calls.
   let lastButtonCheckTime = 0;
-  const BUTTON_CHECK_THROTTLE = 500; // Only run once every 500ms
+  const BUTTON_CHECK_THROTTLE = 500;
 
   function addLuaToolsButton(force) {
-    // Throttle to prevent blocking gamepad input. Bypassed (force=true) for retry- and
-    // observer-driven calls that fire the moment a container appears — those must not be
-    // swallowed, or the "Add via LuaTools" button intermittently never gets inserted.
     const now = Date.now();
     if (!force && now - lastButtonCheckTime < BUTTON_CHECK_THROTTLE) {
-      return; // Skip this execution, too soon
+      return;
     }
     lastButtonCheckTime = now;
 
-    // Track current URL to detect page changes
     const currentUrl = window.location.href;
     if (window.__LuaToolsLastUrl !== currentUrl) {
-      // Page changed - reset button insertion flag and update translations
       window.__LuaToolsLastUrl = currentUrl;
       window.__LuaToolsButtonInserted = false;
       window.__LuaToolsGameAdded = false;
@@ -2639,9 +2552,7 @@
       window.__LuaToolsHeaderInserted = false;
       window.__LuaToolsPresenceCheckInFlight = false;
       window.__LuaToolsPresenceCheckAppId = undefined;
-      // Ensure translations are loaded and update existing buttons
-      ensureTranslationsLoaded(false).then(function () {
-        updateButtonTranslations();
+      ensureTranslationsLoaded(false).then(updateButtonTranslations);
       });
     }
 
@@ -2694,17 +2605,13 @@
       backendLog("Inserted store header button");
     }
 
-    // Check if we're in Big Picture mode
     const isBigPicture = window.__LUATOOLS_IS_BIG_PICTURE__;
 
-    // Look for the appropriate container based on mode
     let targetContainer;
     if (isBigPicture) {
-      // In Big Picture mode, use the queue button's parent as reference
       const queueBtn = document.querySelector("#queueBtnFollow");
       targetContainer = queueBtn ? queueBtn.parentElement : null;
     } else {
-      // In normal mode, use the SteamDB buttons container
       targetContainer =
         document.querySelector(".steamdb-buttons") ||
         document.querySelector("[data-steamdb-buttons]") ||
@@ -2714,15 +2621,8 @@
     if (targetContainer) {
       const steamdbContainer = targetContainer;
 
-      // Keep our buttons in a deterministic spot. This row is filled asynchronously — Steam
-      // injects the external-site links and Community Hub AFTER page load (and the SteamDB
-      // extension its icon), which used to leave our buttons wherever they first landed,
-      // different on every load. Pin [Restart][Add] as the last two children, and keep them
-      // pinned with a MutationObserver so late insertions don't shuffle them — the bounded
-      // ~7s insertion poll stops firing after the page is "ready", but Steam's link injection
-      // can happen after that, so a one-shot re-assert isn't enough. ltPinButtons only moves
-      // when actually out of order, so the observer converges (our own move → re-check →
-      // already ordered → no move) instead of looping.
+      // Pin Restart and Add buttons as last children so Steam's async link injection
+      // doesn't reorder them. MutationObserver keeps them in place after initial insert.
       const ltPinButtons = function (c) {
         try {
           const rb = c.querySelector(".luatools-restart-button");
@@ -2748,19 +2648,16 @@
         } catch (_) {}
       }
 
-      // Insert a Restart Steam button between Community Hub and our LuaTools button
       try {
         if (
           !document.querySelector(".luatools-restart-button") &&
           !window.__LuaToolsRestartInserted
         ) {
           ensureStyles();
-          // In Big Picture mode, use queue button as reference; otherwise use first link in container
           const referenceBtn = isBigPicture
             ? document.querySelector("#queueBtnFollow")
             : steamdbContainer.querySelector("a");
 
-          // Use same custom button for both modes
           const restartBtn = document.createElement("a");
           if (referenceBtn && referenceBtn.className) {
             restartBtn.className =
@@ -2777,14 +2674,13 @@
           rspan.textContent = restartText;
           restartBtn.appendChild(rspan);
 
-          // Normalize margins to match native buttons
-          try {
-            if (referenceBtn) {
+          if (referenceBtn) {
+            try {
               const cs = window.getComputedStyle(referenceBtn);
               restartBtn.style.marginLeft = cs.marginLeft;
               restartBtn.style.marginRight = cs.marginRight;
-            }
-          } catch (_) {}
+            } catch (_) {}
+          }
 
           restartBtn.addEventListener("click", function (e) {
             e.preventDefault();
@@ -2809,23 +2705,16 @@
       // Always update translations for existing buttons (even if not a page change)
       const existingBtn = document.querySelector(".luatools-button");
       if (existingBtn) {
-        ensureTranslationsLoaded(false).then(function () {
-          updateButtonTranslations();
-        });
+        ensureTranslationsLoaded(false).then(updateButtonTranslations);
       }
 
-      // Check if button already exists to avoid duplicates
       if (!existingBtn && !window.__LuaToolsButtonInserted) {
-        // Create the LuaTools button modeled after existing SteamDB/PCGW buttons
-        // In Big Picture mode, use queue button as reference; otherwise use first link in container
         let referenceBtn = isBigPicture
           ? document.querySelector("#queueBtnFollow")
           : steamdbContainer.querySelector("a");
 
-        // Use same custom button for both modes
         const luatoolsButton = document.createElement("a");
         luatoolsButton.href = "#";
-        // Copy classes from an existing button to match look-and-feel, but set our own label
         if (referenceBtn && referenceBtn.className) {
           luatoolsButton.className =
             referenceBtn.className + " luatools-button";
@@ -2850,15 +2739,11 @@
           }
         } catch (_) {}
 
-        // Local click handler suppressed; delegated handler manages actions
         luatoolsButton.addEventListener("click", function (e) {
           e.preventDefault();
-          backendLog(
-            "LuaTools button clicked (delegated handler will process)",
-          );
+          backendLog("LuaTools button clicked (delegated handler will process)");
         });
 
-        // Before inserting, ask backend if LuaTools already exists for this appid
         try {
           const match =
             window.location.href.match(
@@ -2873,12 +2758,6 @@
             typeof Millennium !== "undefined" &&
             typeof Millennium.callServerMethod === "function"
           ) {
-            // Prevent multiple concurrent checks — but self-heal if a check got stuck.
-            // If HasLuaToolsForApp never settles (a slow/hung backend round-trip has been
-            // observed to leave the promise pending), the in-flight flag would otherwise
-            // stay true forever and every retry/observer call would early-return here, so
-            // the button could never be inserted. Allow a fresh attempt once the stuck
-            // check is older than 8s.
             if (
               window.__LuaToolsPresenceCheckInFlight &&
               window.__LuaToolsPresenceCheckAppId === appid &&
@@ -2896,16 +2775,8 @@
               })
               .then(function (payload) {
               try {
-                // Already added → don't show the store-page button at all (removal
-                // lives in the LuaTools menu). Only show "Add via LuaTools" when the
-                // game is NOT yet added.
                 if (payload && payload.success && payload.exists === true) {
-                  backendLog(
-                    "LuaTools already present for this app; not inserting button",
-                  );
-                  // Resolved: game is already added, so the Add button is intentionally
-                  // omitted. Mark it so ensureLuaToolsUI stops retrying (button will never
-                  // appear, and that's correct) instead of spinning to the attempt cap.
+                  backendLog("LuaTools already present for this app; not inserting button");
                   window.__LuaToolsGameAdded = true;
                   window.__LuaToolsPresenceCheckInFlight = false;
                   return;
@@ -2914,10 +2785,7 @@
                   !document.querySelector(".luatools-button") &&
                   !window.__LuaToolsButtonInserted
                 ) {
-                  // Insert after restart button (order: Restart → Add)
-                  const restartExisting = steamdbContainer.querySelector(
-                    ".luatools-restart-button",
-                  );
+                  const restartExisting = steamdbContainer.querySelector(".luatools-restart-button");
                   if (restartExisting && restartExisting.after) {
                     restartExisting.after(luatoolsButton);
                   } else if (referenceBtn && referenceBtn.after) {
@@ -3137,13 +3005,8 @@
     }
 
     // Mark ready once the header button is up (or retries exhausted). This is the signal
-    // CefInjectorService uses to STOP re-injecting — it must NOT be gated on the game-page
-    // "Add" button: that button's row loads later and its presence check is async, so gating
-    // ready on it keeps the page "not ready", triggering an endless re-injection loop that
-    // replaces the Millennium bridge's _pending/_readyResponses maps every cycle and orphans
-    // the in-flight presence check (button then never resolves). Instead, the game button is
-    // handled independently by the MutationObserver below, which reliably fires when the
-    // button row appears — decoupled from the ready/injection signal.
+    // CefInjectorService stops re-injecting when this is true.
+    // Must NOT gate on game-page "Add" button (async, late load) — would cause endless re-injection loop.
     var headerReady = !!document.querySelector(".luatools-header-button");
     if (headerReady || attempt >= 12) {
       window.__LuaToolsReady = true;
@@ -3154,23 +3017,13 @@
     }, 600);
   }
 
-  // Try to add the button immediately if DOM is ready
   function onFrontendReady() {
-    // Fetch settings + translations FIRST, then insert the button once in the correct language
-    try {
-      fetchSettingsConfig(true)
-        .then(function (cfg) {
-          try {
-            ensureLuaToolsStyles();
-          } catch (_) {}
-
-          // Now translations are ready — insert the button in the correct language
-          ensureLuaToolsUI();
-        })
-        .catch(function (_) {
-          // Settings failed, still insert button (English fallback)
-          ensureLuaToolsUI();
-        });
+    fetchSettingsConfig(true)
+      .then(function (cfg) {
+        try { ensureLuaToolsStyles(); } catch (_) {}
+        ensureLuaToolsUI();
+      })
+      .catch(ensureLuaToolsUI);
     } catch (_) {
       ensureLuaToolsUI();
     }
@@ -3327,9 +3180,7 @@
               return;
             }
 
-            // "Add via LuaTools": reflect the app's real add pipeline in the popup
-            // (dynamic sources, Hubcap/key-gating, usage, FastFetch, progress),
-            // headless. Removal is handled from the LuaTools menu, not this button.
+            // Reflect app's add pipeline in popup (headless). Removal from menu.
             startLuaToolsAdd(appid, anchor);
             return;
           }
