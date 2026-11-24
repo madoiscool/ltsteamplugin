@@ -81,7 +81,11 @@
             scroll-margin: 20px;
         }
     `;
-  document.head.appendChild(gamepadCSS);
+  // Millennium can evaluate this script before <head> exists (it does on the store home),
+  // where appending to document.head throws and aborts this whole file — taking the header
+  // icon and every popup with it.
+  const styleRoot = document.head || document.documentElement;
+  if (styleRoot) styleRoot.appendChild(gamepadCSS);
 
   // Gamepad Navigation System
   // ALL LuaTools overlays that should block Steam navigation
@@ -109,6 +113,8 @@
     axesMap: {
       LEFT_STICK_X: 0,
       LEFT_STICK_Y: 1,
+      RIGHT_STICK_X: 2,
+      RIGHT_STICK_Y: 3,
     },
   };
 
@@ -139,6 +145,9 @@
     if (userAgent.includes("Valve Steam Gamepad")) score += 2;
     if (userAgent.includes("Valve Steam Client")) score -= 2;
     if (htmlClasses.includes("touch")) score += 1;
+    // Big Picture and Deck store pages live under /gamepad/, and some client builds render
+    // them without the BasicUI class the checks above rely on.
+    if (/\/gamepad(\/|$)/.test(window.location.pathname)) score += 3;
     return score > 0;
   }
 
@@ -165,14 +174,21 @@
     }
   }
 
-  function scanFocusableElements() {
+  // The overlay to drive is the topmost one: overlays share a z-index, so the last one in the
+  // DOM is what the user sees (a confirm dialog opened from a menu, for example).
+  function activeOverlay() {
+    const overlays = document.querySelectorAll(OVERLAY_SELECTOR_STRING);
+    for (let i = overlays.length - 1; i >= 0; i--) {
+      if (overlays[i].getBoundingClientRect().width > 0) return overlays[i];
+    }
+    return null;
+  }
+
+  function scanFocusableElements(keepFocus) {
     if (!isBigPictureMode()) return;
 
-    // Only scan if there's a LuaTools overlay active
-    const activeOverlay = document.querySelector(OVERLAY_SELECTOR_STRING);
-
-    if (!activeOverlay) {
-      console.log("[Gamepad] No LuaTools overlay active, skipping scan");
+    const overlay = activeOverlay();
+    if (!overlay) {
       state.focusableElements = [];
       state.currentFocusIndex = 0;
       return;
@@ -190,8 +206,8 @@
       ".focusable:not([disabled])",
     ].join(", ");
 
-    // Use querySelectorAll on the overlay, not the whole document
-    const elements = Array.from(activeOverlay.querySelectorAll(selectors));
+    const previous = state.focusableElements[state.currentFocusIndex];
+    const elements = Array.from(overlay.querySelectorAll(selectors));
     state.focusableElements = elements.filter(function (el) {
       const rect = el.getBoundingClientRect();
       const style = window.getComputedStyle(el);
@@ -204,11 +220,15 @@
       );
     });
 
-    console.log(
-      "[Gamepad] Scanned " +
-        state.focusableElements.length +
-        " focusable elements inside overlay",
-    );
+    // Menus fill in their rows after they open, so a rescan has to keep the user on the same
+    // control instead of snapping back to the first one.
+    const previousIndex =
+      keepFocus && previous ? state.focusableElements.indexOf(previous) : -1;
+    if (previousIndex >= 0) {
+      state.currentFocusIndex = previousIndex;
+      previous.classList.add("active-focus");
+      return;
+    }
 
     if (state.focusableElements.length > 0) {
       focusElement(0);
@@ -248,10 +268,11 @@
     }
     state.lastNavigationTime = now;
 
-    if (state.focusableElements.length === 0) {
-      scanFocusableElements();
-      return;
-    }
+    // Menus finish rendering their rows after they open, so refresh the list on every move;
+    // a popup that has not been scanned yet only needs that scan, not a move.
+    const known = state.focusableElements.length;
+    scanFocusableElements(known > 0);
+    if (!known) return;
 
     let newIndex = state.currentFocusIndex;
 
@@ -321,8 +342,11 @@
         break;
 
       case CONFIG.buttonMap.B:
-               // B button disabled - users should use modal buttons
-        console.log("[Gamepad] B button pressed - ignoring");
+        // Back closes our own overlay (registered by the UI below); letting it through makes
+        // Steam navigate the page out from under the dialog.
+        if (window.__LuaToolsCloseTopOverlay) {
+          window.__LuaToolsCloseTopOverlay();
+        }
         break;
 
       case CONFIG.buttonMap.DPAD_UP:
@@ -378,9 +402,13 @@
       state.buttonStates[index] = isPressed;
     });
 
-    // Left stick
-    const axisX = gamepad.axes[CONFIG.axesMap.LEFT_STICK_X] || 0;
-    const axisY = gamepad.axes[CONFIG.axesMap.LEFT_STICK_Y] || 0;
+    // Both sticks navigate; on each axis the stick that is pushed further wins.
+    const leftX = gamepad.axes[CONFIG.axesMap.LEFT_STICK_X] || 0;
+    const leftY = gamepad.axes[CONFIG.axesMap.LEFT_STICK_Y] || 0;
+    const rightX = gamepad.axes[CONFIG.axesMap.RIGHT_STICK_X] || 0;
+    const rightY = gamepad.axes[CONFIG.axesMap.RIGHT_STICK_Y] || 0;
+    const axisX = Math.abs(leftX) >= Math.abs(rightX) ? leftX : rightX;
+    const axisY = Math.abs(leftY) >= Math.abs(rightY) ? leftY : rightY;
 
     const x = Math.abs(axisX) > CONFIG.deadzone ? axisX : 0;
     const y = Math.abs(axisY) > CONFIG.deadzone ? axisY : 0;
@@ -714,6 +742,10 @@
 
     // Touch class (weight: 1 point - additional indicator)
     if (hasTouchClass) bigPictureScore += 1;
+
+    // Gamepad store URLs (weight: 3 points) — Big Picture and Deck store pages live under
+    // /gamepad/, and some client builds render them without the BasicUI class.
+    if (/\/gamepad(\/|$)/.test(window.location.pathname)) bigPictureScore += 3;
 
     // Positive score = Big Picture, negative/zero = Normal
     const isBigPicture = bigPictureScore > 0;
@@ -1582,17 +1614,10 @@
           }).then(function (res) {
             try {
               const p = typeof res === "string" ? JSON.parse(res) : res;
-              titleIcon.src =
-                p && p.success && p.dataUrl
-                  ? p.dataUrl
-                  : "LuaTools/luatools-icon.png";
-            } catch (_) {
-              titleIcon.src = "LuaTools/luatools-icon.png";
-            }
+              if (p && p.success && p.dataUrl) titleIcon.src = p.dataUrl;
+            } catch (_) {}
           });
-        } catch (_) {
-          titleIcon.src = "LuaTools/luatools-icon.png";
-        }
+        } catch (_) {}
         titleIcon.onerror = function () {
           this.style.display = "none";
         };
@@ -3065,8 +3090,6 @@ function ltGetStoreAppId() {
           '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="LuaTools"><path fill="currentColor" d="M12 8a4 4 0 100 8 4 4 0 000-8zm9.94 3.06l-2.12-.35a7.962 7.962 0 00-1.02-2.46l1.29-1.72a.75.75 0 00-.09-.97l-1.41-1.41a.75.75 0 00-.97-.09l-1.72 1.29c-.77-.44-1.6-.78-2.46-1.02L13.06 2.06A.75.75 0 0012.31 2h-1.62a.75.75 0 00-.75.65l-.35 2.12a7.962 7.962 0 00-2.46 1.02L5 4.6a.75.75 0 00-.97.09L2.62 6.1a.75.75 0 00-.09.97l1.29 1.72c-.44.77-.78 1.6-1.02 2.46l-2.12.35a.75.75 0 00-.65.75v1.62c0 .37.27.69.63.75l2.14.36c.24.86.58 1.69 1.02 2.46L2.53 18a.75.75 0 00.09.97l1.41 1.41c.26.26.67.29.97.09l1.72-1.29c.77.44 1.6.78 2.46 1.02l.35 2.12c.06.36.38.63.75.63h1.62c.37 0 .69-.27.75-.63l.36-2.14c.86-.24 1.69-.58 2.46-1.02l1.72 1.29c.3.2.71.17.97-.09l1.41-1.41c.26-.26.29-.67.09-.97l-1.29-1.72c.44-.77.78-1.6 1.02-2.46l2.12-.35c.36-.06.63-.38.63-.75v-1.62a.75.75 0 00-.65-.75z"/></svg>';
       };
 
-      img.src = "LuaTools/luatools-icon.png";
-
       Millennium.callServerMethod("luatools", "GetIconDataUrl", {})
         .then(function (res) {
           const payload = typeof res === "string" ? JSON.parse(res) : res;
@@ -3889,7 +3912,8 @@ function ltGetStoreAppId() {
       }, 300);
     });
 
-    observer.observe(document.body, {
+    // document.body is not there yet when this runs on the store home; <html> is.
+    observer.observe(document.documentElement, {
       childList: true,
       subtree: true,
     });
