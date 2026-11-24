@@ -3116,6 +3116,29 @@
     }
   }, 500);
 
+  // Create floating LuaTools button IMMEDIATELY in Big Picture mode on game pages
+  if (window.__LUATOOLS_IS_BIG_PICTURE__ && window.location.href.includes("/app/")) {
+    setTimeout(function () {
+      if (!document.querySelector(".luatools-floating-button") && !document.querySelector(".luatools-button")) {
+        const floatingBtn = document.createElement("a");
+        floatingBtn.className = "luatools-floating-button";
+        floatingBtn.href = "#";
+        floatingBtn.innerHTML = "<span>Add via LuaTools</span>";
+        floatingBtn.style.cssText = "position:fixed;bottom:20px;right:20px;z-index:2147483647;background:linear-gradient(135deg,#1a9fff,#66c0f4);color:white;padding:10px 16px;border-radius:8px;font-weight:600;text-decoration:none;box-shadow:0 4px 20px rgba(0,0,0,0.5);border:none;display:inline-flex;align-items:center;gap:8px;";
+        floatingBtn.addEventListener("click", function (e) {
+          e.preventDefault();
+          backendLog("LuaTools floating button clicked");
+          window.Millennium.callServerMethod("luatools", "StartLuaToolsAdd", {
+            appid: (window.location.href.match(/https:\/\/store\.steampowered\.com\/app\/(\d+)/) || [,0])[1],
+            name: document.title
+          }).catch(function(){});
+        });
+        document.body.appendChild(floatingBtn);
+        backendLog("Created IMMEDIATE floating button for Big Picture");
+      }
+    }, 200);
+  }
+
   // Delegate click handling in case the DOM is re-rendered
   document.addEventListener(
     "click",
