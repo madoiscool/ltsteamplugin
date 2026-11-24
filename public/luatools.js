@@ -1516,6 +1516,14 @@
                 height: 16px;
                 width: 16px;
             }
+            /* No header row to sit in (Big Picture store, unknown layouts): float in the corner. */
+            button.luatools-header-button--fixed {
+                position: fixed;
+                top: 10px;
+                right: 110px;
+                z-index: 9999;
+                margin-left: 0;
+            }
         `;
   }
 
@@ -2688,6 +2696,32 @@ function ltGetStoreAppId() {
     );
   }
 
+  // Where the store header icon goes. The redesigned storefront builds its header from CSS-module
+  // classes whose hashes change with every client build, so the old hard-coded `._1wn1lBl…`
+  // container disappears after an update and the icon is never created. Anchor on things that
+  // don't move instead: the header's cart/wishlist links, then the legacy #global_header, and as a
+  // last resort a fixed corner button (Big Picture's store has no header row at all).
+  function ltTopHeaderLink(fragment) {
+    const links = document.querySelectorAll('a[href*="' + fragment + '"]');
+    for (let i = 0; i < links.length; i++) {
+      const r = links[i].getBoundingClientRect();
+      if (r.width > 0 && r.top < 120) return links[i];
+    }
+    return null;
+  }
+
+  function ltFindStoreHeaderSlot() {
+    const legacy = document.querySelector("._1wn1lBlAzl3HMRqS1llwie");
+    if (legacy) return { container: legacy };
+    const globalHeader = document.getElementById("global_header");
+    if (globalHeader)
+      return { container: globalHeader.querySelector(".content") || globalHeader };
+    const link = ltTopHeaderLink("/cart/") || ltTopHeaderLink("/wishlist/");
+    if (link && link.parentElement)
+      return { container: link.parentElement, before: link };
+    return { float: true };
+  }
+
   function ltPreferredActionContainer() {
     return (
       document.getElementById("FeatureTarget_interest-buttons") ||
@@ -3084,9 +3118,9 @@ function ltGetStoreAppId() {
     }
 
     // Store Header Button Logic (always visible)
-    const headerContainer = document.querySelector("._1wn1lBlAzl3HMRqS1llwie");
+    const headerSlot = ltFindStoreHeaderSlot();
     if (
-      headerContainer &&
+      headerSlot &&
       !document.querySelector(".luatools-header-button") &&
       !window.__LuaToolsHeaderInserted
     ) {
@@ -3125,7 +3159,14 @@ function ltGetStoreAppId() {
         showSettingsPopup();
       };
 
-      headerContainer.appendChild(headerBtn);
+      if (headerSlot.float) {
+        headerBtn.classList.add("luatools-header-button--fixed");
+        (document.body || document.documentElement).appendChild(headerBtn);
+      } else if (headerSlot.before) {
+        headerSlot.container.insertBefore(headerBtn, headerSlot.before);
+      } else {
+        headerSlot.container.appendChild(headerBtn);
+      }
       window.__LuaToolsHeaderInserted = true;
       ltRegisterGamepadFocus(headerBtn);
       backendLog("Inserted store header button");
