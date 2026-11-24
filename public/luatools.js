@@ -2559,7 +2559,6 @@
       window.__LuaToolsPresenceCheckInFlight = false;
       window.__LuaToolsPresenceCheckAppId = undefined;
       ensureTranslationsLoaded(false).then(updateButtonTranslations);
-      });
     }
 
     // Store Header Button Logic (always visible)
