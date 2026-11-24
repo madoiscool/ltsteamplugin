@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>LuaTools local harness</title>
+    <style>
+      body { font: 14px/1.6 system-ui, sans-serif; margin: 40px auto; max-width: 760px; color: #c7d5e0; background: #1b2838; }
+      a { color: #66c0f4; }
+      code { background: #16202d; padding: 1px 5px; border-radius: 4px; }
+      li { margin-bottom: 12px; }
+      h1 { font-size: 20px; }
+      h2 { font-size: 15px; margin-top: 28px; }
+    </style>
+  </head>
+  <body>
+    <h1>LuaTools local harness</h1>
+    <p>
+      Manual checks for <code>public/luatools.js</code> in an ordinary browser — no Steam,
+      Millennium or controller required. Both pages load the real file and stand in for the
+      client with <code>window.Millennium</code> (the CDP bridge) and a fake standard-mapping
+      gamepad. Serve the repository root first:
+      <code>python -m http.server 8765</code>.
+    </p>
+
+    <h2>Big Picture store page</h2>
+    <p><a href="gamepad/store/index.html">tests/local/gamepad/store/index.html</a> — expect:</p>
+    <ul>
+      <li>a LuaTools icon button in the store header, with <code>img.src</code> starting <code>data:image/png;base64,</code></li>
+      <li>a <code>.luatools-bpm-stack</code> inside <code>#FeatureTarget_interest-buttons</code> holding <b>Add via LuaTools</b> and <b>Restart Steam</b></li>
+      <li>clicking the header button opens the settings overlay, showing the same icon</li>
+      <li>d-pad down/up (buttons 12/13), either stick, or <code>window.__pad.buttons[12].pressed = true</code> moves the highlighted control; B (button 1) closes the overlay</li>
+    </ul>
+
+    <h2>Evaluated without &lt;head&gt;</h2>
+    <p>
+      <a href="early.html">tests/local/early.html</a> — the store-home timing that used to abort
+      the whole script. Expect the header button and its icon to appear anyway
+      (<code>window.__LuaToolsInjected === true</code>).
+    </p>
+
+    <h2>In the console</h2>
+    <pre><code>document.querySelector(".luatools-header-button img").src.slice(0, 22); // "data:image/png;base64,"
+window.__LuaToolsInjected;                                                // true
+document.querySelectorAll(".luatools-bpm-stack button");                  // Add + Restart</code></pre>
+  </body>
+</html>

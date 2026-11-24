@@ -1,0 +1,58 @@
+<!doctype html>
+<html class="BasicUI touch">
+  <head>
+    <meta charset="utf-8" />
+    <title>LuaTools local harness — Big Picture store page</title>
+  </head>
+  <body>
+    <!-- Hashed store header container the plugin inserts its icon button into -->
+    <div id="store_nav_area" class="_1wn1lBlAzl3HMRqS1llwie">
+      <a href="#">Store</a> <a href="#">Library</a>
+    </div>
+
+    <!-- New-design action containers the Big Picture button stack targets -->
+    <div id="FeatureTarget_interest-buttons">
+      <button class="btnv6_blue_hoverfade">Add to your wishlist</button>
+    </div>
+    <div id="FeatureTarget_purchase-options"></div>
+    <div id="gamepadPurchaseOptions"></div>
+    <div class="apphub_OtherSiteInfo"></div>
+
+    <script>
+      // Stand-in for the CDP bridge: window.Millennium is what the plugin's local shim calls
+      // for the endpoints that really belong to the LuaTools app.
+      window.__calls = [];
+      var canned = {
+        HasLuaToolsForApp: { success: true, exists: false },
+        GetLuaToolsAddStatus: { success: true, state: { status: "idle" } },
+        ReadLoadedApps: { success: true, apps: [] },
+        GetInitApisMessage: { success: true, message: "" },
+        CheckForUpdatesNow: { success: true, message: "No updates available." },
+      };
+      window.Millennium = {
+        callServerMethod: function (plugin, method) {
+          window.__calls.push(method);
+          return Promise.resolve(JSON.stringify(canned[method] || { success: true }));
+        },
+      };
+
+      // Deterministic standard-mapping gamepad (buttons 0-15, axes 0-3).
+      window.__pad = {
+        index: 0,
+        id: "Fake pad (STANDARD GAMEPAD)",
+        connected: true,
+        axes: [0, 0, 0, 0],
+        buttons: Array.from({ length: 16 }, function () {
+          return { pressed: false, value: 0 };
+        }),
+      };
+      Object.defineProperty(Navigator.prototype, "getGamepads", {
+        configurable: true,
+        value: function () {
+          return [window.__pad];
+        },
+      });
+    </script>
+    <script src="../../../../public/luatools.js"></script>
+  </body>
+</html>
