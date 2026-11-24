@@ -659,12 +659,17 @@
   })();
 
   function isBigPictureMode() {
+    if (typeof window.__LUATOOLS_IS_BIG_PICTURE__ !== "undefined") {
+      return window.__LUATOOLS_IS_BIG_PICTURE__;
+    }
     const htmlClasses = document.documentElement.className;
     const userAgent = navigator.userAgent;
+    const url = window.location.href;
 
     const hasBigPictureClass = htmlClasses.includes("BasicUI");
     const hasDesktopClass = htmlClasses.includes("DesktopUI");
     const hasTouchClass = htmlClasses.includes("touch");
+    const isTenfootUrl = url.includes("tenfoot") || url.includes("/app/") && htmlClasses.includes("BasicUI");
 
     const isGamepadUA = userAgent.includes("Valve Steam Gamepad");
     const isClientUA = userAgent.includes("Valve Steam Client");
@@ -678,11 +683,12 @@
     if (isClientUA) bigPictureScore -= 2;
 
     if (hasTouchClass) bigPictureScore += 1;
+    if (isTenfootUrl) bigPictureScore += 2;
 
-    return bigPictureScore > 0;
+    const result = bigPictureScore > 0;
+    window.__LUATOOLS_IS_BIG_PICTURE__ = result;
+    return result;
   }
-
-  window.__LUATOOLS_IS_BIG_PICTURE__ = isBigPictureMode();
 
   // Forward logs to Millennium backend so they appear in the dev console
   function backendLog(message) {
@@ -2557,7 +2563,14 @@
     }
 
     // Store Header Button Logic (always visible)
-    const headerContainer = document.querySelector("._1wn1lBlAzl3HMRqS1llwie");
+    const headerContainer =
+      document.querySelector("._1wn1lBlAzl3HMRqS1llwie") ||
+      document.querySelector(".store-header") ||
+      document.querySelector(".global_header") ||
+      document.querySelector(".apphub_header") ||
+      document.querySelector("[class*='header'][class*='store']") ||
+      document.querySelector("nav") ||
+      document.querySelector("header");
     if (
       headerContainer &&
       !document.querySelector(".luatools-header-button") &&
@@ -2615,7 +2628,12 @@
       targetContainer =
         document.querySelector(".steamdb-buttons") ||
         document.querySelector("[data-steamdb-buttons]") ||
-        document.querySelector(".apphub_OtherSiteInfo");
+        document.querySelector(".apphub_OtherSiteInfo") ||
+        document.querySelector(".apphub_Options") ||
+        document.querySelector(".apphub_Content") ||
+        document.querySelector(".apphub_UserReviews") ||
+        document.querySelector("section") ||
+        document.querySelector("main");
     }
 
     if (targetContainer) {
@@ -2656,7 +2674,7 @@
           ensureStyles();
           const referenceBtn = isBigPicture
             ? document.querySelector("#queueBtnFollow")
-            : steamdbContainer.querySelector("a");
+            : steamdbContainer.querySelector("a") || steamdbContainer.querySelector("button") || steamdbContainer.firstElementChild;
 
           const restartBtn = document.createElement("a");
           if (referenceBtn && referenceBtn.className) {
@@ -2711,7 +2729,7 @@
       if (!existingBtn && !window.__LuaToolsButtonInserted) {
         let referenceBtn = isBigPicture
           ? document.querySelector("#queueBtnFollow")
-          : steamdbContainer.querySelector("a");
+          : steamdbContainer.querySelector("a") || steamdbContainer.querySelector("button") || steamdbContainer.firstElementChild;
 
         const luatoolsButton = document.createElement("a");
         luatoolsButton.href = "#";
@@ -3008,7 +3026,7 @@
     // CefInjectorService stops re-injecting when this is true.
     // Must NOT gate on game-page "Add" button (async, late load) — would cause endless re-injection loop.
     var headerReady = !!document.querySelector(".luatools-header-button");
-    if (headerReady || attempt >= 12) {
+    if (headerReady || attempt >= 25) {
       window.__LuaToolsReady = true;
       return;
     }
