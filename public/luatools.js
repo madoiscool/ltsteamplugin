@@ -2623,7 +2623,15 @@
     let targetContainer;
     if (isBigPicture) {
       const queueBtn = document.querySelector("#queueBtnFollow");
-      targetContainer = queueBtn ? queueBtn.parentElement : null;
+      targetContainer = queueBtn
+        ? queueBtn.parentElement
+        : document.querySelector(".apphub_OtherSiteInfo") ||
+          document.querySelector(".apphub_Options") ||
+          document.querySelector(".apphub_Content") ||
+          document.querySelector(".apphub_UserReviews") ||
+          document.querySelector("section") ||
+          document.querySelector("main") ||
+          null;
     } else {
       targetContainer =
         document.querySelector(".steamdb-buttons") ||
