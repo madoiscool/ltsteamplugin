@@ -2778,15 +2778,56 @@
           backendLog("LuaTools button clicked (delegated handler will process)");
         });
 
-        // Insert button immediately, then check if game already added
-        const restartExisting = steamdbContainer.querySelector(".luatools-restart-button");
-        if (restartExisting && restartExisting.after) {
-          restartExisting.after(luatoolsButton);
-        } else if (referenceBtn && referenceBtn.after) {
-          referenceBtn.after(luatoolsButton);
-        } else {
-          steamdbContainer.appendChild(luatoolsButton);
+        // Insert button immediately with guaranteed visibility
+        function insertButton() {
+          const restartExisting = steamdbContainer.querySelector(".luatools-restart-button");
+          if (restartExisting && restartExisting.after) {
+            restartExisting.after(luatoolsButton);
+          } else if (referenceBtn && referenceBtn.after) {
+            referenceBtn.after(luatoolsButton);
+          } else {
+            steamdbContainer.appendChild(luatoolsButton);
+          }
+
+          // Force visibility regardless of container
+          luatoolsButton.style.setProperty("display", "inline-flex", "important");
+          luatoolsButton.style.setProperty("visibility", "visible", "important");
+          luatoolsButton.style.setProperty("opacity", "1", "important");
+          luatoolsButton.style.setProperty("position", "relative", "important");
+          luatoolsButton.style.setProperty("z-index", "9999", "important");
+          luatoolsButton.style.setProperty("pointer-events", "auto", "important");
+
+          // If container is body or button not visible, create floating fallback
+          setTimeout(function () {
+            const rect = luatoolsButton.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0 || luatoolsButton.offsetParent === null) {
+              backendLog("Button not visible, creating floating fallback");
+              createFloatingButton();
+            }
+          }, 100);
         }
+
+        function createFloatingButton() {
+          if (document.querySelector(".luatools-floating-button")) return;
+          const floatingBtn = luatoolsButton.cloneNode(true);
+          floatingBtn.classList.add("luatools-floating-button");
+          floatingBtn.style.setProperty("position", "fixed", "important");
+          floatingBtn.style.setProperty("bottom", "20px", "important");
+          floatingBtn.style.setProperty("right", "20px", "important");
+          floatingBtn.style.setProperty("z-index", "2147483647", "important");
+          floatingBtn.style.setProperty("box-shadow", "0 4px 20px rgba(0,0,0,0.5)", "important");
+          floatingBtn.style.setProperty("border-radius", "8px", "important");
+          floatingBtn.style.setProperty("padding", "10px 16px", "important");
+          floatingBtn.style.setProperty("background", "linear-gradient(135deg, #1a9fff, #66c0f4)", "important");
+          floatingBtn.style.setProperty("color", "white", "important");
+          floatingBtn.style.setProperty("font-weight", "600", "important");
+          floatingBtn.style.setProperty("text-decoration", "none", "important");
+          floatingBtn.style.setProperty("border", "none", "important");
+          document.body.appendChild(floatingBtn);
+          backendLog("Created floating fallback button");
+        }
+
+        insertButton();
         window.__LuaToolsButtonInserted = true;
         backendLog("LuaTools button inserted");
 
@@ -2816,6 +2857,8 @@
                     window.__LuaToolsGameAdded = true;
                     const btn = document.querySelector(".luatools-button");
                     if (btn) btn.remove();
+                    const floatingBtn = document.querySelector(".luatools-floating-button");
+                    if (floatingBtn) floatingBtn.remove();
                     window.__LuaToolsButtonInserted = false;
                   }
                 } catch (_) {}
