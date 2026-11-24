@@ -2569,6 +2569,8 @@
       document.querySelector(".global_header") ||
       document.querySelector(".apphub_header") ||
       document.querySelector("[class*='header'][class*='store']") ||
+      document.querySelector(".responsive_store_nav_ctn") ||
+      document.querySelector("#responsive_store_nav_ctn") ||
       document.querySelector("nav") ||
       document.querySelector("header");
     if (
