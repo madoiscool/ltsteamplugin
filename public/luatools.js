@@ -2638,12 +2638,17 @@
       document.querySelector(".game_page_autocollapse_actions") ||
       document.querySelector(".game_purchase") ||
       document.querySelector(".game_area_purchase_game") ||
-      null;
-
-    if (!targetContainer && isBigPicture) {
-      const bodyDiv = document.querySelector("body > div[id]");
-      if (bodyDiv) targetContainer = bodyDiv;
-    }
+      // Big Picture mode container selectors
+      document.querySelector(".store-purchase-options") ||
+      document.querySelector(".purchase-options") ||
+      document.querySelector(".bp-purchase-options") ||
+      document.querySelector(".bp-store-purchase-container") ||
+      document.querySelector(".game-purchase-options") ||
+      document.querySelector(".bp-game-purchase-container") ||
+      document.querySelector(".store-action-buttons") ||
+      document.querySelector(".bp-action-buttons") ||
+      document.querySelector("body > div[id]") ||
+      document.body;
 
     if (targetContainer) {
       const steamdbContainer = targetContainer;
