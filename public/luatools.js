@@ -2699,8 +2699,9 @@ function ltGetStoreAppId() {
   // Where the store header icon goes. The redesigned storefront builds its header from CSS-module
   // classes whose hashes change with every client build, so the old hard-coded `._1wn1lBl…`
   // container disappears after an update and the icon is never created. Anchor on things that
-  // don't move instead: the header's cart/wishlist links, then the legacy #global_header, and as a
-  // last resort a fixed corner button (Big Picture's store has no header row at all).
+  // don't move instead: the cart/wishlist row, then the legacy #global_header, and as a last
+  // resort a fixed corner button. Big Picture's store has no header row at all, so it keeps the
+  // corner button.
   function ltTopHeaderLink(fragment) {
     const links = document.querySelectorAll('a[href*="' + fragment + '"]');
     for (let i = 0; i < links.length; i++) {
@@ -2711,15 +2712,35 @@ function ltGetStoreAppId() {
   }
 
   function ltFindStoreHeaderSlot() {
+    if (window.__LUATOOLS_IS_BIG_PICTURE__) return { float: true };
+    // The cart/wishlist row is the part of the header that survives storefront redesigns. The icon
+    // joins it as a sibling, so it lines up with the rest of the nav instead of floating in a
+    // corner of the window.
+    const link = ltTopHeaderLink("/cart/") || ltTopHeaderLink("/wishlist/");
+    if (link && link.parentElement) return { container: link.parentElement };
     const legacy = document.querySelector("._1wn1lBlAzl3HMRqS1llwie");
     if (legacy) return { container: legacy };
     const globalHeader = document.getElementById("global_header");
     if (globalHeader)
       return { container: globalHeader.querySelector(".content") || globalHeader };
-    const link = ltTopHeaderLink("/cart/") || ltTopHeaderLink("/wishlist/");
-    if (link && link.parentElement)
-      return { container: link.parentElement, before: link };
     return { float: true };
+  }
+
+  // The button is created as soon as this file runs, which on the store home is before the header
+  // has laid itself out — so the first pass usually only finds the corner fallback. Run this on
+  // every poll instead: the button moves into the header once the header exists, and back out to
+  // the corner on a page that has no header row (Big Picture).
+  function ltPlaceHeaderButton(btn) {
+    const slot = ltFindStoreHeaderSlot();
+    if (!slot) return;
+    if (slot.float) {
+      btn.classList.add("luatools-header-button--fixed");
+      const host = document.body || document.documentElement;
+      if (btn.parentElement !== host) host.appendChild(btn);
+      return;
+    }
+    btn.classList.remove("luatools-header-button--fixed");
+    if (btn.parentElement !== slot.container) slot.container.appendChild(btn);
   }
 
   function ltPreferredActionContainer() {
@@ -3108,7 +3129,6 @@ function ltGetStoreAppId() {
       window.__LuaToolsGameAdded = false;
       window.__LuaToolsRestartInserted = false;
       window.__LuaToolsIconInserted = false;
-      window.__LuaToolsHeaderInserted = false;
       window.__LuaToolsPresenceCheckInFlight = false;
       window.__LuaToolsPresenceCheckAppId = undefined;
       // Ensure translations are loaded and update existing buttons
@@ -3118,14 +3138,10 @@ function ltGetStoreAppId() {
     }
 
     // Store Header Button Logic (always visible)
-    const headerSlot = ltFindStoreHeaderSlot();
-    if (
-      headerSlot &&
-      !document.querySelector(".luatools-header-button") &&
-      !window.__LuaToolsHeaderInserted
-    ) {
+    let headerBtn = document.querySelector(".luatools-header-button");
+    if (!headerBtn) {
       ensureLuaToolsStyles();
-      const headerBtn = document.createElement("button");
+      headerBtn = document.createElement("button");
       headerBtn.type = "button";
       headerBtn.className = "luatools-header-button Focusable";
       headerBtn.tabIndex = "0";
@@ -3159,18 +3175,10 @@ function ltGetStoreAppId() {
         showSettingsPopup();
       };
 
-      if (headerSlot.float) {
-        headerBtn.classList.add("luatools-header-button--fixed");
-        (document.body || document.documentElement).appendChild(headerBtn);
-      } else if (headerSlot.before) {
-        headerSlot.container.insertBefore(headerBtn, headerSlot.before);
-      } else {
-        headerSlot.container.appendChild(headerBtn);
-      }
-      window.__LuaToolsHeaderInserted = true;
       ltRegisterGamepadFocus(headerBtn);
       backendLog("Inserted store header button");
     }
+    if (headerBtn) ltPlaceHeaderButton(headerBtn);
 
     // Check if we're in Big Picture mode
     const isBigPicture = window.__LUATOOLS_IS_BIG_PICTURE__;
@@ -3892,7 +3900,6 @@ function ltGetStoreAppId() {
       window.__LuaToolsGameAdded = false;
       window.__LuaToolsRestartInserted = false;
       window.__LuaToolsIconInserted = false;
-      window.__LuaToolsHeaderInserted = false;
 
       window.__LuaToolsPresenceCheckInFlight = false;
       window.__LuaToolsPresenceCheckAppId = undefined;
