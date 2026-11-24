@@ -105,6 +105,7 @@
     buttonMap: {
       A: 0,
       B: 1,
+      START: 9,
       DPAD_UP: 12,
       DPAD_DOWN: 13,
       DPAD_LEFT: 14,
@@ -349,6 +350,19 @@
         }
         break;
 
+      // Big Picture store pages often have no header row to hang the icon button on, so
+      // START gives the controller its own way into the menu.
+      case CONFIG.buttonMap.START:
+        if (!activeOverlay()) {
+          const headerBtn = document.querySelector(".luatools-header-button");
+          if (headerBtn) {
+            headerBtn.click();
+          } else if (window.__LuaToolsOpenMenu) {
+            window.__LuaToolsOpenMenu();
+          }
+        }
+        break;
+
       case CONFIG.buttonMap.DPAD_UP:
         navigate("up");
         break;
@@ -373,14 +387,9 @@
       return;
     }
 
-    // Check if there's an active LuaTools overlay
+    // Buttons are read even with nothing open: START is how Big Picture users reach the menu
+    // when the page has no header row for the icon button.
     const hasActiveOverlay = document.querySelector(OVERLAY_SELECTOR_STRING);
-
-    // If no overlay is active, skip input processing but keep polling
-    if (!hasActiveOverlay) {
-      state.animationFrameId = requestAnimationFrame(pollGamepad);
-      return;
-    }
 
     const gamepads = navigator.getGamepads();
     const gamepad = gamepads[state.gamepadIndex];
@@ -401,6 +410,12 @@
 
       state.buttonStates[index] = isPressed;
     });
+
+    // Navigation only means something while one of our overlays is up.
+    if (!hasActiveOverlay) {
+      state.animationFrameId = requestAnimationFrame(pollGamepad);
+      return;
+    }
 
     // Both sticks navigate; on each axis the stick that is pushed further wins.
     const leftX = gamepad.axes[CONFIG.axesMap.LEFT_STICK_X] || 0;
@@ -2916,6 +2931,10 @@ function ltGetStoreAppId() {
   // ── Controller/keyboard overlay plumbing ────────────────────────────────────
   // B/Esc close the TOPMOST open LuaTools overlay by clicking its marked dismiss control
   // ([data-lt-close]; Cancel/Close/Dismiss/OK all carry it). Returns true when something closed.
+  // Controller entry point used by the gamepad layer's START button when there is no
+  // header icon button to click (Big Picture store pages have no store header row).
+  window.__LuaToolsOpenMenu = showSettingsPopup;
+
   window.__LuaToolsCloseTopOverlay = function () {
     try {
       var selectors = [

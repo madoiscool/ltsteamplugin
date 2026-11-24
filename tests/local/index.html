@@ -4,43 +4,87 @@
     <meta charset="utf-8" />
     <title>LuaTools local harness</title>
     <style>
-      body { font: 14px/1.6 system-ui, sans-serif; margin: 40px auto; max-width: 760px; color: #c7d5e0; background: #1b2838; }
+      body { font: 14px/1.6 system-ui, sans-serif; margin: 40px auto; max-width: 820px; color: #c7d5e0; background: #1b2838; }
       a { color: #66c0f4; }
-      code { background: #16202d; padding: 1px 5px; border-radius: 4px; }
-      li { margin-bottom: 12px; }
+      code, pre { background: #16202d; border-radius: 4px; }
+      code { padding: 1px 5px; }
+      pre { padding: 10px 12px; overflow-x: auto; }
+      li { margin-bottom: 8px; }
       h1 { font-size: 20px; }
       h2 { font-size: 15px; margin-top: 28px; }
+      table { border-collapse: collapse; }
+      td, th { text-align: left; padding: 3px 14px 3px 0; vertical-align: top; }
     </style>
   </head>
   <body>
     <h1>LuaTools local harness</h1>
     <p>
-      Manual checks for <code>public/luatools.js</code> in an ordinary browser — no Steam,
-      Millennium or controller required. Both pages load the real file and stand in for the
-      client with <code>window.Millennium</code> (the CDP bridge) and a fake standard-mapping
-      gamepad. Serve the repository root first:
-      <code>python -m http.server 8765</code>.
+      Checks <code>public/luatools.js</code> in an ordinary browser — no Steam, Millennium or
+      controller needed. The pages load the real file and stand in for the client with
+      <code>window.Millennium</code> (the CDP bridge) and a fake standard-mapping gamepad.
     </p>
 
-    <h2>Big Picture store page</h2>
-    <p><a href="gamepad/store/index.html">tests/local/gamepad/store/index.html</a> — expect:</p>
+    <h2>Run it</h2>
+    <pre><code>cd ltsteamplugin            # repository root
+python -m http.server 8765  # or: npx --yes serve -l 8765</code></pre>
+    <p>Then open:</p>
     <ul>
-      <li>a LuaTools icon button in the store header, with <code>img.src</code> starting <code>data:image/png;base64,</code></li>
-      <li>a <code>.luatools-bpm-stack</code> inside <code>#FeatureTarget_interest-buttons</code> holding <b>Add via LuaTools</b> and <b>Restart Steam</b></li>
-      <li>clicking the header button opens the settings overlay, showing the same icon</li>
-      <li>d-pad down/up (buttons 12/13), either stick, or <code>window.__pad.buttons[12].pressed = true</code> moves the highlighted control; B (button 1) closes the overlay</li>
+      <li><a href="gamepad/store/index.html">gamepad/store/index.html</a> — mock Big Picture store page</li>
+      <li><a href="early.html">early.html</a> — same script evaluated after <code>&lt;head&gt;</code> is removed</li>
     </ul>
 
-    <h2>Evaluated without &lt;head&gt;</h2>
+    <h2>Store page variants</h2>
+    <p>Add <code>?mode=</code> to the store page to exercise the cases seen in the wild:</p>
+    <table>
+      <tr><th><code>?mode=</code></th><th>Page</th><th>Expected</th></tr>
+      <tr><td><code>bpm</code> (default)</td><td><code>BasicUI touch</code>, all containers, store header row</td><td>BPM; header icon + stack in <code>#FeatureTarget_interest-buttons</code></td></tr>
+      <tr><td><code>bpm-path-only</code></td><td>no <code>BasicUI</code> class, URL still under <code>/gamepad/</code></td><td>still BPM (URL signal); same UI</td></tr>
+      <tr><td><code>bpm-minimal</code></td><td>only <code>#gamepadPurchaseOptions</code></td><td>BPM; stack moves into that container</td></tr>
+      <tr><td><code>bpm-noheader</code></td><td>no store header row (as in the gamepad UI)</td><td>BPM; no icon button, START opens the menu</td></tr>
+      <tr><td><code>desktop</code></td><td><code>DesktopUI</code>, no Big Picture containers</td><td>not BPM; header icon only, no button stack</td></tr>
+    </table>
+
+    <h2>Driving the pad</h2>
     <p>
-      <a href="early.html">tests/local/early.html</a> — the store-home timing that used to abort
-      the whole script. Expect the header button and its icon to appear anyway
-      (<code>window.__LuaToolsInjected === true</code>).
+      Presses go through <code>window.__pad</code>. Hold a button for a couple of hundred
+      milliseconds — the plugin samples the pad once per animation frame, so an
+      instantaneous flick can fall between samples.
+    </p>
+    <pre><code>// START (index 9) opens the menu when the page has no header icon button
+window.__pad.buttons[9].pressed = true;
+setTimeout(() => (window.__pad.buttons[9].pressed = false), 250);
+
+// d-pad down / up / left / right
+[13, 12, 14, 15].forEach((i, n) =>
+  setTimeout(() => {
+    window.__pad.buttons[i].pressed = true;
+    setTimeout(() => (window.__pad.buttons[i].pressed = false), 200);
+  }, n * 600)
+);
+
+// B (index 1) closes the topmost overlay
+window.__pad.buttons[1].pressed = true;
+setTimeout(() => (window.__pad.buttons[1].pressed = false), 250);
+
+window.GamepadNav.isConnected(); // true when the plugin has picked the pad up</code></pre>
+    <p>
+      Keep the page visible: Chromium suspends animation frames and throttles timers in
+      background tabs, so the poll loop stops and presses are missed.
     </p>
 
-    <h2>In the console</h2>
+    <h2>Spot checks in the console</h2>
     <pre><code>document.querySelector(".luatools-header-button img").src.slice(0, 22); // "data:image/png;base64,"
-window.__LuaToolsInjected;                                                // true
-document.querySelectorAll(".luatools-bpm-stack button");                  // Add + Restart</code></pre>
+window.__LuaToolsInjected;                                               // true
+[...document.querySelectorAll(".luatools-bpm-stack button")];           // Restart Steam, Add via LuaTools
+window.__LUATOOLS_IS_BIG_PICTURE__;                                      // true on the bpm* modes</code></pre>
+
+    <h2>Then, for real</h2>
+    <p>
+      The harness cannot prove CEF injection or Steam's own focus tree. With Millennium
+      installed, open Steam in Big Picture mode and check the store home and a game page:
+      the header icon, the <b>Add via LuaTools</b> / <b>Restart Steam</b> row above the
+      wishlist buttons, START opening the LuaTools menu, d-pad moving the highlight inside
+      it, and B closing it.
+    </p>
   </body>
 </html>
