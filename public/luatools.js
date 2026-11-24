@@ -2656,31 +2656,27 @@
       // Pin Restart and Add buttons as last children so Steam's async link injection
       // doesn't reorder them. MutationObserver keeps them in place after initial insert.
       const ltPinButtons = function (c) {
-        try {
-          const rb = c.querySelector(".luatools-restart-button");
-          const ab = c.querySelector(".luatools-button");
-          if (rb && ab) {
-            if (rb.nextElementSibling !== ab || c.lastElementChild !== ab) {
-              c.appendChild(rb);
-              c.appendChild(ab);
-            }
-          } else if (rb && c.lastElementChild !== rb) {
+        const rb = c.querySelector(".luatools-restart-button");
+        const ab = c.querySelector(".luatools-button");
+        if (rb && ab) {
+          if (rb.nextElementSibling !== ab || c.lastElementChild !== ab) {
             c.appendChild(rb);
+            c.appendChild(ab);
           }
-        } catch (_) {}
+        } else if (rb && c.lastElementChild !== rb) {
+          c.appendChild(rb);
+        }
       };
       ltPinButtons(steamdbContainer);
       if (window.__LuaToolsOrderObservedEl !== steamdbContainer) {
-        try {
-          if (window.__LuaToolsOrderObserver) window.__LuaToolsOrderObserver.disconnect();
-          const obs = new MutationObserver(function () { ltPinButtons(steamdbContainer); });
-          obs.observe(steamdbContainer, { childList: true });
-          window.__LuaToolsOrderObserver = obs;
-          window.__LuaToolsOrderObservedEl = steamdbContainer;
-        } catch (_) {}
+        if (window.__LuaToolsOrderObserver) window.__LuaToolsOrderObserver.disconnect();
+        const obs = new MutationObserver(function () { ltPinButtons(steamdbContainer); });
+        obs.observe(steamdbContainer, { childList: true });
+        window.__LuaToolsOrderObserver = obs;
+        window.__LuaToolsOrderObservedEl = steamdbContainer;
       }
 
-      try {
+      // Insert restart button
         if (
           !document.querySelector(".luatools-restart-button") &&
           !window.__LuaToolsRestartInserted
@@ -2708,22 +2704,15 @@
           restartBtn.appendChild(rspan);
 
           if (referenceBtn) {
-            try {
-              const cs = window.getComputedStyle(referenceBtn);
-              restartBtn.style.marginLeft = cs.marginLeft;
-              restartBtn.style.marginRight = cs.marginRight;
-            } catch (_) {}
+            const cs = window.getComputedStyle(referenceBtn);
+            restartBtn.style.marginLeft = cs.marginLeft;
+            restartBtn.style.marginRight = cs.marginRight;
           }
 
           restartBtn.addEventListener("click", function (e) {
             e.preventDefault();
-            try {
-              // Ensure any settings overlays are closed before confirm
-              closeSettingsOverlay();
-              askRestartConfirmation();
-            } catch (_) {
-              askRestartConfirmation();
-            }
+            closeSettingsOverlay();
+            askRestartConfirmation();
           });
 
           // Append to the end of the row (the re-assert block above keeps it pinned there)
@@ -2732,7 +2721,6 @@
           window.__LuaToolsRestartInserted = true;
           backendLog("Inserted Restart Steam button");
         }
-      } catch (_) {}
 
       // Status Pills Logic
       // Always update translations for existing buttons (even if not a page change)
@@ -2765,13 +2753,11 @@
         luatoolsButton.setAttribute("data-tooltip-text", addViaText);
 
         // Normalize margins to match native buttons
-        try {
-          if (referenceBtn) {
-            const cs = window.getComputedStyle(referenceBtn);
-            luatoolsButton.style.marginLeft = cs.marginLeft;
-            luatoolsButton.style.marginRight = cs.marginRight;
-          }
-        } catch (_) {}
+        if (referenceBtn) {
+          const cs = window.getComputedStyle(referenceBtn);
+          luatoolsButton.style.marginLeft = cs.marginLeft;
+          luatoolsButton.style.marginRight = cs.marginRight;
+        }
 
         luatoolsButton.addEventListener("click", function (e) {
           e.preventDefault();
@@ -2861,11 +2847,15 @@
                     if (floatingBtn) floatingBtn.remove();
                     window.__LuaToolsButtonInserted = false;
                   }
-                } catch (_) {}
+                } catch (err) {
+                  backendLog("LuaTools presence check inner error: " + err);
+                }
               })
               .catch(function () {});
           }
-        } catch (_) {}
+        } catch (err) {
+          backendLog("LuaTools presence check error: " + err);
+        }
 
       try {
         const match =
@@ -3014,7 +3004,9 @@
     // CefInjectorService stops re-injecting when this is true.
     // Must NOT gate on game-page "Add" button (async, late load) — would cause endless re-injection loop.
     var headerReady = !!document.querySelector(".luatools-header-button");
-    if (headerReady || attempt >= 25) {
+    var gameBtnReady = !!document.querySelector(".luatools-button");
+    var restartReady = !!document.querySelector(".luatools-restart-button");
+    if ((headerReady || gameBtnReady || restartReady) || attempt >= 50) {
       window.__LuaToolsReady = true;
       return;
     }
@@ -3026,7 +3018,7 @@
   function onFrontendReady() {
     fetchSettingsConfig(true)
       .then(function (cfg) {
-        try { ensureLuaToolsStyles(); } catch (_) {}
+        ensureLuaToolsStyles();
         ensureLuaToolsUI();
       })
       .catch(ensureLuaToolsUI);
