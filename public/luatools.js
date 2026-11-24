@@ -3053,140 +3053,104 @@
         ensureLuaToolsUI();
       })
       .catch(ensureLuaToolsUI);
-    } catch (_) {
-      ensureLuaToolsUI();
-    }
+  }
 
-    // Show gamepad hint if connected (only in Big Picture mode)
-    setTimeout(function () {
-      if (
-        window.GamepadNav &&
-        window.GamepadNav.isConnected &&
-        window.GamepadNav.isConnected()
-      ) {
-        backendLog("[LuaTools] Gamepad detected - Navigation enabled");
-
-        // Only show visual hint in Big Picture mode
-        if (window.__LUATOOLS_IS_BIG_PICTURE__) {
-          const hint = document.createElement("div");
-          hint.id = "luatools-gamepad-hint";
-          hint.innerHTML = "🎮 " + lt("bigpicture.mouseTip");
-          hint.style.cssText =
-            "\
-                        position: fixed;\
-                        bottom: 20px;\
-                        right: 20px;\
-                        background: rgba(11, 20, 30, 0.9);\
-                        color: #66c0f4;\
-                        padding: 12px 16px;\
-                        border-radius: 8px;\
-                        font-size: 14px;\
-                        z-index: 99998;\
-                        border: 1px solid rgba(102, 192, 244, 0.3);\
-                        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);\
-                        animation: fadeInOut 3s ease-in-out;\
-                    ";
-
-          // Add CSS animation if not already present
-          if (!document.querySelector("#luatools-gamepad-hint-styles")) {
-            const style = document.createElement("style");
-            style.id = "luatools-gamepad-hint-styles";
-            style.textContent =
-              "\
-                            @keyframes fadeInOut {\
-                                0% { opacity: 0; transform: translateY(10px); }\
-                                10% { opacity: 1; transform: translateY(0); }\
-                                90% { opacity: 1; transform: translateY(0); }\
-                                100% { opacity: 0; transform: translateY(10px); }\
-                            }\
-                        ";
-            document.head.appendChild(style);
-          }
-
-          document.body.appendChild(hint);
-
-          // Auto-remove after animation
-          setTimeout(function () {
-            if (hint && hint.parentElement) {
-              hint.remove();
-            }
-          }, 3000);
-        }
-      }
-    }, 500);
-
-    // Ask backend if there is a queued startup message from InitApis
-    try {
-      if (
-        typeof Millennium !== "undefined" &&
-        typeof Millennium.callServerMethod === "function"
-      ) {
-        Millennium.callServerMethod("luatools", "GetInitApisMessage", {
-          contentScriptQuery: "",
-        }).then(function (res) {
-          try {
-            const payload = typeof res === "string" ? JSON.parse(res) : res;
-            if (payload && payload.message) {
-              const msg = String(payload.message);
-              // Check if this is an update message (contains "update" or "restart")
-              const isUpdateMsg =
-                msg.toLowerCase().includes("update") ||
-                msg.toLowerCase().includes("restart");
-
-              if (isUpdateMsg) {
-                // For update messages, use confirm dialog with OK (restart) and Cancel options
-                askRestartConfirmation();
-              } else {
-                // For non-update messages, use regular alert
-                ShowLuaToolsAlert("LuaTools", msg);
-              }
-            }
-          } catch (_) {}
-        });
-        // Also show loaded apps list if present (only once per session, store page only)
+  // Ask backend if there is a queued startup message from InitApis
+  try {
+    if (
+      typeof Millennium !== "undefined" &&
+      typeof Millennium.callServerMethod === "function"
+    ) {
+      Millennium.callServerMethod("luatools", "GetInitApisMessage", {
+        contentScriptQuery: "",
+      }).then(function (res) {
         try {
-          if (window.location.hostname === "store.steampowered.com") {
-            if (!sessionStorage.getItem("LuaToolsLoadedAppsGate")) {
-              sessionStorage.setItem("LuaToolsLoadedAppsGate", "1");
-              Millennium.callServerMethod("luatools", "ReadLoadedApps", {
-                contentScriptQuery: "",
-              }).then(function (res) {
-                try {
-                  const payload =
-                    typeof res === "string" ? JSON.parse(res) : res;
-                  const apps =
-                    payload && payload.success && Array.isArray(payload.apps)
-                      ? payload.apps
-                      : [];
-                  if (apps.length > 0) {
-                    showLoadedAppsPopup(apps);
-                  }
-                } catch (_) {}
-              });
+          const payload = typeof res === "string" ? JSON.parse(res) : res;
+          if (payload && payload.message) {
+            const msg = String(payload.message);
+            const isUpdateMsg =
+              msg.toLowerCase().includes("update") ||
+              msg.toLowerCase().includes("restart");
+
+            if (isUpdateMsg) {
+              askRestartConfirmation();
+            } else {
+              ShowLuaToolsAlert("LuaTools", msg);
             }
           }
         } catch (_) {}
-      }
-    } catch (_) {}
-  }
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", onFrontendReady);
-  } else {
-    onFrontendReady();
-  }
+      });
+      // Also show loaded apps list if present (only once per session, store page only)
+      try {
+        if (window.location.hostname === "store.steampowered.com") {
+          if (!sessionStorage.getItem("LuaToolsLoadedAppsGate")) {
+            sessionStorage.setItem("LuaToolsLoadedAppsGate", "1");
+            Millennium.callServerMethod("luatools", "ReadLoadedApps", {
+              contentScriptQuery: "",
+            }).then(function (res) {
+              try {
+                const payload =
+                  typeof res === "string" ? JSON.parse(res) : res;
+                const apps =
+                  payload && payload.success && Array.isArray(payload.apps)
+                    ? payload.apps
+                    : [];
+                if (apps.length > 0) {
+                  showLoadedAppsPopup(apps);
+                }
+              } catch (_) {}
+            });
+          }
+        }
+      } catch (_) {}
+    }
+  } catch (_) {}
 
-  // Delegate click handling in case the DOM is re-rendered and listeners are lost
-  // Use bubble phase instead of capture phase to avoid interfering with gamepad navigation
+  // Show gamepad hint if connected (only in Big Picture mode)
+  setTimeout(function () {
+    if (
+      window.GamepadNav &&
+      window.GamepadNav.isConnected &&
+      window.GamepadNav.isConnected()
+    ) {
+      backendLog("[LuaTools] Gamepad detected - Navigation enabled");
+
+      if (window.__LUATOOLS_IS_BIG_PICTURE__) {
+        const hint = document.createElement("div");
+        hint.id = "luatools-gamepad-hint";
+        hint.innerHTML = "\uD83C\uDF7E " + lt("bigpicture.mouseTip");
+        hint.style.cssText =
+          "position: fixed; bottom: 20px; right: 20px; background: rgba(11, 20, 30, 0.9); color: #66c0f4; padding: 12px 16px; border-radius: 8px; font-size: 14px; z-index: 99998; border: 1px solid rgba(102, 192, 244, 0.3); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); animation: fadeInOut 3s ease-in-out;";
+
+        if (!document.querySelector("#luatools-gamepad-hint-styles")) {
+          const style = document.createElement("style");
+          style.id = "luatools-gamepad-hint-styles";
+          style.textContent =
+            "@keyframes fadeInOut { 0% { opacity: 0; transform: translateY(10px); } 10% { opacity: 1; transform: translateY(0); } 90% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(10px); } }";
+          document.head.appendChild(style);
+        }
+
+        document.body.appendChild(hint);
+
+        setTimeout(function () {
+          if (hint && hint.parentElement) {
+            hint.remove();
+          }
+        }, 3000);
+      }
+    }
+  }, 500);
+
+  // Delegate click handling in case the DOM is re-rendered
   document.addEventListener(
     "click",
     function (evt) {
-      // Quick exit if target doesn't have closest method or isn't an element
       if (!evt.target || !evt.target.closest) return;
 
       const anchor = evt.target.closest(".luatools-button");
       if (anchor) {
         evt.preventDefault();
-        evt.stopPropagation(); // Stop propagation to avoid conflicts
+        evt.stopPropagation();
         backendLog("LuaTools delegated click");
         try {
           const match =
@@ -3203,13 +3167,9 @@
             typeof Millennium.callServerMethod === "function"
           ) {
             if (runState.inProgress && runState.appid === appid) {
-              backendLog(
-                "LuaTools: operation already in progress for this appid",
-              );
+              backendLog("LuaTools: operation already in progress for this appid");
               return;
             }
-
-            // Reflect app's add pipeline in popup (headless). Removal from menu.
             startLuaToolsAdd(appid, anchor);
             return;
           }
@@ -3219,35 +3179,27 @@
     false,
   );
 
-  // SPA navigation detection: the store is single-page-ish, so watch for URL changes
-  // (interval + popstate + pushState/replaceState hooks below) to re-add our buttons. Init
-  // lastUrl to the current URL so the first check sees "no change" instead of resetting state.
+  // SPA navigation detection
   let lastUrl = window.location.href;
   function checkUrlChange() {
     const currentUrl = window.location.href;
     if (currentUrl !== lastUrl) {
       lastUrl = currentUrl;
-      // URL changed - reset flags and update buttons
       window.__LuaToolsButtonInserted = false;
       window.__LuaToolsGameAdded = false;
       window.__LuaToolsRestartInserted = false;
       window.__LuaToolsIconInserted = false;
       window.__LuaToolsHeaderInserted = false;
-
       window.__LuaToolsPresenceCheckInFlight = false;
       window.__LuaToolsPresenceCheckAppId = undefined;
-      // Update translations and re-add buttons
       ensureTranslationsLoaded(false).then(function () {
         updateButtonTranslations();
         addLuaToolsButton(true);
       });
     }
   }
-  // Check URL changes periodically and on popstate
-  // Reduced frequency to avoid blocking gamepad input
-  setInterval(checkUrlChange, 2000); // Changed from 500ms to 2000ms (2 seconds)
+  setInterval(checkUrlChange, 2000);
   window.addEventListener("popstate", checkUrlChange);
-  // Override pushState/replaceState to detect navigation
   const originalPushState = history.pushState;
   const originalReplaceState = history.replaceState;
   history.pushState = function () {
@@ -3259,32 +3211,25 @@
     setTimeout(checkUrlChange, 100);
   };
 
-  // Load themes + translations early so the UI is styled and localized from the first paint.
+  // Load themes + translations early
   function bootSettings() {
     if (typeof Millennium === "undefined" || typeof Millennium.callServerMethod !== "function") {
-        setTimeout(bootSettings, 200);
-        return;
+      setTimeout(bootSettings, 200);
+      return;
     }
     loadThemes().then(function() {
-        return fetchSettingsConfig();
+      return fetchSettingsConfig();
     }).then(function() {
-        if (typeof ensureLuaToolsStyles === "function") ensureLuaToolsStyles();
+      if (typeof ensureLuaToolsStyles === "function") ensureLuaToolsStyles();
     }).catch(function(e) {
-        try { backendLog("LuaTools: Boot sequence failed: " + String(e)); } catch(_) {}
+      try { backendLog("LuaTools: Boot sequence failed: " + String(e)); } catch(_) {}
     });
   }
   bootSettings();
 
-  // Catch dynamically added content: Steam builds out the header and the game-page button
-  // row asynchronously (and re-injects links well after page load). Debounce each mutation
-  // burst into one cheap check — if a target container is present but our button isn't there
-  // yet, (re)insert. The old version scanned only the first 10 mutations / first 3 added nodes
-  // and matched only top-level added nodes, so a container inserted nested inside a larger
-  // subtree (common) was missed — that was a primary cause of the button intermittently not
-  // appearing. A couple of querySelectors per debounced burst is negligible for gamepad input.
+  // MutationObserver for dynamic content
   if (typeof MutationObserver !== "undefined") {
     let mutationTimeout;
-
     const observer = new MutationObserver(function () {
       clearTimeout(mutationTimeout);
       mutationTimeout = setTimeout(function () {
@@ -3311,126 +3256,5 @@
     });
   }
 
-  function showLoadedAppsPopup(apps) {
-    // Avoid duplicates
-    if (document.querySelector(".luatools-loadedapps-overlay")) return;
-    ensureFontAwesome();
-    ensureLuaToolsStyles();
-    const overlay = document.createElement("div");
-    overlay.className = "luatools-loadedapps-overlay";
-    overlay.style.cssText =
-      "position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;";
-    const modal = document.createElement("div");
-    const loadedAppsModalColors = getThemeColors();
-    modal.style.cssText = `background:${loadedAppsModalColors.modalBg};color:${loadedAppsModalColors.text};border:2px solid ${loadedAppsModalColors.border};border-radius:8px;width:560px;padding:28px 32px;box-shadow:0 20px 60px rgba(0,0,0,.8), 0 0 0 1px ${loadedAppsModalColors.shadowRgba};animation:slideUp 0.1s ease-out;`;
-    const title = document.createElement("div");
-    const loadedAppsTitleColors = getThemeColors();
-    title.style.cssText = `font-size:24px;color:${loadedAppsTitleColors.text};margin-bottom:20px;font-weight:700;text-shadow:0 2px 8px ${loadedAppsTitleColors.shadow};background:${loadedAppsTitleColors.gradientLight};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-align:center;`;
-    title.textContent = lt("LuaTools · Added Games");
-    const body = document.createElement("div");
-    const loadedAppsBodyColors = getThemeColors();
-    body.style.cssText = `font-size:14px;line-height:1.8;margin-bottom:16px;max-height:320px;overflow:auto;padding:16px;border:1px solid ${loadedAppsBodyColors.border};border-radius:12px;background:${loadedAppsBodyColors.bgContainer};`;
-    if (apps && apps.length) {
-      const list = document.createElement("div");
-      apps.forEach(function (item) {
-        // Backend sends [{appid, name}], but tolerate a bare appid number too so a missing
-        // name never renders as literal "undefined".
-        const appid = item && typeof item === "object" ? item.appid : item;
-        const name = item && typeof item === "object" ? item.name : null;
-        const a = document.createElement("a");
-        a.href = "steam://install/" + String(appid);
-        a.textContent = String(name || appid);
-        const linkColors = getThemeColors();
-        a.style.cssText = `display:block;color:${linkColors.textSecondary};text-decoration:none;padding:10px 16px;margin-bottom:8px;background:rgba(${linkColors.rgbString},0.08);border:1px solid rgba(${linkColors.rgbString},0.2);border-radius:4px;transition:all 0.3s ease;`;
-        a.onmouseover = function () {
-          const c = getThemeColors();
-          this.style.background = `rgba(${c.rgbString},0.2)`;
-          this.style.borderColor = c.accent;
-          this.style.transform = "translateX(4px)";
-          this.style.color = c.text;
-        };
-        a.onmouseout = function () {
-          const c = getThemeColors();
-          this.style.background = `rgba(${c.rgbString},0.08)`;
-          this.style.borderColor = `rgba(${c.rgbString},0.2)`;
-          this.style.transform = "translateX(0)";
-          this.style.color = c.textSecondary;
-        };
-        a.onclick = function (e) {
-          e.preventDefault();
-          try {
-            window.location.href = a.href;
-          } catch (_) {}
-        };
-        a.oncontextmenu = function (e) {
-          e.preventDefault();
-          const url = "https://steamdb.info/app/" + String(appid) + "/";
-          try {
-            Millennium.callServerMethod("luatools", "OpenExternalUrl", {
-              url,
-              contentScriptQuery: "",
-            });
-          } catch (_) {}
-        };
-        list.appendChild(a);
-      });
-      body.appendChild(list);
-    } else {
-      body.style.textAlign = "center";
-      body.textContent = lt("No games found.");
-    }
-    const btnRow = document.createElement("div");
-    btnRow.style.cssText =
-      "margin-top:16px;display:flex;gap:8px;justify-content:space-between;align-items:center;";
-    const instructionText = document.createElement("div");
-    instructionText.style.cssText = "font-size:12px;color:#8f98a0;";
-    instructionText.textContent = lt(
-      "Left click to install, Right click for SteamDB",
-    );
-    const dismissBtn = document.createElement("a");
-    dismissBtn.className = "luatools-btn";
-    dismissBtn.innerHTML = "<span>" + lt("Dismiss") + "</span>";
-    dismissBtn.href = "#";
-    dismissBtn.onclick = function (e) {
-      e.preventDefault();
-      try {
-        Millennium.callServerMethod("luatools", "DismissLoadedApps", {
-          contentScriptQuery: "",
-        });
-      } catch (_) {}
-      try {
-        sessionStorage.setItem("LuaToolsLoadedAppsShown", "1");
-      } catch (_) {}
-      overlay.remove();
-    };
-    btnRow.appendChild(instructionText);
-    btnRow.appendChild(dismissBtn);
-    modal.appendChild(title);
-    modal.appendChild(body);
-    modal.appendChild(btnRow);
-    overlay.appendChild(modal);
-    overlay.addEventListener("click", function (e) {
-      if (e.target === overlay) overlay.remove();
-    });
-    document.body.appendChild(overlay);
-
-    // Re-scan elements for gamepad navigation
-    setTimeout(function () {
-      if (window.GamepadNav) {
-        window.GamepadNav.scanElements();
-      }
-    }, 150);
-  }
-
-  // ============================================
-  // GAMEPAD NAVIGATION INTEGRATION
-  // ============================================
-  // Note: The gamepad back handler is configured in the gamepad system at the top of this file
-  // It already handles all overlay types automatically using OVERLAY_SELECTOR_STRING
-
-  // window.__LuaToolsReady (the completion marker CefInjectorService's polling loop checks — see
-  // ensureLuaToolsUI() above) is set there once the button/icon setup actually settles, not here
-  // unconditionally. Setting it here regardless of that outcome is exactly the bug that caused pages to
-  // occasionally load with no button/icon until a manual refresh — the loop would see "ready" and stop
-  // retrying before the UI had actually been created.
+  window.__LuaToolsReady = true;
 })();
