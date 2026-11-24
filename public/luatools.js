@@ -2622,28 +2622,28 @@
 
     const isBigPicture = window.__LUATOOLS_IS_BIG_PICTURE__;
 
-    let targetContainer;
-    if (isBigPicture) {
-      const queueBtn = document.querySelector("#queueBtnFollow");
-      targetContainer = queueBtn
-        ? queueBtn.parentElement
-        : document.querySelector(".apphub_OtherSiteInfo") ||
-          document.querySelector(".apphub_Options") ||
-          document.querySelector(".apphub_Content") ||
-          document.querySelector(".apphub_UserReviews") ||
-          document.querySelector("section") ||
-          document.querySelector("main") ||
-          null;
-    } else {
-      targetContainer =
-        document.querySelector(".steamdb-buttons") ||
-        document.querySelector("[data-steamdb-buttons]") ||
-        document.querySelector(".apphub_OtherSiteInfo") ||
-        document.querySelector(".apphub_Options") ||
-        document.querySelector(".apphub_Content") ||
-        document.querySelector(".apphub_UserReviews") ||
-        document.querySelector("section") ||
-        document.querySelector("main");
+    // Try ALL container selectors regardless of mode — Steam injects button rows
+    // asynchronously and container classes differ between Desktop and Big Picture.
+    let targetContainer =
+      document.querySelector(".steamdb-buttons") ||
+      document.querySelector("[data-steamdb-buttons]") ||
+      document.querySelector(".apphub_OtherSiteInfo") ||
+      document.querySelector(".apphub_Options") ||
+      document.querySelector(".apphub_Content") ||
+      document.querySelector(".apphub_UserReviews") ||
+      document.querySelector(".responsive_store_nav_ctn") ||
+      document.querySelector("#responsive_store_nav_ctn") ||
+      document.querySelector("#queueBtnFollow") ||
+      document.querySelector("section") ||
+      document.querySelector("main") ||
+      document.querySelector(".game_page_autocollapse_actions") ||
+      document.querySelector(".game_purchase") ||
+      document.querySelector(".game_area_purchase_game") ||
+      null;
+
+    if (!targetContainer && isBigPicture) {
+      const bodyDiv = document.querySelector("body > div[id]");
+      if (bodyDiv) targetContainer = bodyDiv;
     }
 
     if (targetContainer) {
@@ -2682,9 +2682,10 @@
           !window.__LuaToolsRestartInserted
         ) {
           ensureStyles();
-          const referenceBtn = isBigPicture
-            ? document.querySelector("#queueBtnFollow")
-            : steamdbContainer.querySelector("a") || steamdbContainer.querySelector("button") || steamdbContainer.firstElementChild;
+          const referenceBtn =
+            steamdbContainer.querySelector("a") ||
+            steamdbContainer.querySelector("button") ||
+            steamdbContainer.firstElementChild;
 
           const restartBtn = document.createElement("a");
           if (referenceBtn && referenceBtn.className) {
@@ -2737,9 +2738,10 @@
       }
 
       if (!existingBtn && !window.__LuaToolsButtonInserted) {
-        let referenceBtn = isBigPicture
-          ? document.querySelector("#queueBtnFollow")
-          : steamdbContainer.querySelector("a") || steamdbContainer.querySelector("button") || steamdbContainer.firstElementChild;
+        let referenceBtn =
+            steamdbContainer.querySelector("a") ||
+            steamdbContainer.querySelector("button") ||
+            steamdbContainer.firstElementChild;
 
         const luatoolsButton = document.createElement("a");
         luatoolsButton.href = "#";
