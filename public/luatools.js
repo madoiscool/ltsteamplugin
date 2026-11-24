@@ -2766,6 +2766,12 @@
 
         // Insert button immediately with guaranteed visibility
         function insertButton() {
+          // In Big Picture mode, always use floating button for guaranteed visibility
+          if (isBigPicture) {
+            createFloatingButton();
+            return;
+          }
+
           const restartExisting = steamdbContainer.querySelector(".luatools-restart-button");
           if (restartExisting && restartExisting.after) {
             restartExisting.after(luatoolsButton);
