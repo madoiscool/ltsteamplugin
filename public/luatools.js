@@ -2773,6 +2773,19 @@
           backendLog("LuaTools button clicked (delegated handler will process)");
         });
 
+        // Insert button immediately, then check if game already added
+        const restartExisting = steamdbContainer.querySelector(".luatools-restart-button");
+        if (restartExisting && restartExisting.after) {
+          restartExisting.after(luatoolsButton);
+        } else if (referenceBtn && referenceBtn.after) {
+          referenceBtn.after(luatoolsButton);
+        } else {
+          steamdbContainer.appendChild(luatoolsButton);
+        }
+        window.__LuaToolsButtonInserted = true;
+        backendLog("LuaTools button inserted");
+
+        // Async presence check to remove button if game already added
         try {
           const match =
             window.location.href.match(
@@ -2787,109 +2800,25 @@
             typeof Millennium !== "undefined" &&
             typeof Millennium.callServerMethod === "function"
           ) {
-            if (
-              window.__LuaToolsPresenceCheckInFlight &&
-              window.__LuaToolsPresenceCheckAppId === appid &&
-              Date.now() - (window.__LuaToolsPresenceCheckAt || 0) < 8000
-            ) {
-              return;
-            }
-            window.__LuaToolsPresenceCheckInFlight = true;
-            window.__LuaToolsPresenceCheckAt = Date.now();
-            window.__LuaToolsPresenceCheckAppId = appid;
-            window.__LuaToolsCurrentAppId = appid;
             window.Millennium.callServerMethod("luatools", "HasLuaToolsForApp", { appid })
               .then(function (payload) {
                 return typeof payload === "string" ? JSON.parse(payload) : payload;
               })
               .then(function (payload) {
-              try {
-                if (payload && payload.success && payload.exists === true) {
-                  backendLog("LuaTools already present for this app; not inserting button");
-                  window.__LuaToolsGameAdded = true;
-                  window.__LuaToolsPresenceCheckInFlight = false;
-                  return;
-                }
-                if (
-                  !document.querySelector(".luatools-button") &&
-                  !window.__LuaToolsButtonInserted
-                ) {
-                  const restartExisting = steamdbContainer.querySelector(".luatools-restart-button");
-                  if (restartExisting && restartExisting.after) {
-                    restartExisting.after(luatoolsButton);
-                  } else if (referenceBtn && referenceBtn.after) {
-                    referenceBtn.after(luatoolsButton);
-                  } else {
-                    steamdbContainer.appendChild(luatoolsButton);
+                try {
+                  if (payload && payload.success && payload.exists === true) {
+                    backendLog("LuaTools already present; removing button");
+                    window.__LuaToolsGameAdded = true;
+                    const btn = document.querySelector(".luatools-button");
+                    if (btn) btn.remove();
+                    window.__LuaToolsButtonInserted = false;
                   }
-                  window.__LuaToolsButtonInserted = true;
-                  backendLog("LuaTools button inserted");
-                }
-                window.__LuaToolsPresenceCheckInFlight = false;
-              } catch (_) {
-                if (
-                  !document.querySelector(".luatools-button") &&
-                  !window.__LuaToolsButtonInserted
-                ) {
-                  steamdbContainer.appendChild(luatoolsButton);
-                  window.__LuaToolsButtonInserted = true;
-                  backendLog("LuaTools button inserted");
-                }
-                window.__LuaToolsPresenceCheckInFlight = false;
-              }
-            })
-            .catch(function () {
-              if (
-                !document.querySelector(".luatools-button") &&
-                !window.__LuaToolsButtonInserted
-              ) {
-                steamdbContainer.appendChild(luatoolsButton);
-                window.__LuaToolsButtonInserted = true;
-              }
-              window.__LuaToolsPresenceCheckInFlight = false;
-            });
-          } else {
-            if (
-              !document.querySelector(".luatools-button") &&
-              !window.__LuaToolsButtonInserted
-            ) {
-              // Insert after restart button (order: Restart → Add)
-              const restartExisting = steamdbContainer.querySelector(
-                ".luatools-restart-button",
-              );
-              if (restartExisting && restartExisting.after) {
-                restartExisting.after(luatoolsButton);
-              } else if (referenceBtn && referenceBtn.after) {
-                referenceBtn.after(luatoolsButton);
-              } else {
-                steamdbContainer.appendChild(luatoolsButton);
-              }
-              window.__LuaToolsButtonInserted = true;
-              backendLog("LuaTools button inserted");
-            }
+                } catch (_) {}
+              })
+              .catch(function () {});
           }
-        } catch (_) {
-          if (
-            !document.querySelector(".luatools-button") &&
-            !window.__LuaToolsButtonInserted
-          ) {
-            const restartExisting = steamdbContainer.querySelector(
-              ".luatools-restart-button",
-            );
-            if (restartExisting && restartExisting.after) {
-              restartExisting.after(luatoolsButton);
-            } else if (referenceBtn && referenceBtn.after) {
-              referenceBtn.after(luatoolsButton);
-            } else {
-              steamdbContainer.appendChild(luatoolsButton);
-            }
-            window.__LuaToolsButtonInserted = true;
-            backendLog("LuaTools button inserted");
-          }
-        }
-      }
+        } catch (_) {}
 
-      // status pills — only run once per appid
       try {
         const match =
           window.location.href.match(
@@ -3257,4 +3186,5 @@
   }
 
   window.__LuaToolsReady = true;
+  }
 })();
