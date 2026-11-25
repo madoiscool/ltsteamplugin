@@ -130,7 +130,8 @@
       y: 0,
     },
     buttonStates: {},
-    animationFrameId: null,
+    pollFrame: null,
+    pollTimer: null,
   };
 
   // duplicated from main code thing for reliability
@@ -156,9 +157,7 @@
     console.log("[Gamepad] Gamepad conectado en Millennium:", event.gamepad.id);
     state.gamepadConnected = true;
     state.gamepadIndex = event.gamepad.index;
-    if (!state.animationFrameId) {
-      pollGamepad();
-    }
+    schedulePoll();
     // Don't scan immediately - only scan when an overlay is opened
     // scanFocusableElements() will be called by the overlay's setTimeout
   }
@@ -168,10 +167,7 @@
     if (state.gamepadIndex === event.gamepad.index) {
       state.gamepadConnected = false;
       state.gamepadIndex = null;
-      if (state.animationFrameId) {
-        cancelAnimationFrame(state.animationFrameId);
-        state.animationFrameId = null;
-      }
+      stopPolling();
     }
   }
 
@@ -381,11 +377,35 @@
     }
   }
 
-  function pollGamepad() {
-    if (!state.gamepadConnected) {
-      state.animationFrameId = null;
-      return;
+  // The poll used to be pure requestAnimationFrame. rAF never fires while the view is not
+  // painting, and Big Picture keeps the store in a webview that reports document.hidden, so a
+  // controller plugged into BPM did nothing at all. Poll on rAF when we are visible and on a
+  // timer when we are not; whichever runs first re-arms itself.
+  function schedulePoll() {
+    if (!state.gamepadConnected) return;
+    if (state.pollFrame !== null || state.pollTimer !== null) return;
+    if (document.hidden) {
+      state.pollTimer = setTimeout(runPollTick, 100);
+    } else {
+      state.pollFrame = requestAnimationFrame(runPollTick);
     }
+  }
+
+  function runPollTick() {
+    state.pollFrame = null;
+    state.pollTimer = null;
+    pollGamepad();
+  }
+
+  function stopPolling() {
+    if (state.pollFrame !== null) cancelAnimationFrame(state.pollFrame);
+    if (state.pollTimer !== null) clearTimeout(state.pollTimer);
+    state.pollFrame = null;
+    state.pollTimer = null;
+  }
+
+  function pollGamepad() {
+    if (!state.gamepadConnected) return;
 
     // Buttons are read even with nothing open: START is how Big Picture users reach the menu
     // when the page has no header row for the icon button.
@@ -395,7 +415,7 @@
     const gamepad = gamepads[state.gamepadIndex];
 
     if (!gamepad) {
-      state.animationFrameId = requestAnimationFrame(pollGamepad);
+      schedulePoll();
       return;
     }
 
@@ -413,7 +433,7 @@
 
     // Navigation only means something while one of our overlays is up.
     if (!hasActiveOverlay) {
-      state.animationFrameId = requestAnimationFrame(pollGamepad);
+      schedulePoll();
       return;
     }
 
@@ -445,7 +465,7 @@
     state.lastAxisValues.x = x;
     state.lastAxisValues.y = y;
 
-    state.animationFrameId = requestAnimationFrame(pollGamepad);
+    schedulePoll();
   }
 
   // Block Steam's gamepad navigation when overlay is active
@@ -531,6 +551,14 @@
 
     // Block browser history navigation (back button)
     window.addEventListener("popstate", blockHistoryNavigation, true);
+
+    // Switching between BPM and the desktop window changes document.hidden, and a pending rAF
+    // never fires after that. Restart the poll on the scheduler that suits the new state.
+    document.addEventListener("visibilitychange", function () {
+      if (!state.gamepadConnected) return;
+      stopPolling();
+      schedulePoll();
+    });
 
     const gamepads = navigator.getGamepads();
     for (let i = 0; i < gamepads.length; i++) {
