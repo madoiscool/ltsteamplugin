@@ -13,7 +13,7 @@
         .active-focus {
             outline: 3px solid #66c0f4 !important;
             outline-offset: 2px !important;
-            box-shadow: 0 0 0 4px rgba(102, 192, 244, 0.3),
+            box-shadow: 0 0 0 4px rgba(11, 19, 24, 0.3),
                         0 0 12px rgba(102, 192, 244, 0.5) !important;
             position: relative !important;
             z-index: 9999 !important;
@@ -81,7 +81,11 @@
             scroll-margin: 20px;
         }
     `;
-  document.head.appendChild(gamepadCSS);
+  // Millennium can evaluate this script before <head> exists (it does on the store home),
+  // where appending to document.head throws and aborts this whole file — taking the header
+  // icon and every popup with it.
+  const styleRoot = document.head || document.documentElement;
+  if (styleRoot) styleRoot.appendChild(gamepadCSS);
 
   // Gamepad Navigation System
   // ALL LuaTools overlays that should block Steam navigation
@@ -101,6 +105,7 @@
     buttonMap: {
       A: 0,
       B: 1,
+      START: 9,
       DPAD_UP: 12,
       DPAD_DOWN: 13,
       DPAD_LEFT: 14,
@@ -109,6 +114,8 @@
     axesMap: {
       LEFT_STICK_X: 0,
       LEFT_STICK_Y: 1,
+      RIGHT_STICK_X: 2,
+      RIGHT_STICK_Y: 3,
     },
   };
 
@@ -139,6 +146,9 @@
     if (userAgent.includes("Valve Steam Gamepad")) score += 2;
     if (userAgent.includes("Valve Steam Client")) score -= 2;
     if (htmlClasses.includes("touch")) score += 1;
+    // Big Picture and Deck store pages live under /gamepad/, and some client builds render
+    // them without the BasicUI class the checks above rely on.
+    if (/\/gamepad(\/|$)/.test(window.location.pathname)) score += 3;
     return score > 0;
   }
 
@@ -165,14 +175,21 @@
     }
   }
 
-  function scanFocusableElements() {
+  // The overlay to drive is the topmost one: overlays share a z-index, so the last one in the
+  // DOM is what the user sees (a confirm dialog opened from a menu, for example).
+  function activeOverlay() {
+    const overlays = document.querySelectorAll(OVERLAY_SELECTOR_STRING);
+    for (let i = overlays.length - 1; i >= 0; i--) {
+      if (overlays[i].getBoundingClientRect().width > 0) return overlays[i];
+    }
+    return null;
+  }
+
+  function scanFocusableElements(keepFocus) {
     if (!isBigPictureMode()) return;
 
-    // Only scan if there's a LuaTools overlay active
-    const activeOverlay = document.querySelector(OVERLAY_SELECTOR_STRING);
-
-    if (!activeOverlay) {
-      console.log("[Gamepad] No LuaTools overlay active, skipping scan");
+    const overlay = activeOverlay();
+    if (!overlay) {
       state.focusableElements = [];
       state.currentFocusIndex = 0;
       return;
@@ -190,8 +207,8 @@
       ".focusable:not([disabled])",
     ].join(", ");
 
-    // Use querySelectorAll on the overlay, not the whole document
-    const elements = Array.from(activeOverlay.querySelectorAll(selectors));
+    const previous = state.focusableElements[state.currentFocusIndex];
+    const elements = Array.from(overlay.querySelectorAll(selectors));
     state.focusableElements = elements.filter(function (el) {
       const rect = el.getBoundingClientRect();
       const style = window.getComputedStyle(el);
@@ -204,11 +221,15 @@
       );
     });
 
-    console.log(
-      "[Gamepad] Scanned " +
-        state.focusableElements.length +
-        " focusable elements inside overlay",
-    );
+    // Menus fill in their rows after they open, so a rescan has to keep the user on the same
+    // control instead of snapping back to the first one.
+    const previousIndex =
+      keepFocus && previous ? state.focusableElements.indexOf(previous) : -1;
+    if (previousIndex >= 0) {
+      state.currentFocusIndex = previousIndex;
+      previous.classList.add("active-focus");
+      return;
+    }
 
     if (state.focusableElements.length > 0) {
       focusElement(0);
@@ -248,10 +269,11 @@
     }
     state.lastNavigationTime = now;
 
-    if (state.focusableElements.length === 0) {
-      scanFocusableElements();
-      return;
-    }
+    // Menus finish rendering their rows after they open, so refresh the list on every move;
+    // a popup that has not been scanned yet only needs that scan, not a move.
+    const known = state.focusableElements.length;
+    scanFocusableElements(known > 0);
+    if (!known) return;
 
     let newIndex = state.currentFocusIndex;
 
@@ -321,8 +343,24 @@
         break;
 
       case CONFIG.buttonMap.B:
-        // B button disabled - users should use modal buttons
-        console.log("[Gamepad] B button pressed - ignoring");
+        // Back closes our own overlay (registered by the UI below); letting it through makes
+        // Steam navigate the page out from under the dialog.
+        if (window.__LuaToolsCloseTopOverlay) {
+          window.__LuaToolsCloseTopOverlay();
+        }
+        break;
+
+      // Big Picture store pages often have no header row to hang the icon button on, so
+      // START gives the controller its own way into the menu.
+      case CONFIG.buttonMap.START:
+        if (!activeOverlay()) {
+          const headerBtn = document.querySelector(".luatools-header-button");
+          if (headerBtn) {
+            headerBtn.click();
+          } else if (window.__LuaToolsOpenMenu) {
+            window.__LuaToolsOpenMenu();
+          }
+        }
         break;
 
       case CONFIG.buttonMap.DPAD_UP:
@@ -349,14 +387,9 @@
       return;
     }
 
-    // Check if there's an active LuaTools overlay
+    // Buttons are read even with nothing open: START is how Big Picture users reach the menu
+    // when the page has no header row for the icon button.
     const hasActiveOverlay = document.querySelector(OVERLAY_SELECTOR_STRING);
-
-    // If no overlay is active, skip input processing but keep polling
-    if (!hasActiveOverlay) {
-      state.animationFrameId = requestAnimationFrame(pollGamepad);
-      return;
-    }
 
     const gamepads = navigator.getGamepads();
     const gamepad = gamepads[state.gamepadIndex];
@@ -378,9 +411,19 @@
       state.buttonStates[index] = isPressed;
     });
 
-    // Left stick
-    const axisX = gamepad.axes[CONFIG.axesMap.LEFT_STICK_X] || 0;
-    const axisY = gamepad.axes[CONFIG.axesMap.LEFT_STICK_Y] || 0;
+    // Navigation only means something while one of our overlays is up.
+    if (!hasActiveOverlay) {
+      state.animationFrameId = requestAnimationFrame(pollGamepad);
+      return;
+    }
+
+    // Both sticks navigate; on each axis the stick that is pushed further wins.
+    const leftX = gamepad.axes[CONFIG.axesMap.LEFT_STICK_X] || 0;
+    const leftY = gamepad.axes[CONFIG.axesMap.LEFT_STICK_Y] || 0;
+    const rightX = gamepad.axes[CONFIG.axesMap.RIGHT_STICK_X] || 0;
+    const rightY = gamepad.axes[CONFIG.axesMap.RIGHT_STICK_Y] || 0;
+    const axisX = Math.abs(leftX) >= Math.abs(rightX) ? leftX : rightX;
+    const axisY = Math.abs(leftY) >= Math.abs(rightY) ? leftY : rightY;
 
     const x = Math.abs(axisX) > CONFIG.deadzone ? axisX : 0;
     const y = Math.abs(axisY) > CONFIG.deadzone ? axisY : 0;
@@ -714,6 +757,10 @@
 
     // Touch class (weight: 1 point - additional indicator)
     if (hasTouchClass) bigPictureScore += 1;
+
+    // Gamepad store URLs (weight: 3 points) — Big Picture and Deck store pages live under
+    // /gamepad/, and some client builds render them without the BasicUI class.
+    if (/\/gamepad(\/|$)/.test(window.location.pathname)) bigPictureScore += 3;
 
     // Positive score = Big Picture, negative/zero = Normal
     const isBigPicture = bigPictureScore > 0;
@@ -1469,6 +1516,14 @@
                 height: 16px;
                 width: 16px;
             }
+            /* No header row to sit in (Big Picture store, unknown layouts): float in the corner. */
+            button.luatools-header-button--fixed {
+                position: fixed;
+                top: 10px;
+                right: 110px;
+                z-index: 9999;
+                margin-left: 0;
+            }
         `;
   }
 
@@ -1582,17 +1637,10 @@
           }).then(function (res) {
             try {
               const p = typeof res === "string" ? JSON.parse(res) : res;
-              titleIcon.src =
-                p && p.success && p.dataUrl
-                  ? p.dataUrl
-                  : "LuaTools/luatools-icon.png";
-            } catch (_) {
-              titleIcon.src = "LuaTools/luatools-icon.png";
-            }
+              if (p && p.success && p.dataUrl) titleIcon.src = p.dataUrl;
+            } catch (_) {}
           });
-        } catch (_) {
-          titleIcon.src = "LuaTools/luatools-icon.png";
-        }
+        } catch (_) {}
         titleIcon.onerror = function () {
           this.style.display = "none";
         };
@@ -1608,6 +1656,8 @@
           const btn = document.createElement("a");
           btn.id = id;
           btn.href = "#";
+          btn.className = "Focusable";
+          btn.tabIndex = 0;
           const btnColors = getThemeColors();
           btn.style.cssText = `display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:rgba(${btnColors.rgbString},0.1);border:1px solid ${btnColors.borderRgba};border-radius:10px;color:${btnColors.accent};font-size:18px;text-decoration:none;transition:all 0.3s ease;cursor:pointer;`;
           btn.innerHTML = '<i class="fa-solid ' + iconClass + '"></i>';
@@ -1654,6 +1704,8 @@
           const btn = document.createElement("a");
           btn.id = id;
           btn.href = "#";
+          btn.className = "Focusable";
+          btn.tabIndex = 0;
           const btnColors = getThemeColors();
           btn.style.cssText = `display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;flex:1;background:rgba(${btnColors.rgbString},0.06);border:1px solid ${btnColors.borderRgba};border-radius:12px;color:${btnColors.text};font-size:11px;font-weight:500;text-decoration:none;transition:all 0.2s ease;cursor:pointer;text-align:center;padding:14px 6px;min-width:0;`;
           const iconHtml = iconClass
@@ -1836,7 +1888,7 @@
             try {
               const match =
                 window.location.href.match(
-                  /https:\/\/store\.steampowered\.com\/app\/(\d+)/,
+                  /https:\/\/store\.steampowered\.com\/(?:gamepad\/)?app\/(\d+)/,
                 ) ||
                 window.location.href.match(
                   /https:\/\/steamcommunity\.com\/app\/(\d+)/,
@@ -1867,7 +1919,7 @@
         try {
           const match =
             window.location.href.match(
-              /https:\/\/store\.steampowered\.com\/app\/(\d+)/,
+              /https:\/\/store\.steampowered\.com\/(?:gamepad\/)?app\/(\d+)/,
             ) ||
             window.location.href.match(
               /https:\/\/steamcommunity\.com\/app\/(\d+)/,
@@ -2173,7 +2225,9 @@
     // finished (just closes). The poll flips the label to "Close" on success. Class kept as
     // .luatools-hide-btn so the poll's existing selector still finds it.
     const hideBtn = document.createElement("a");
-    hideBtn.className = "luatools-btn luatools-hide-btn";
+    hideBtn.className = "luatools-btn luatools-hide-btn Focusable";
+    hideBtn.tabIndex = 0;
+    hideBtn.setAttribute("data-lt-close", "1");
     hideBtn.style.cssText =
       "display:flex;align-items:center;justify-content:center;text-align:center;";
     hideBtn.innerHTML = `<span>${lt("Cancel")}</span>`;
@@ -2357,7 +2411,9 @@
 
     const okBtn = document.createElement("a");
     okBtn.href = "#";
-    okBtn.className = "luatools-btn primary";
+    okBtn.className = "luatools-btn primary Focusable";
+    okBtn.tabIndex = 0;
+    okBtn.setAttribute("data-lt-close", "1");
     okBtn.style.cssText =
       "min-width:140px;display:flex;align-items:center;justify-content:center;text-align:center;";
     okBtn.innerHTML = `<span>${lt("Close")}</span>`;
@@ -2447,7 +2503,9 @@
 
     const cancelBtn = document.createElement("a");
     cancelBtn.href = "#";
-    cancelBtn.className = "luatools-btn";
+    cancelBtn.className = "luatools-btn Focusable";
+    cancelBtn.tabIndex = 0;
+    cancelBtn.setAttribute("data-lt-close", "1");
     cancelBtn.style.cssText =
       "flex:1;display:flex;align-items:center;justify-content:center;text-align:center;";
     cancelBtn.innerHTML = `<span>${lt("Cancel")}</span>`;
@@ -2460,7 +2518,8 @@
     };
     const confirmBtn = document.createElement("a");
     confirmBtn.href = "#";
-    confirmBtn.className = "luatools-btn primary";
+    confirmBtn.className = "luatools-btn primary Focusable";
+    confirmBtn.tabIndex = 0;
     confirmBtn.style.cssText =
       "flex:1;display:flex;align-items:center;justify-content:center;text-align:center;";
     confirmBtn.innerHTML = `<span>${lt("Confirm")}</span>`;
@@ -2538,6 +2597,45 @@
                 .luatools-pill.green { background: rgba(92, 184, 92, 0.15); color: #5cb85c; border: 1px solid rgba(92, 184, 92, 0.3); }
                 .luatools-pill.yellow { background: rgba(255, 193, 7, 0.15); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.3); }
                 .luatools-pill.orange { background: rgba(255, 136, 0, 0.15); color: #ff8800; border: 1px solid rgba(255, 136, 0, 0.3); }
+
+                /* ── Big Picture / new-store redesign button stack ──
+                   Sits as the first child of #FeatureTarget_interest-buttons (etc.), i.e.
+                   directly ABOVE the native "Add to your wishlist" button. Buttons reuse
+                   Valve's own btnv6_blue_hoverfade skin so they read as first-party UI,
+                   plus the Focusable class so Steam's spatial gamepad nav picks them up. */
+                .luatools-bpm-stack {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                    margin-bottom: 10px;
+                }
+                .luatools-bpm-stack .luatools-button,
+                .luatools-bpm-stack .luatools-restart-button {
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    width: 100% !important;
+                    min-height: 38px !important;
+                    box-sizing: border-box !important;
+                    position: relative !important;
+                    cursor: pointer;
+                }
+                .luatools-bpm-stack .luatools-button span,
+                .luatools-bpm-stack .luatools-restart-button span {
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+                .luatools-bpm-stack .luatools-pills-container {
+                    top: -22px !important;
+                }
+                /* Keyboard focus ring fallback (Steam draws its own ring for .Focusable) */
+                .luatools-bpm-stack button:focus-visible,
+                .luatools-header-button:focus-visible,
+                .luatools-btn:focus-visible {
+                    outline: 2px solid #66c0f4 !important;
+                    outline-offset: 1px !important;
+                }
             `;
       document.head.appendChild(style); // This is now separate from the main style block
     }
@@ -2574,6 +2672,439 @@
     }
   }
 
+function ltGetStoreAppId() {
+    try {
+      const m =
+        window.location.href.match(
+          /https:\/\/store\.steampowered\.com\/(?:gamepad\/)?app\/(\d+)/,
+        ) ||
+        window.location.href.match(
+          /https:\/\/steamcommunity\.com\/app\/(\d+)/,
+        );
+      return m ? parseInt(m[1], 10) : NaN;
+    } catch (_) {
+      return NaN;
+    }
+  }
+
+  function ltIsNewDesignActionContainer(el) {
+    return (
+      !!el &&
+      (el.id === "gamepadPurchaseOptions" ||
+        el.id === "FeatureTarget_interest-buttons" ||
+        el.id === "FeatureTarget_purchase-options")
+    );
+  }
+
+  // Where the store header icon goes. The redesigned storefront builds its header from CSS-module
+  // classes whose hashes change with every client build, so the old hard-coded `._1wn1lBl…`
+  // container disappears after an update and the icon is never created. Anchor on things that
+  // don't move instead: the cart/wishlist row, then the legacy #global_header, and as a last
+  // resort a fixed corner button. Big Picture's store has no header row at all, so it keeps the
+  // corner button.
+  function ltTopHeaderLink(fragment) {
+    const links = document.querySelectorAll('a[href*="' + fragment + '"]');
+    for (let i = 0; i < links.length; i++) {
+      const r = links[i].getBoundingClientRect();
+      if (r.width > 0 && r.top < 120) return links[i];
+    }
+    return null;
+  }
+
+  function ltFindStoreHeaderSlot() {
+    if (window.__LUATOOLS_IS_BIG_PICTURE__) return { float: true };
+    // The cart/wishlist row is the part of the header that survives storefront redesigns. The icon
+    // joins it as a sibling, so it lines up with the rest of the nav instead of floating in a
+    // corner of the window.
+    const link = ltTopHeaderLink("/cart/") || ltTopHeaderLink("/wishlist/");
+    if (link && link.parentElement) return { container: link.parentElement };
+    const legacy = document.querySelector("._1wn1lBlAzl3HMRqS1llwie");
+    if (legacy) return { container: legacy };
+    const globalHeader = document.getElementById("global_header");
+    if (globalHeader)
+      return { container: globalHeader.querySelector(".content") || globalHeader };
+    return { float: true };
+  }
+
+  // The button is created as soon as this file runs, which on the store home is before the header
+  // has laid itself out — so the first pass usually only finds the corner fallback. Run this on
+  // every poll instead: the button moves into the header once the header exists, and back out to
+  // the corner on a page that has no header row (Big Picture).
+  function ltPlaceHeaderButton(btn) {
+    const slot = ltFindStoreHeaderSlot();
+    if (!slot) return;
+    if (slot.float) {
+      btn.classList.add("luatools-header-button--fixed");
+      const host = document.body || document.documentElement;
+      if (btn.parentElement !== host) host.appendChild(btn);
+      return;
+    }
+    btn.classList.remove("luatools-header-button--fixed");
+    if (btn.parentElement !== slot.container) slot.container.appendChild(btn);
+  }
+
+  function ltPreferredActionContainer() {
+    return (
+      document.getElementById("FeatureTarget_interest-buttons") ||
+      document.getElementById("FeatureTarget_purchase-options") ||
+      document.getElementById("gamepadPurchaseOptions")
+    );
+  }
+
+  // The redesigned pages can render SEVERAL of the stable-id containers (e.g. the cart
+  // box builds before the wishlist row). Buttons belong in exactly ONE place — above the
+  // wishlist — so if an earlier invocation left a stack in a non-preferred container,
+  // move it over here (moving preserves listeners/state) instead of building a duplicate.
+  function ltAdoptOrphanBpmStack(container) {
+    const ids = [
+      "gamepadPurchaseOptions",
+      "FeatureTarget_purchase-options",
+      "FeatureTarget_interest-buttons",
+    ];
+    for (let i = 0; i < ids.length; i++) {
+      const c = document.getElementById(ids[i]);
+      if (!c || c === container) continue;
+      const s = c.querySelector(":scope > .luatools-bpm-stack");
+      if (s) {
+        try {
+          container.insertBefore(s, container.firstChild);
+        } catch (_) {}
+        return s;
+      }
+    }
+    return null;
+  }
+
+  function ltFindBpmStack() {
+    const preferred = ltPreferredActionContainer();
+    if (preferred) {
+      const s = preferred.querySelector(":scope > .luatools-bpm-stack");
+      if (s) return s;
+    }
+    return document.querySelector(".luatools-bpm-stack");
+  }
+
+  function ltInsertNewDesignAddButton(stackEl) {
+    if (!stackEl || stackEl.querySelector(".luatools-button")) return;
+    const b = document.createElement("button");
+    b.type = "button";
+    b.tabIndex = 0;
+    // Valve's own storefront button skin + Focusable => looks AND navigates natively.
+    // Clicks are handled by the existing delegated .luatools-button document handler,
+    // exactly like on desktop pages — no per-instance listener needed.
+    b.className =
+      "btnv6_blue_hoverfade btn_medium luatools-button Focusable";
+    const label = lt("Add via LuaTools");
+    b.title = label;
+    b.setAttribute("data-tooltip-text", label);
+    const sp = document.createElement("span");
+    sp.textContent = label;
+    b.appendChild(sp);
+    stackEl.appendChild(b);
+    window.__LuaToolsButtonInserted = true;
+    backendLog("LuaTools BPM Add button inserted");
+  }
+
+  // Register injected controls with Valve's gamepad focus-nav tree. The redesigned store
+  // pages run Steam's GPNav system (FocusNavController + InstrumentFocusElements): merely
+  // having the Focusable class is NOT enough — elements are enumerated into the nav tree at
+  // render time, so anything injected later is invisible to the d-pad until re-instrumented.
+  function ltRegisterGamepadFocus(el) {
+    if (!el) return;
+    try {
+      if (typeof window.ForceUpdateFocusElements === "function") {
+        window.ForceUpdateFocusElements(el);
+      } else if (typeof window.InstrumentFocusElements === "function") {
+        window.InstrumentFocusElements(el);
+      }
+    } catch (_) {}
+    // GPNav can finish booting after we insert (g_bGamepadNavReady flips late) — re-run once
+    // it's up so buttons added during startup still land in the tree.
+    try {
+      if (
+        typeof window.RunWhenGamepadNavReady === "function" &&
+        !window.__ltNavReadyHooked
+      ) {
+        window.__ltNavReadyHooked = true;
+        window.RunWhenGamepadNavReady(function () {
+          try {
+            const s = document.querySelector(".luatools-bpm-stack");
+            if (s && typeof window.InstrumentFocusElements === "function") {
+              window.InstrumentFocusElements(s);
+            }
+          } catch (_) {}
+        });
+      }
+    } catch (_) {}
+  }
+
+  function ensureNewDesignStoreButtons(container) {
+    try {
+      ensureStyles();
+
+      // Canonical anchor: whichever stable container we treat as "the" button home right now
+      // (the wishlist row once it exists). If we were handed a different one, manage the
+      // canonical container instead so buttons never end up in two places.
+      const preferred = ltPreferredActionContainer();
+      if (preferred && preferred !== container) {
+        ensureNewDesignStoreButtons(preferred);
+        return;
+      }
+
+      // Stack = first child of the container → directly above the wishlist button.
+      let stack = container.querySelector(":scope > .luatools-bpm-stack");
+      if (!stack) {
+        stack =
+          ltAdoptOrphanBpmStack(container) ||
+          document.createElement("div");
+        stack.className = "luatools-bpm-stack";
+        container.insertBefore(stack, container.firstChild);
+      } else if (container.firstChild !== stack) {
+        container.insertBefore(stack, container.firstChild);
+      }
+
+      // Restart Steam — always offered.
+      if (!stack.querySelector(".luatools-restart-button")) {
+        const rb = document.createElement("button");
+        rb.type = "button";
+        rb.tabIndex = 0;
+        rb.className =
+          "btnv6_blue_hoverfade btn_medium luatools-restart-button Focusable";
+        const rtext = lt("Restart Steam");
+        rb.title = rtext;
+        rb.setAttribute("data-tooltip-text", rtext);
+        const rsp = document.createElement("span");
+        rsp.textContent = rtext;
+        rb.appendChild(rsp);
+        rb.addEventListener("click", function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          askRestartConfirmation();
+        });
+        stack.appendChild(rb);
+        window.__LuaToolsRestartInserted = true;
+        backendLog("LuaTools BPM Restart button inserted");
+      }
+
+      // Add via LuaTools — only while the game isn't managed yet (same presence gate
+      // and stuck-check self-heal as the desktop path).
+      if (
+        !stack.querySelector(".luatools-button") &&
+        window.__LuaToolsGameAdded !== true &&
+        !window.__LuaToolsButtonInserted
+      ) {
+        const appid = ltGetStoreAppId();
+        if (
+          !isNaN(appid) &&
+          typeof Millennium !== "undefined" &&
+          typeof Millennium.callServerMethod === "function"
+        ) {
+          if (
+            window.__LuaToolsPresenceCheckInFlight &&
+            window.__LuaToolsPresenceCheckAppId === appid &&
+            Date.now() - (window.__LuaToolsPresenceCheckAt || 0) >= 8000
+          ) {
+            // A previous check never settled — stop treating it as in-flight.
+            window.__LuaToolsPresenceCheckInFlight = false;
+          }
+          if (
+            !window.__LuaToolsPresenceCheckInFlight ||
+            window.__LuaToolsPresenceCheckAppId !== appid
+          ) {
+            window.__LuaToolsPresenceCheckInFlight = true;
+            window.__LuaToolsPresenceCheckAt = Date.now();
+            window.__LuaToolsPresenceCheckAppId = appid;
+            window.__LuaToolsCurrentAppId = appid;
+            Millennium.callServerMethod("luatools", "HasLuaToolsForApp", {
+              appid,
+            })
+              .then(function (payload) {
+                return typeof payload === "string"
+                  ? JSON.parse(payload)
+                  : payload;
+              })
+              .then(function (payload) {
+                window.__LuaToolsPresenceCheckInFlight = false;
+                if (payload && payload.success && payload.exists === true) {
+                  window.__LuaToolsGameAdded = true;
+                  backendLog(
+                    "LuaTools already present for this app; BPM Add button withheld",
+                  );
+                  return;
+                }
+                ltInsertNewDesignAddButton(ltFindBpmStack());
+              })
+              .catch(function () {
+                window.__LuaToolsPresenceCheckInFlight = false;
+                ltInsertNewDesignAddButton(ltFindBpmStack());
+              });
+          }
+        } else {
+          // No bridge/appid → still show the button; the delegated click path no-ops safely.
+          ltInsertNewDesignAddButton(stack);
+        }
+      }
+
+      // Game became managed while we were open (added from the download popup) → drop it.
+      if (window.__LuaToolsGameAdded === true) {
+        const ab = stack.querySelector(".luatools-button");
+        if (ab && ab.parentElement) ab.parentElement.removeChild(ab);
+      }
+
+      // Hand our buttons to Steam's gamepad focus-nav tree so the d-pad can reach them.
+      ltRegisterGamepadFocus(stack);
+
+      // Pinning observer: React re-renders can remove/reorder our stack; re-assert placement
+      // and children (debounced so a burst of mutations collapses into one pass). One observer
+      // per container (WeakMap) so migrating between containers never orphans the old watch.
+      try {
+        if (!window.__LuaToolsBpmObservers)
+          window.__LuaToolsBpmObservers =
+            typeof WeakMap !== "undefined" ? new WeakMap() : null;
+        const have =
+          window.__LuaToolsBpmObservers &&
+          window.__LuaToolsBpmObservers.get(container);
+        if (!have) {
+          const obs = new MutationObserver(function () {
+            clearTimeout(window.__LuaToolsBpmObsTimer);
+            window.__LuaToolsBpmObsTimer = setTimeout(function () {
+              try {
+                ensureNewDesignStoreButtons(container);
+              } catch (_) {}
+            }, 250);
+          });
+          obs.observe(container, { childList: true, subtree: false });
+          if (window.__LuaToolsBpmObservers)
+            window.__LuaToolsBpmObservers.set(container, obs);
+        }
+      } catch (_) {}
+    } catch (e) {
+      backendLog("LuaTools: ensureNewDesignStoreButtons error: " + e);
+    }
+  }
+
+  // ── Controller/keyboard overlay plumbing ────────────────────────────────────
+  // B/Esc close the TOPMOST open LuaTools overlay by clicking its marked dismiss control
+  // ([data-lt-close]; Cancel/Close/Dismiss/OK all carry it). Returns true when something closed.
+  // Controller entry point used by the gamepad layer's START button when there is no
+  // header icon button to click (Big Picture store pages have no store header row).
+  window.__LuaToolsOpenMenu = showSettingsPopup;
+
+  window.__LuaToolsCloseTopOverlay = function () {
+    try {
+      var selectors = [
+        ".luatools-overlay",
+        ".luatools-settings-overlay",
+        ".luatools-alert-overlay",
+        ".luatools-confirm-overlay",
+        ".luatools-loadedapps-overlay",
+      ];
+      var top = null;
+      for (var i = 0; i < selectors.length; i++) {
+        var found = document.querySelectorAll(selectors[i]);
+        for (var j = 0; j < found.length; j++) {
+          var el = found[j];
+          var r = el.getBoundingClientRect();
+          if (r.width > 0 && r.height > 0) top = el; // later selector list order ≈ z-order
+        }
+      }
+      if (!top) return false;
+      var closer =
+        top.querySelector("[data-lt-close]") ||
+        top.querySelector(".luatools-hide-btn");
+      if (closer && closer.click) {
+        closer.click();
+        return true;
+      }
+      // Last resort: just remove the overlay shell (settings popup has no data-lt-close mark
+      // on purpose — closing it is done via its own X/settings buttons below).
+      top.remove();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  };
+
+  // Keyboard fallbacks for environments where Steam's gamepad layer isn't translating input:
+  // Esc/Backspace closes our overlays (unless typing in a field), Enter/Space activates the
+  // focused non-native control inside them (source rows etc.). Registered on WINDOW in the
+  // CAPTURE phase — window capture fires before every document-level listener, including
+  // Valve's own page scripts that treat a bare Escape as "navigate back". Without winning
+  // that race, closing the confirm dialog via keyboard/B also bounced the browser view back.
+  window.addEventListener(
+    "keydown",
+    function (e) {
+      try {
+        if (e.key !== "Escape" && e.key !== "Backspace") return;
+        var t = e.target;
+        if (
+          t &&
+          (t.tagName === "INPUT" ||
+            t.tagName === "TEXTAREA" ||
+            t.tagName === "SELECT" ||
+            t.isContentEditable)
+        )
+          return;
+        if (
+          !document.querySelector(
+            ".luatools-overlay, .luatools-settings-overlay, .luatools-alert-overlay, .luatools-confirm-overlay, .luatools-loadedapps-overlay",
+          )
+        )
+          return;
+        if (window.__LuaToolsCloseTopOverlay && window.__LuaToolsCloseTopOverlay()) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      } catch (_) {}
+    },
+    true,
+  );
+
+  window.addEventListener(
+    "keydown",
+    function (e) {
+      try {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        var t = e.target;
+        if (!t || !t.closest) return;
+        if (
+          t.tagName === "INPUT" ||
+          t.tagName === "TEXTAREA" ||
+          t.tagName === "SELECT" ||
+          t.isContentEditable
+        )
+          return;
+        var ov = t.closest(
+          ".luatools-overlay, .luatools-settings-overlay, .luatools-alert-overlay, .luatools-confirm-overlay, .luatools-loadedapps-overlay",
+        );
+        if (!ov) return;
+        var tabindex = t.getAttribute && t.getAttribute("tabindex");
+        if (tabindex !== null && tabindex !== "-1") {
+          e.preventDefault();
+          t.click();
+        }
+      } catch (_) {}
+    },
+    true,
+  );
+
+  // Watchdog: redesigned pages build the cart box (#gamepadPurchaseOptions) BEFORE the
+  // wishlist row (#FeatureTarget_interest-buttons), so our first insertion lands in the
+  // cart area and the page-wide observer stops re-firing once an Add button exists
+  // (its needGameBtn check sees one already). This cheap poll re-homes the stack into
+  // whichever container is currently canonical — i.e. above the wishlist as soon as it
+  // renders — and rebuilds everything if React wiped us outright.
+  setInterval(function () {
+    try {
+      const curStack = document.querySelector(".luatools-bpm-stack");
+      const pref = ltPreferredActionContainer();
+      if (!pref) return;
+      if (!curStack || curStack.parentElement !== pref) {
+        ensureNewDesignStoreButtons(pref);
+      }
+    } catch (_) {}
+  }, 1500);
+
   // Function to add the LuaTools button
   // Add throttle to prevent excessive executions
   let lastButtonCheckTime = 0;
@@ -2598,7 +3129,6 @@
       window.__LuaToolsGameAdded = false;
       window.__LuaToolsRestartInserted = false;
       window.__LuaToolsIconInserted = false;
-      window.__LuaToolsHeaderInserted = false;
       window.__LuaToolsPresenceCheckInFlight = false;
       window.__LuaToolsPresenceCheckAppId = undefined;
       // Ensure translations are loaded and update existing buttons
@@ -2608,14 +3138,10 @@
     }
 
     // Store Header Button Logic (always visible)
-    const headerContainer = document.querySelector("._1wn1lBlAzl3HMRqS1llwie");
-    if (
-      headerContainer &&
-      !document.querySelector(".luatools-header-button") &&
-      !window.__LuaToolsHeaderInserted
-    ) {
+    let headerBtn = document.querySelector(".luatools-header-button");
+    if (!headerBtn) {
       ensureLuaToolsStyles();
-      const headerBtn = document.createElement("button");
+      headerBtn = document.createElement("button");
       headerBtn.type = "button";
       headerBtn.className = "luatools-header-button Focusable";
       headerBtn.tabIndex = "0";
@@ -2633,8 +3159,6 @@
           '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="LuaTools"><path fill="currentColor" d="M12 8a4 4 0 100 8 4 4 0 000-8zm9.94 3.06l-2.12-.35a7.962 7.962 0 00-1.02-2.46l1.29-1.72a.75.75 0 00-.09-.97l-1.41-1.41a.75.75 0 00-.97-.09l-1.72 1.29c-.77-.44-1.6-.78-2.46-1.02L13.06 2.06A.75.75 0 0012.31 2h-1.62a.75.75 0 00-.75.65l-.35 2.12a7.962 7.962 0 00-2.46 1.02L5 4.6a.75.75 0 00-.97.09L2.62 6.1a.75.75 0 00-.09.97l1.29 1.72c-.44.77-.78 1.6-1.02 2.46l-2.12.35a.75.75 0 00-.65.75v1.62c0 .37.27.69.63.75l2.14.36c.24.86.58 1.69 1.02 2.46L2.53 18a.75.75 0 00.09.97l1.41 1.41c.26.26.67.29.97.09l1.72-1.29c.77.44 1.6.78 2.46 1.02l.35 2.12c.06.36.38.63.75.63h1.62c.37 0 .69-.27.75-.63l.36-2.14c.86-.24 1.69-.58 2.46-1.02l1.72 1.29c.3.2.71.17.97-.09l1.41-1.41c.26-.26.29-.67.09-.97l-1.29-1.72c.44-.77.78-1.6 1.02-2.46l2.12-.35c.36-.06.63-.38.63-.75v-1.62a.75.75 0 00-.65-.75z"/></svg>';
       };
 
-      img.src = "LuaTools/luatools-icon.png";
-
       Millennium.callServerMethod("luatools", "GetIconDataUrl", {})
         .then(function (res) {
           const payload = typeof res === "string" ? JSON.parse(res) : res;
@@ -2651,10 +3175,10 @@
         showSettingsPopup();
       };
 
-      headerContainer.appendChild(headerBtn);
-      window.__LuaToolsHeaderInserted = true;
+      ltRegisterGamepadFocus(headerBtn);
       backendLog("Inserted store header button");
     }
+    if (headerBtn) ltPlaceHeaderButton(headerBtn);
 
     // Check if we're in Big Picture mode
     const isBigPicture = window.__LUATOOLS_IS_BIG_PICTURE__;
@@ -2662,19 +3186,52 @@
     // Look for the appropriate container based on mode
     let targetContainer;
     if (isBigPicture) {
-      // In Big Picture mode, use the queue button's parent as reference
+      // In Big Picture mode, try multiple selectors for the button container on store app pages
+      // #queueBtnFollow is the "Add to Library" / "Follow" button on game pages
       const queueBtn = document.querySelector("#queueBtnFollow");
-      targetContainer = queueBtn ? queueBtn.parentElement : null;
+      if (queueBtn && queueBtn.parentElement) {
+        targetContainer = queueBtn.parentElement;
+      } else {
+        // Fallback: Big Picture mode store app pages may have different structure.
+        // Stable new-redesign ids FIRST (wishlist row wins so we land above the wishlist
+        // button even when several anchors exist), fuzzy class fallbacks last.
+        targetContainer =
+        document.querySelector("#FeatureTarget_interest-buttons") ||   // Primary: Wishlist/Follow/Ignore container
+        document.querySelector("#FeatureTarget_purchase-options") ||   // Parent of gamepadPurchaseOptions
+        document.querySelector("#gamepadPurchaseOptions") ||           // Add to Cart container
+        document.querySelector("#queueBtnFollow")?.parentElement ||    // Legacy Fallback
+        document.querySelector(".gamepage_buttons") ||
+        document.querySelector(".apphub_ActionButtons") ||
+        document.querySelector("[class*='ActionButtons']") ||
+        document.querySelector("[class*='btn_group']") ||
+        document.querySelector(".store_page_actions") ||
+        document.querySelector(".page_actions_ctn") ||
+        document.querySelector(".block.action_buttons") ||
+        document.querySelector(".glance_tags_ctn");
+      }
     } else {
-      // In normal mode, use the SteamDB buttons container
+      // In normal mode, prefer the classic SteamDB/other-sites row; on redesigned app pages
+      // (no legacy anchors left) fall through to the stable new-design containers so desktop
+      // users get the same above-the-wishlist placement instead of nothing.
       targetContainer =
         document.querySelector(".steamdb-buttons") ||
         document.querySelector("[data-steamdb-buttons]") ||
-        document.querySelector(".apphub_OtherSiteInfo");
+        document.querySelector(".apphub_OtherSiteInfo") ||
+        document.querySelector("#FeatureTarget_interest-buttons") ||
+        document.querySelector("#FeatureTarget_purchase-options") ||
+        document.querySelector("#gamepadPurchaseOptions");
     }
 
     if (targetContainer) {
       const steamdbContainer = targetContainer;
+
+      // New-design containers are React-managed blocks (hashed classes, no <a> siblings):
+      // the append-lookalike-link flow below would misplace ugly buttons there. Delegate
+      // to the dedicated above-the-wishlist stack builder instead.
+      if (ltIsNewDesignActionContainer(steamdbContainer)) {
+        ensureNewDesignStoreButtons(steamdbContainer);
+        return;
+      }
 
       // Keep our buttons in a deterministic spot. This row is filled asynchronously — Steam
       // injects the external-site links and Community Hub AFTER page load (and the SteamDB
@@ -2717,19 +3274,32 @@
           !window.__LuaToolsRestartInserted
         ) {
           ensureStyles();
-          // In Big Picture mode, use queue button as reference; otherwise use first link in container
-          const referenceBtn = isBigPicture
-            ? document.querySelector("#queueBtnFollow")
-            : steamdbContainer.querySelector("a");
+          // In Big Picture mode, try multiple selectors for reference button
+          let referenceBtn;
+          if (isBigPicture) {
+            referenceBtn = document.querySelector("#gamepadPurchaseOptions button") ||
+              document.querySelector("#FeatureTarget_interest-buttons button") ||
+              document.querySelector("#FeatureTarget_purchase-options button") ||
+              document.querySelector("#queueBtnFollow") ||
+              document.querySelector(".gamepage_buttons a") ||
+              document.querySelector(".apphub_ActionButtons a") ||
+              document.querySelector("[class*='ActionButtons'] a") ||
+              document.queryselector("[class*='btn_group'] a") ||
+              document.querySelector(".store_page_actions a") ||
+              document.querySelector(".page_actions_ctn a") ||
+              document.querySelector(".block.action_buttons a");
+          } else {
+            referenceBtn = steamdbContainer.querySelector("a");
+          }
 
           // Use same custom button for both modes
           const restartBtn = document.createElement("a");
           if (referenceBtn && referenceBtn.className) {
             restartBtn.className =
-              referenceBtn.className + " luatools-restart-button";
+              referenceBtn.className + " luatools-restart-button Focusable";
           } else {
             restartBtn.className =
-              "btnv6_blue_hoverfade btn_medium luatools-restart-button";
+              "btnv6_blue_hoverfade btn_medium luatools-restart-button Focusable";
           }
           restartBtn.href = "#";
           const restartText = lt("Restart Steam");
@@ -2779,10 +3349,23 @@
       // Check if button already exists to avoid duplicates
       if (!existingBtn && !window.__LuaToolsButtonInserted) {
         // Create the LuaTools button modeled after existing SteamDB/PCGW buttons
-        // In Big Picture mode, use queue button as reference; otherwise use first link in container
-        let referenceBtn = isBigPicture
-          ? document.querySelector("#queueBtnFollow")
-          : steamdbContainer.querySelector("a");
+        // In Big Picture mode, try multiple selectors for reference button
+        let referenceBtn;
+        if (isBigPicture) {
+          referenceBtn = document.querySelector("#gamepadPurchaseOptions button") ||
+            document.querySelector("#FeatureTarget_interest-buttons button") ||
+            document.querySelector("#FeatureTarget_purchase-options button") ||
+            document.querySelector("#queueBtnFollow") ||
+            document.querySelector(".gamepage_buttons a") ||
+            document.querySelector(".apphub_ActionButtons a") ||
+            document.querySelector("[class*='ActionButtons'] a") ||
+            document.querySelector("[class*='btn_group'] a") ||
+            document.querySelector(".store_page_actions a") ||
+            document.querySelector(".page_actions_ctn a") ||
+            document.querySelector(".block.action_buttons a");
+        } else {
+          referenceBtn = steamdbContainer.querySelector("a");
+        }
 
         // Use same custom button for both modes
         const luatoolsButton = document.createElement("a");
@@ -2790,10 +3373,10 @@
         // Copy classes from an existing button to match look-and-feel, but set our own label
         if (referenceBtn && referenceBtn.className) {
           luatoolsButton.className =
-            referenceBtn.className + " luatools-button";
+            referenceBtn.className + " luatools-button Focusable";
         } else {
           luatoolsButton.className =
-            "btnv6_blue_hoverfade btn_medium luatools-button";
+            "btnv6_blue_hoverfade btn_medium luatools-button Focusable";
         }
         const span = document.createElement("span");
         const addViaText = lt("Add via LuaTools");
@@ -2824,7 +3407,7 @@
         try {
           const match =
             window.location.href.match(
-              /https:\/\/store\.steampowered\.com\/app\/(\d+)/,
+              /https:\/\/store\.steampowered\.com\/(?:gamepad\/)?app\/(\d+)/,
             ) ||
             window.location.href.match(
               /https:\/\/steamcommunity\.com\/app\/(\d+)/,
@@ -3071,6 +3654,9 @@
       } catch (e) {
         /* ignore */
       }
+
+      // Register the legacy-row buttons with Steam's gamepad focus-nav (old-layout BPM pages).
+      ltRegisterGamepadFocus(steamdbContainer);
     } else {
       if (!logState.missingOnce) {
         backendLog("LuaTools: steamdbContainer not found on this page");
@@ -3271,7 +3857,7 @@
         try {
           const match =
             window.location.href.match(
-              /https:\/\/store\.steampowered\.com\/app\/(\d+)/,
+              /https:\/\/store\.steampowered\.com\/(?:gamepad\/)?app\/(\d+)/,
             ) ||
             window.location.href.match(
               /https:\/\/steamcommunity\.com\/app\/(\d+)/,
@@ -3314,7 +3900,6 @@
       window.__LuaToolsGameAdded = false;
       window.__LuaToolsRestartInserted = false;
       window.__LuaToolsIconInserted = false;
-      window.__LuaToolsHeaderInserted = false;
 
       window.__LuaToolsPresenceCheckInFlight = false;
       window.__LuaToolsPresenceCheckAppId = undefined;
@@ -3370,8 +3955,15 @@
     const observer = new MutationObserver(function () {
       clearTimeout(mutationTimeout);
       mutationTimeout = setTimeout(function () {
+        // Check for both normal mode and Big Picture mode containers
         var gameContainer = document.querySelector(
-          ".steamdb-buttons, [data-steamdb-buttons], .apphub_OtherSiteInfo, #queueBtnFollow",
+          ".steamdb-buttons, [data-steamdb-buttons], .apphub_OtherSiteInfo, " +
+          // Big Picture mode store app page containers (specific IDs first - stable selectors)
+          "#gamepadPurchaseOptions, #FeatureTarget_interest-buttons, #FeatureTarget_purchase-options, " +
+          // Big Picture mode fallback (class-based, less stable)
+          ".gamepage_buttons, .apphub_ActionButtons, [class*='ActionButtons'], " +
+          "[class*='btn_group'], .store_page_actions, .page_actions_ctn, " +
+          ".block.action_buttons, .glance_tags_ctn, #queueBtnFollow",
         );
         var needGameBtn =
           !!gameContainer &&
@@ -3387,7 +3979,8 @@
       }, 300);
     });
 
-    observer.observe(document.body, {
+    // document.body is not there yet when this runs on the store home; <html> is.
+    observer.observe(document.documentElement, {
       childList: true,
       subtree: true,
     });
@@ -3470,7 +4063,9 @@
       "Left click to install, Right click for SteamDB",
     );
     const dismissBtn = document.createElement("a");
-    dismissBtn.className = "luatools-btn";
+    dismissBtn.className = "luatools-btn Focusable";
+    dismissBtn.tabIndex = 0;
+    dismissBtn.setAttribute("data-lt-close", "1");
     dismissBtn.innerHTML = "<span>" + lt("Dismiss") + "</span>";
     dismissBtn.href = "#";
     dismissBtn.onclick = function (e) {
