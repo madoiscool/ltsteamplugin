@@ -105,6 +105,10 @@
     buttonMap: {
       A: 0,
       B: 1,
+      X: 2,
+      LB: 4,
+      RB: 5,
+      BACK: 8,
       START: 9,
       DPAD_UP: 12,
       DPAD_DOWN: 13,
@@ -344,10 +348,29 @@
         }
         break;
 
+      // B, X and Back all close the open popup instead of letting Steam navigate back.
       case CONFIG.buttonMap.B:
-        // B closes our overlay instead of letting Steam navigate back.
+      case CONFIG.buttonMap.X:
+      case CONFIG.buttonMap.BACK:
         if (window.__LuaToolsCloseTopOverlay) {
           window.__LuaToolsCloseTopOverlay();
+        }
+        break;
+
+      // Bumpers jump to the ends of the popup.
+      case CONFIG.buttonMap.LB:
+        if (activeOverlay()) {
+          scanFocusableElements(true);
+          if (state.focusableElements.length > 0) focusElement(0);
+        }
+        break;
+
+      case CONFIG.buttonMap.RB:
+        if (activeOverlay()) {
+          scanFocusableElements(true);
+          if (state.focusableElements.length > 0) {
+            focusElement(state.focusableElements.length - 1);
+          }
         }
         break;
 
