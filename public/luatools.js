@@ -130,7 +130,6 @@
       y: 0,
     },
     buttonStates: {},
-    pollFrame: null,
     pollTimer: null,
   };
 
@@ -157,7 +156,7 @@
     console.log("[Gamepad] Gamepad conectado en Millennium:", event.gamepad.id);
     state.gamepadConnected = true;
     state.gamepadIndex = event.gamepad.index;
-    schedulePoll();
+    startPolling();
     // Don't scan immediately - only scan when an overlay is opened
     // scanFocusableElements() will be called by the overlay's setTimeout
   }
@@ -267,9 +266,13 @@
 
     // Menus finish rendering their rows after they open, so refresh the list on every move;
     // a popup that has not been scanned yet only needs that scan, not a move.
+    const previous = state.focusableElements[state.currentFocusIndex];
     const known = state.focusableElements.length;
     scanFocusableElements(known > 0);
     if (!known) return;
+    // The focused control belonged to a popup that is gone, so the scan already put us on the
+    // first control of the new one. Do not step past it.
+    if (previous && state.focusableElements.indexOf(previous) === -1) return;
 
     let newIndex = state.currentFocusIndex;
 
@@ -282,9 +285,12 @@
         break;
       case "left":
         newIndex = findElementInDirection("left");
+        // Nothing directly left of a wide row: step back instead of getting stuck.
+        if (newIndex === state.currentFocusIndex) newIndex--;
         break;
       case "right":
         newIndex = findElementInDirection("right");
+        if (newIndex === state.currentFocusIndex) newIndex++;
         break;
     }
 
@@ -375,28 +381,19 @@
     }
   }
 
-  // Use rAF while the view is visible and a timer while it is hidden, so the controller
-  // keeps working in Big Picture.
-  function schedulePoll() {
-    if (!state.gamepadConnected) return;
-    if (state.pollFrame !== null || state.pollTimer !== null) return;
-    if (document.hidden) {
-      state.pollTimer = setTimeout(runPollTick, 100);
-    } else {
-      state.pollFrame = requestAnimationFrame(runPollTick);
-    }
-  }
+  // One interval for the whole session. A chained timeout or rAF loop dies for good if the
+  // browser drops a single callback, which is what happens to a background or occluded
+  // webview such as the Big Picture store. The browser slows an interval down there, but it
+  // keeps running.
+  const POLL_INTERVAL = 33;
 
-  function runPollTick() {
-    state.pollFrame = null;
-    state.pollTimer = null;
-    pollGamepad();
+  function startPolling() {
+    if (state.pollTimer) return;
+    state.pollTimer = setInterval(pollGamepad, POLL_INTERVAL);
   }
 
   function stopPolling() {
-    if (state.pollFrame !== null) cancelAnimationFrame(state.pollFrame);
-    if (state.pollTimer !== null) clearTimeout(state.pollTimer);
-    state.pollFrame = null;
+    if (state.pollTimer) clearInterval(state.pollTimer);
     state.pollTimer = null;
   }
 
@@ -410,10 +407,7 @@
     const gamepads = navigator.getGamepads();
     const gamepad = gamepads[state.gamepadIndex];
 
-    if (!gamepad) {
-      schedulePoll();
-      return;
-    }
+    if (!gamepad) return;
 
     // Buttons
     gamepad.buttons.forEach(function (button, index) {
@@ -428,10 +422,7 @@
     });
 
     // Navigation only means something while one of our overlays is up.
-    if (!hasActiveOverlay) {
-      schedulePoll();
-      return;
-    }
+    if (!hasActiveOverlay) return;
 
     // Both sticks navigate; on each axis the stick that is pushed further wins.
     const leftX = gamepad.axes[CONFIG.axesMap.LEFT_STICK_X] || 0;
@@ -460,8 +451,6 @@
 
     state.lastAxisValues.x = x;
     state.lastAxisValues.y = y;
-
-    schedulePoll();
   }
 
   // Block Steam's gamepad navigation when overlay is active
@@ -548,12 +537,6 @@
     // Block browser history navigation (back button)
     window.addEventListener("popstate", blockHistoryNavigation, true);
 
-    // Restart the poll when the page switches between hidden and visible.
-    document.addEventListener("visibilitychange", function () {
-      if (!state.gamepadConnected) return;
-      stopPolling();
-      schedulePoll();
-    });
 
     const gamepads = navigator.getGamepads();
     for (let i = 0; i < gamepads.length; i++) {
