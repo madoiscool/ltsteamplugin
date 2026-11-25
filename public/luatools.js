@@ -934,6 +934,10 @@
         item.appendChild(right);
         if (clickable && s.canDownload && !s.downloading) {
           item.style.cursor = "pointer";
+          // A controller has to be able to reach a source row, and a plain div is not in
+          // Steam's focus tree or in the D-pad scan.
+          item.className = "luatools-api-item Focusable";
+          item.tabIndex = 0;
           item.onmouseover = function () {
             item.style.borderColor = colors.accent;
           };
