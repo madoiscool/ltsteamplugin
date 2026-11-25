@@ -13,7 +13,7 @@
         .active-focus {
             outline: 3px solid #66c0f4 !important;
             outline-offset: 2px !important;
-            box-shadow: 0 0 0 4px rgba(11, 19, 24, 0.3),
+            box-shadow: 0 0 0 4px rgba(102, 192, 244, 0.3),
                         0 0 12px rgba(102, 192, 244, 0.5) !important;
             position: relative !important;
             z-index: 9999 !important;
@@ -2672,7 +2672,8 @@
     }
   }
 
-function ltGetStoreAppId() {
+  // Appid of the current page, for both the classic and the /gamepad/ store URLs.
+  function ltGetStoreAppId() {
     try {
       const m =
         window.location.href.match(
@@ -2838,6 +2839,19 @@ function ltGetStoreAppId() {
     } catch (_) {}
   }
 
+  // Big Picture has no header row, so the store buttons copy their skin from the page's own
+  // action button. The stable ids come first; the class names are for older clients.
+  function ltBpmReferenceButton() {
+    return (
+      document.querySelector("#gamepadPurchaseOptions button") ||
+      document.querySelector("#FeatureTarget_interest-buttons button") ||
+      document.querySelector("#FeatureTarget_purchase-options button") ||
+      document.querySelector("#queueBtnFollow") ||
+      document.querySelector(".gamepage_buttons a") ||
+      document.querySelector(".apphub_ActionButtons a")
+    );
+  }
+
   function ensureNewDesignStoreButtons(container) {
     try {
       ensureStyles();
@@ -2984,12 +2998,13 @@ function ltGetStoreAppId() {
   }
 
   // ── Controller/keyboard overlay plumbing ────────────────────────────────────
-  // B/Esc close the TOPMOST open LuaTools overlay by clicking its marked dismiss control
-  // ([data-lt-close]; Cancel/Close/Dismiss/OK all carry it). Returns true when something closed.
-  // Controller entry point used by the gamepad layer's START button when there is no
-  // header icon button to click (Big Picture store pages have no store header row).
+
+  // START opens this when the page has no header icon to click (Big Picture store pages
+  // have no store header row).
   window.__LuaToolsOpenMenu = showSettingsPopup;
 
+  // B/Esc close the TOPMOST open LuaTools overlay by clicking its marked dismiss control
+  // ([data-lt-close]; Cancel/Close/Dismiss/OK all carry it). Returns true when something closed.
   window.__LuaToolsCloseTopOverlay = function () {
     try {
       var selectors = [
@@ -3096,6 +3111,7 @@ function ltGetStoreAppId() {
   // renders — and rebuilds everything if React wiped us outright.
   setInterval(function () {
     try {
+      ltEnsureHeaderButton();
       const curStack = document.querySelector(".luatools-bpm-stack");
       const pref = ltPreferredActionContainer();
       if (!pref) return;
@@ -3110,34 +3126,12 @@ function ltGetStoreAppId() {
   let lastButtonCheckTime = 0;
   const BUTTON_CHECK_THROTTLE = 500; // Only run once every 500ms
 
-  function addLuaToolsButton(force) {
-    // Throttle to prevent blocking gamepad input. Bypassed (force=true) for retry- and
-    // observer-driven calls that fire the moment a container appears — those must not be
-    // swallowed, or the "Add via LuaTools" button intermittently never gets inserted.
-    const now = Date.now();
-    if (!force && now - lastButtonCheckTime < BUTTON_CHECK_THROTTLE) {
-      return; // Skip this execution, too soon
-    }
-    lastButtonCheckTime = now;
-
-    // Track current URL to detect page changes
-    const currentUrl = window.location.href;
-    if (window.__LuaToolsLastUrl !== currentUrl) {
-      // Page changed - reset button insertion flag and update translations
-      window.__LuaToolsLastUrl = currentUrl;
-      window.__LuaToolsButtonInserted = false;
-      window.__LuaToolsGameAdded = false;
-      window.__LuaToolsRestartInserted = false;
-      window.__LuaToolsIconInserted = false;
-      window.__LuaToolsPresenceCheckInFlight = false;
-      window.__LuaToolsPresenceCheckAppId = undefined;
-      // Ensure translations are loaded and update existing buttons
-      ensureTranslationsLoaded(false).then(function () {
-        updateButtonTranslations();
-      });
-    }
-
-    // Store Header Button Logic (always visible)
+  // The store home keeps building after the last addLuaToolsButton() call, so the header button
+  // is also driven by the poll above: it is created on store pages without one, re-created if
+  // React wipes it, and re-placed whenever the header finally exists.
+  function ltEnsureHeaderButton() {
+    // Store only: library and community pages keep their own header untouched.
+    if (window.location.hostname !== "store.steampowered.com") return;
     let headerBtn = document.querySelector(".luatools-header-button");
     if (!headerBtn) {
       ensureLuaToolsStyles();
@@ -3179,6 +3173,36 @@ function ltGetStoreAppId() {
       backendLog("Inserted store header button");
     }
     if (headerBtn) ltPlaceHeaderButton(headerBtn);
+  }
+
+  function addLuaToolsButton(force) {
+    // Throttle to prevent blocking gamepad input. Bypassed (force=true) for retry- and
+    // observer-driven calls that fire the moment a container appears — those must not be
+    // swallowed, or the "Add via LuaTools" button intermittently never gets inserted.
+    const now = Date.now();
+    if (!force && now - lastButtonCheckTime < BUTTON_CHECK_THROTTLE) {
+      return; // Skip this execution, too soon
+    }
+    lastButtonCheckTime = now;
+
+    // Track current URL to detect page changes
+    const currentUrl = window.location.href;
+    if (window.__LuaToolsLastUrl !== currentUrl) {
+      // Page changed - reset button insertion flag and update translations
+      window.__LuaToolsLastUrl = currentUrl;
+      window.__LuaToolsButtonInserted = false;
+      window.__LuaToolsGameAdded = false;
+      window.__LuaToolsRestartInserted = false;
+      window.__LuaToolsIconInserted = false;
+      window.__LuaToolsPresenceCheckInFlight = false;
+      window.__LuaToolsPresenceCheckAppId = undefined;
+      // Ensure translations are loaded and update existing buttons
+      ensureTranslationsLoaded(false).then(function () {
+        updateButtonTranslations();
+      });
+    }
+
+    ltEnsureHeaderButton();
 
     // Check if we're in Big Picture mode
     const isBigPicture = window.__LUATOOLS_IS_BIG_PICTURE__;
@@ -3192,22 +3216,15 @@ function ltGetStoreAppId() {
       if (queueBtn && queueBtn.parentElement) {
         targetContainer = queueBtn.parentElement;
       } else {
-        // Fallback: Big Picture mode store app pages may have different structure.
-        // Stable new-redesign ids FIRST (wishlist row wins so we land above the wishlist
-        // button even when several anchors exist), fuzzy class fallbacks last.
+        // Otherwise the wishlist row, so we land above it even when several anchors exist.
+        const legacyQueueBtn = document.querySelector("#queueBtnFollow");
         targetContainer =
-        document.querySelector("#FeatureTarget_interest-buttons") ||   // Primary: Wishlist/Follow/Ignore container
-        document.querySelector("#FeatureTarget_purchase-options") ||   // Parent of gamepadPurchaseOptions
-        document.querySelector("#gamepadPurchaseOptions") ||           // Add to Cart container
-        document.querySelector("#queueBtnFollow")?.parentElement ||    // Legacy Fallback
-        document.querySelector(".gamepage_buttons") ||
-        document.querySelector(".apphub_ActionButtons") ||
-        document.querySelector("[class*='ActionButtons']") ||
-        document.querySelector("[class*='btn_group']") ||
-        document.querySelector(".store_page_actions") ||
-        document.querySelector(".page_actions_ctn") ||
-        document.querySelector(".block.action_buttons") ||
-        document.querySelector(".glance_tags_ctn");
+          document.querySelector("#FeatureTarget_interest-buttons") ||
+          document.querySelector("#FeatureTarget_purchase-options") ||
+          document.querySelector("#gamepadPurchaseOptions") ||
+          (legacyQueueBtn && legacyQueueBtn.parentElement) ||
+          document.querySelector(".gamepage_buttons") ||
+          document.querySelector(".apphub_ActionButtons");
       }
     } else {
       // In normal mode, prefer the classic SteamDB/other-sites row; on redesigned app pages
@@ -3274,23 +3291,9 @@ function ltGetStoreAppId() {
           !window.__LuaToolsRestartInserted
         ) {
           ensureStyles();
-          // In Big Picture mode, try multiple selectors for reference button
-          let referenceBtn;
-          if (isBigPicture) {
-            referenceBtn = document.querySelector("#gamepadPurchaseOptions button") ||
-              document.querySelector("#FeatureTarget_interest-buttons button") ||
-              document.querySelector("#FeatureTarget_purchase-options button") ||
-              document.querySelector("#queueBtnFollow") ||
-              document.querySelector(".gamepage_buttons a") ||
-              document.querySelector(".apphub_ActionButtons a") ||
-              document.querySelector("[class*='ActionButtons'] a") ||
-              document.queryselector("[class*='btn_group'] a") ||
-              document.querySelector(".store_page_actions a") ||
-              document.querySelector(".page_actions_ctn a") ||
-              document.querySelector(".block.action_buttons a");
-          } else {
-            referenceBtn = steamdbContainer.querySelector("a");
-          }
+          const referenceBtn = isBigPicture
+            ? ltBpmReferenceButton()
+            : steamdbContainer.querySelector("a");
 
           // Use same custom button for both modes
           const restartBtn = document.createElement("a");
@@ -3349,23 +3352,9 @@ function ltGetStoreAppId() {
       // Check if button already exists to avoid duplicates
       if (!existingBtn && !window.__LuaToolsButtonInserted) {
         // Create the LuaTools button modeled after existing SteamDB/PCGW buttons
-        // In Big Picture mode, try multiple selectors for reference button
-        let referenceBtn;
-        if (isBigPicture) {
-          referenceBtn = document.querySelector("#gamepadPurchaseOptions button") ||
-            document.querySelector("#FeatureTarget_interest-buttons button") ||
-            document.querySelector("#FeatureTarget_purchase-options button") ||
-            document.querySelector("#queueBtnFollow") ||
-            document.querySelector(".gamepage_buttons a") ||
-            document.querySelector(".apphub_ActionButtons a") ||
-            document.querySelector("[class*='ActionButtons'] a") ||
-            document.querySelector("[class*='btn_group'] a") ||
-            document.querySelector(".store_page_actions a") ||
-            document.querySelector(".page_actions_ctn a") ||
-            document.querySelector(".block.action_buttons a");
-        } else {
-          referenceBtn = steamdbContainer.querySelector("a");
-        }
+        const referenceBtn = isBigPicture
+          ? ltBpmReferenceButton()
+          : steamdbContainer.querySelector("a");
 
         // Use same custom button for both modes
         const luatoolsButton = document.createElement("a");
@@ -3958,12 +3947,9 @@ function ltGetStoreAppId() {
         // Check for both normal mode and Big Picture mode containers
         var gameContainer = document.querySelector(
           ".steamdb-buttons, [data-steamdb-buttons], .apphub_OtherSiteInfo, " +
-          // Big Picture mode store app page containers (specific IDs first - stable selectors)
-          "#gamepadPurchaseOptions, #FeatureTarget_interest-buttons, #FeatureTarget_purchase-options, " +
-          // Big Picture mode fallback (class-based, less stable)
-          ".gamepage_buttons, .apphub_ActionButtons, [class*='ActionButtons'], " +
-          "[class*='btn_group'], .store_page_actions, .page_actions_ctn, " +
-          ".block.action_buttons, .glance_tags_ctn, #queueBtnFollow",
+            "#gamepadPurchaseOptions, #FeatureTarget_interest-buttons, " +
+            "#FeatureTarget_purchase-options, .gamepage_buttons, " +
+            ".apphub_ActionButtons, #queueBtnFollow",
         );
         var needGameBtn =
           !!gameContainer &&
